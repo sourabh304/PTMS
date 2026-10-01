@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. `--brand` is injected at runtime from env / organization settings
+ * (see BrandingStyles), everything else derives from it.
+ */
+:root {
+  --brand: #2563eb;
+  --brand-foreground: #ffffff;
+  --background: #f6f7fb;
+  --surface: #ffffff;
+  --surface-muted: #f1f3f8;
+  --border: #e3e6ee;
+  --foreground: #111827;
+  --muted: #6b7280;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --sidebar: #0f172a;
+  --sidebar-foreground: #cbd5e1;
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: color-mix(in srgb, var(--brand) 12%, white);
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  border-color: var(--border);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--brand) 25%, white);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+}

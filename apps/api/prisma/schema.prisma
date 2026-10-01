@@ -1,0 +1,368 @@
+// SegueIT Projects - data model
+// Enumerated values (roles, lookup types, approval states) are stored as strings
+// and validated in the application layer (see src/common/constants) so that the
+// schema stays portable between SQLite and PostgreSQL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                 String   @id @default(cuid())
+  name               String
+  slug               String   @unique
+  logoUrl            String?
+  primaryColor       String?
+  timezone           String
+  weekStartsOn       Int
+  workingHoursPerDay Float
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  users      User[]
+  projects   Project[]
+  lookups    Lookup[]
+  activities Activity[]
+}
+
+model User {
+  id             String    @id @default(cuid())
+  organizationId String
+  email          String    @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  jobTitle       String?
+  avatarUrl      String?
+  role           String
+  isActive       Boolean   @default(true)
+  hourlyRate     Float?
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  refreshTokens       RefreshToken[]
+  ownedProjects       Project[]        @relation("ProjectOwner")
+  memberships         ProjectMember[]
+  taskAssignments     TaskAssignee[]
+  createdTasks        Task[]           @relation("TaskCreator")
+  ownedMilestones     Milestone[]      @relation("MilestoneOwner")
+  reportedIssues      Issue[]          @relation("IssueReporter")
+  assignedIssues      Issue[]          @relation("IssueAssignee")
+  timeEntries         TimeEntry[]      @relation("TimeEntryUser")
+  approvedTimeEntries TimeEntry[]      @relation("TimeEntryApprover")
+  comments            Comment[]
+  activities          Activity[]
+  notifications       Notification[]
+
+  @@index([organizationId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Configurable, per-organization values: task/issue/project statuses,
+/// priorities and issue severities.
+model Lookup {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String
+  name           String
+  color          String
+  category       String?
+  position       Int      @default(0)
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectsWithStatus Project[]    @relation("ProjectStatus")
+  tasksWithStatus    Task[]       @relation("TaskStatus")
+  tasksWithPriority  Task[]       @relation("TaskPriority")
+  issuesWithStatus   Issue[]      @relation("IssueStatus")
+  issuesWithPriority Issue[]      @relation("IssuePriority")
+  issuesWithSeverity Issue[]      @relation("IssueSeverity")
+
+  @@unique([organizationId, type, name])
+  @@index([organizationId, type])
+}
+
+model Project {
+  id             String    @id @default(cuid())
+  organizationId String
+  key            String
+  name           String
+  description    String?
+  color          String?
+  statusId       String
+  ownerId        String
+  startDate      DateTime?
+  endDate        DateTime?
+  budgetHours    Float?
+  isArchived     Boolean   @default(false)
+  taskCounter    Int       @default(0)
+  issueCounter   Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status       Lookup          @relation("ProjectStatus", fields: [statusId], references: [id], onDelete: Restrict)
+  owner        User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members      ProjectMember[]
+  taskLists    TaskList[]
+  tasks        Task[]
+  milestones   Milestone[]
+  issues       Issue[]
+  timeEntries  TimeEntry[]
+  activities   Activity[]
+
+  @@unique([organizationId, key])
+  @@index([organizationId, isArchived])
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model Milestone {
+  id          String    @id @default(cuid())
+  projectId   String
+  name        String
+  description String?
+  startDate   DateTime?
+  dueDate     DateTime
+  ownerId     String?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner     User?      @relation("MilestoneOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  taskLists TaskList[]
+  tasks     Task[]
+  issues    Issue[]
+
+  @@index([projectId, dueDate])
+}
+
+model TaskList {
+  id          String   @id @default(cuid())
+  projectId   String
+  milestoneId String?
+  name        String
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestone Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  tasks     Task[]
+
+  @@index([projectId])
+}
+
+model Task {
+  id             String    @id @default(cuid())
+  projectId      String
+  taskListId     String?
+  milestoneId    String?
+  parentId       String?
+  number         Int
+  title          String
+  description    String?
+  statusId       String
+  priorityId     String
+  startDate      DateTime?
+  dueDate        DateTime?
+  estimatedHours Float?
+  progress       Int       @default(0)
+  position       Float     @default(0)
+  createdById    String
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  taskList     TaskList?        @relation(fields: [taskListId], references: [id], onDelete: SetNull)
+  milestone    Milestone?       @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  parent       Task?            @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks     Task[]           @relation("Subtasks")
+  status       Lookup           @relation("TaskStatus", fields: [statusId], references: [id], onDelete: Restrict)
+  priority     Lookup           @relation("TaskPriority", fields: [priorityId], references: [id], onDelete: Restrict)
+  createdBy    User             @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignees    TaskAssignee[]
+  predecessors TaskDependency[] @relation("DependencySuccessor")
+  successors   TaskDependency[] @relation("DependencyPredecessor")
+  comments     Comment[]
+  timeEntries  TimeEntry[]
+  issues       Issue[]
+
+  @@unique([projectId, number])
+  @@index([projectId, statusId])
+  @@index([dueDate])
+}
+
+model TaskAssignee {
+  taskId     String
+  userId     String
+  assignedAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId])
+}
+
+model TaskDependency {
+  id            String   @id @default(cuid())
+  predecessorId String
+  successorId   String
+  type          String
+  createdAt     DateTime @default(now())
+
+  predecessor Task @relation("DependencyPredecessor", fields: [predecessorId], references: [id], onDelete: Cascade)
+  successor   Task @relation("DependencySuccessor", fields: [successorId], references: [id], onDelete: Cascade)
+
+  @@unique([predecessorId, successorId])
+}
+
+model Issue {
+  id          String    @id @default(cuid())
+  projectId   String
+  number      Int
+  title       String
+  description String?
+  statusId    String
+  priorityId  String
+  severityId  String
+  reporterId  String
+  assigneeId  String?
+  milestoneId String?
+  taskId      String?
+  dueDate     DateTime?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status      Lookup      @relation("IssueStatus", fields: [statusId], references: [id], onDelete: Restrict)
+  priority    Lookup      @relation("IssuePriority", fields: [priorityId], references: [id], onDelete: Restrict)
+  severity    Lookup      @relation("IssueSeverity", fields: [severityId], references: [id], onDelete: Restrict)
+  reporter    User        @relation("IssueReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  assignee    User?       @relation("IssueAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  milestone   Milestone?  @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  task        Task?       @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  comments    Comment[]
+  timeEntries TimeEntry[]
+
+  @@unique([projectId, number])
+  @@index([projectId, statusId])
+  @@index([assigneeId])
+}
+
+model TimeEntry {
+  id             String    @id @default(cuid())
+  userId         String
+  projectId      String
+  taskId         String?
+  issueId        String?
+  date           DateTime
+  minutes        Int
+  notes          String?
+  isBillable     Boolean   @default(true)
+  approvalStatus String
+  approvedById   String?
+  approvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user       User    @relation("TimeEntryUser", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy User?   @relation("TimeEntryApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task       Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  issue      Issue?  @relation(fields: [issueId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([projectId, date])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  authorId  String
+  taskId    String?
+  issueId   String?
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  task   Task?  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  issue  Issue? @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([issueId])
+}
+
+model Activity {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String?
+  actorId        String
+  entityType     String
+  entityId       String
+  action         String
+  summary        String
+  metadata       String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actor        User         @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([projectId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}

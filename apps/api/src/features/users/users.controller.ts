@@ -1,0 +1,63 @@
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { Permission } from '../../common/constants/permissions.constants';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import {
+  ChangePasswordDto,
+  CreateUserDto,
+  ResetPasswordDto,
+  UpdateProfileDto,
+  UpdateUserDto,
+  UserQueryDto,
+} from './dto/user.dto';
+import { UsersService } from './users.service';
+
+@ApiTags('Users')
+@Controller('users')
+export class UsersController {
+  constructor(private readonly users: UsersService) {}
+
+  @Get()
+  @RequirePermissions(Permission.USERS_VIEW)
+  findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: UserQueryDto) {
+    return this.users.findAll(user.organizationId, query);
+  }
+
+  @Patch('me')
+  updateProfile(@CurrentUser('id') userId: string, @Body() dto: UpdateProfileDto) {
+    return this.users.updateProfile(userId, dto);
+  }
+
+  @Post('me/password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  changePassword(@CurrentUser('id') userId: string, @Body() dto: ChangePasswordDto) {
+    return this.users.changePassword(userId, dto);
+  }
+
+  @Get(':id')
+  @RequirePermissions(Permission.USERS_VIEW)
+  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.users.findOne(user.organizationId, id);
+  }
+
+  @Post()
+  @RequirePermissions(Permission.USERS_MANAGE)
+  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateUserDto) {
+    return this.users.create(user, dto);
+  }
+
+  @Patch(':id')
+  @RequirePermissions(Permission.USERS_MANAGE)
+  update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.users.update(user, id, dto);
+  }
+
+  @Post(':id/reset-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions(Permission.USERS_MANAGE)
+  resetPassword(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: ResetPasswordDto) {
+    return this.users.resetPassword(user, id, dto.password);
+  }
+}
