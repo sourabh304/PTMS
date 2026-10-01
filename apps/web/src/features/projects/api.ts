@@ -4,11 +4,12 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import type { ProjectRole } from '@/shared/constants/domain';
 import { api } from '@/shared/lib/api-client';
 import type { Paginated } from '@/shared/types/api';
-import type { Project, ProjectDashboard, ProjectDetail, ProjectInput, ProjectMember, ProjectQuery } from './types';
+import type { Project, ProjectDashboard, ProjectDetail, ProjectInput, ProjectMember, ProjectQuery, ProjectSummary } from './types';
 
 export const projectKeys = {
   all: ['projects'] as const,
   list: (query: ProjectQuery) => ['projects', 'list', query] as const,
+  summary: ['projects', 'summary'] as const,
   detail: (id: string) => ['projects', 'detail', id] as const,
   members: (id: string) => ['projects', 'members', id] as const,
   dashboard: (id: string) => ['projects', 'dashboard', id] as const,
@@ -20,6 +21,10 @@ export function useProjects(query: ProjectQuery = {}) {
     queryFn: () => api.get<Paginated<Project>>('/projects', { ...query }),
     placeholderData: keepPreviousData,
   });
+}
+
+export function useProjectSummary() {
+  return useQuery({ queryKey: projectKeys.summary, queryFn: () => api.get<ProjectSummary>('/projects/summary') });
 }
 
 export function useProject(id: string) {

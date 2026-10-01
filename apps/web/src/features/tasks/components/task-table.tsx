@@ -35,7 +35,7 @@ export function TaskTable({ tasks, onOpen, showProject }: TaskTableProps) {
           const overdue = isOverdue(task.dueDate, closed);
           return (
             <Tr key={task.id} className="cursor-pointer" onClick={() => onOpen(task)}>
-              <Td className="whitespace-nowrap text-xs font-medium text-muted">
+              <Td className="whitespace-nowrap font-mono text-xs text-muted">
                 {task.project.key}-{task.number}
               </Td>
               <Td>
@@ -43,12 +43,12 @@ export function TaskTable({ tasks, onOpen, showProject }: TaskTableProps) {
                   <span className={cn('font-medium', closed && 'text-muted line-through')}>{task.title}</span>
                   {task._count.subtasks > 0 && (
                     <span className="inline-flex items-center gap-0.5 text-xs text-muted" title="Subtasks">
-                      <GitBranch className="h-3 w-3" /> {task._count.subtasks}
+                      <GitBranch className="size-3" /> {task._count.subtasks}
                     </span>
                   )}
                   {task._count.comments > 0 && (
                     <span className="inline-flex items-center gap-0.5 text-xs text-muted" title="Comments">
-                      <MessageSquare className="h-3 w-3" /> {task._count.comments}
+                      <MessageSquare className="size-3" /> {task._count.comments}
                     </span>
                   )}
                 </div>
@@ -56,7 +56,7 @@ export function TaskTable({ tasks, onOpen, showProject }: TaskTableProps) {
               </Td>
               {showProject && (
                 <Td className="whitespace-nowrap text-sm">
-                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: task.project.color ?? 'var(--brand)' }} />
+                  <span className="mr-1.5 inline-block size-2 rounded-full" style={{ backgroundColor: task.project.color ?? 'var(--brand)' }} />
                   {task.project.name}
                 </Td>
               )}

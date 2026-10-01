@@ -4,6 +4,7 @@ import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react
 import { useState, type ReactNode } from 'react';
 import { Toaster, toast } from 'sonner';
 import { ApiError, errorMessage } from '@/shared/lib/api-client';
+import { ThemeProvider, useTheme } from '@/shared/theme/theme-provider';
 
 declare module '@tanstack/react-query' {
   interface Register {
@@ -40,9 +41,16 @@ function createQueryClient() {
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(createQueryClient);
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster position="top-right" richColors closeButton />
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        <ThemedToaster />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
+}
+
+function ThemedToaster() {
+  const { resolvedMode } = useTheme();
+  return <Toaster position="top-right" theme={resolvedMode} richColors closeButton toastOptions={{ className: 'font-sans' }} />;
 }

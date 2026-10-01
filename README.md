@@ -1,4 +1,4 @@
-# SegueIT Projects
+# Project Tracker
 
 Enterprise project tracking platform — plan, track and deliver projects with task lists,
 Kanban boards, Gantt charts, milestones, issue tracking, timesheets with approvals,
@@ -50,7 +50,8 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Dashboards** – organization dashboard and per-project overview (status mix, priorities, workload, budget burn).
 - **Reports** – portfolio health (on track / at risk / off track) with CSV export, resource utilization vs capacity, time analysis, issue trends.
 - **Activity & notifications** – audit trail per project and in-app notifications for assignments, comments, reviews.
-- **Administration** – users & roles, organization branding (name, logo, brand color), timezone, working hours, and fully configurable workflows.
+- **Administration** – users & roles, organization name and default brand color, timezone, working hours, and fully configurable workflows.
+- **Appearance** – per-user light/dark/system theme, accent color, font (Inter, Geist, IBM Plex Sans, Manrope), density, corner radius, light/dark sidebar, and a collapsible sidebar (Ctrl/⌘+B).
 - **Security** – httpOnly cookie auth, short-lived access tokens, rotating refresh tokens with reuse detection, bcrypt, Helmet, rate limiting, strict DTO validation, RBAC + project-level authorization.
 
 ---
@@ -63,7 +64,8 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 | Ports, CORS, secrets, cookies, rate limits, pagination | `apps/api/.env` (validated with Zod at boot) |
 | Seed admin, demo data | `SEED_*` variables in `apps/api/.env` |
 | Statuses, priorities, severities | Database, per organization — **Settings → Workflow** |
-| Org name, logo, brand color, timezone, week start, working hours | Database — **Settings → Organization** |
+| Org name, default brand color, timezone, week start, working hours | Database — **Settings → Organization** |
+| Personal theme, accent, font, density, radius, sidebar | Browser storage — **Settings → Appearance** (options in `apps/web/src/shared/theme/theme.config.ts`) |
 | Role → permission matrix | `apps/api/src/common/constants/permissions.constants.ts` (served to the UI via `/auth/me`) |
 | Defaults for new organizations | `apps/api/src/features/lookups/lookup.defaults.ts`, `features/organizations/organization.defaults.ts` |
 

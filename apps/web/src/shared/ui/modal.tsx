@@ -18,10 +18,13 @@ interface OverlayProps {
 
 function useOverlayBehavior(open: boolean, onClose: () => void) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onCloseRef.current();
     document.addEventListener('keydown', onKey);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -31,11 +34,27 @@ function useOverlayBehavior(open: boolean, onClose: () => void) {
       document.body.style.overflow = overflow;
       previous?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
   return panelRef;
 }
 
-const sizes = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' } as const;
+function OverlayHeader({ id, title, description, onClose }: { id: string; title: ReactNode; description?: ReactNode; onClose: () => void }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
+      <div className="min-w-0">
+        <h2 id={id} className="truncate text-base font-semibold tracking-tight">
+          {title}
+        </h2>
+        {description && <div className="mt-0.5 text-sm text-muted">{description}</div>}
+      </div>
+      <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close" className="-mr-1.5 -mt-0.5">
+        <X />
+      </Button>
+    </div>
+  );
+}
+
+const sizes = { sm: 'sm:max-w-md', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl', xl: 'sm:max-w-4xl' } as const;
 
 export function Modal({ open, onClose, title, description, children, footer, className, size = 'md' }: OverlayProps & { size?: keyof typeof sizes }) {
   const panelRef = useOverlayBehavior(open, onClose);
@@ -43,7 +62,10 @@ export function Modal({ open, onClose, title, description, children, footer, cla
   if (!open || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 pt-[8vh] backdrop-blur-[2px]" onMouseDown={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex animate-fade-in items-end justify-center overflow-y-auto bg-overlay backdrop-blur-[1px] sm:items-start sm:p-4 sm:pt-[10vh]"
+      onMouseDown={onClose}
+    >
       <div
         ref={panelRef}
         role="dialog"
@@ -51,21 +73,15 @@ export function Modal({ open, onClose, title, description, children, footer, cla
         aria-labelledby={titleId}
         tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
-        className={cn('w-full rounded-2xl bg-surface shadow-2xl outline-none', sizes[size], className)}
+        className={cn(
+          'flex max-h-[92dvh] w-full animate-pop-in flex-col rounded-t-ui-lg border border-border bg-surface shadow-ui-lg outline-none sm:max-h-[85vh] sm:rounded-ui-lg',
+          sizes[size],
+          className,
+        )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
-          <div>
-            <h2 id={titleId} className="text-base font-semibold">
-              {title}
-            </h2>
-            {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="px-6 py-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-border px-6 py-4">{footer}</div>}
+        <OverlayHeader id={titleId} title={title} description={description} onClose={onClose} />
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+        {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-border bg-surface-muted/40 px-5 py-3.5 sm:px-6">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -78,7 +94,7 @@ export function Drawer({ open, onClose, title, description, children, footer, cl
   if (!open || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex animate-fade-in justify-end bg-overlay" onMouseDown={onClose}>
       <div
         ref={panelRef}
         role="dialog"
@@ -86,21 +102,11 @@ export function Drawer({ open, onClose, title, description, children, footer, cl
         aria-labelledby={titleId}
         tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
-        className={cn('flex h-full w-full max-w-2xl flex-col bg-surface shadow-2xl outline-none', className)}
+        className={cn('flex h-full w-full max-w-2xl animate-slide-in-right flex-col border-l border-border bg-surface shadow-ui-lg outline-none', className)}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
-          <div className="min-w-0">
-            <h2 id={titleId} className="truncate text-base font-semibold">
-              {title}
-            </h2>
-            {description && <div className="mt-0.5 text-sm text-muted">{description}</div>}
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-border px-6 py-4">{footer}</div>}
+        <OverlayHeader id={titleId} title={title} description={description} onClose={onClose} />
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+        {footer && <div className="flex justify-end gap-2 border-t border-border px-5 py-3.5 sm:px-6">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -137,7 +143,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', 
         </>
       }
     >
-      <div className="space-y-4 text-sm text-foreground/80">
+      <div className="space-y-4 text-sm text-foreground-soft">
         <p>{message}</p>
         {children}
       </div>

@@ -1,21 +1,16 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { routes } from '@/shared/config/routes';
-import { LinkTabs, PageHeader } from '@/shared/ui/layout';
+import { appConfig } from '@/shared/config/env';
+import { SettingsNav } from '@/shared/components/settings-nav';
+import { PageHeader } from '@/shared/ui/layout';
 
-export const metadata: Metadata = { title: 'Settings' };
-
-const TABS = [
-  { href: routes.settingsOrganization, label: 'Organization' },
-  { href: routes.settingsUsers, label: 'Users' },
-  { href: routes.settingsWorkflow, label: 'Workflow' },
-];
+export const metadata: Metadata = { title: { default: 'Settings', template: `%s · ${appConfig.name}` } };
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   return (
     <>
-      <PageHeader title="Settings" description="Configure your workspace, people and workflows." />
-      <LinkTabs items={TABS} className="mb-6" />
+      <PageHeader title="Settings" description="Manage your workspace, people, workflows and personal preferences." />
+      <SettingsNav />
       {children}
     </>
   );

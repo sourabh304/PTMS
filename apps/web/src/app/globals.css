@@ -1,62 +1,244 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens. `--brand` is injected at runtime from env / organization settings
- * (see BrandingStyles), everything else derives from it.
+ * Design tokens.
+ * Appearance is driven by data attributes on <html> (set by the ThemeProvider and a
+ * pre-paint script): data-mode, data-density, data-radius, data-sidebar, data-font.
+ * The brand color resolves as: user accent → organization color → env default.
  */
+@custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));
+/* Applies inside the desktop sidebar while it is collapsed to an icon rail. */
+@custom-variant collapsed (&:where([data-nav='collapsed'] [data-collapsible] *, [data-nav='collapsed'] [data-collapsible]));
+
 :root {
-  --brand: #2563eb;
-  --brand-foreground: #ffffff;
-  --background: #f6f7fb;
+  --brand: var(--accent, var(--org-brand, #2563eb));
+  --brand-foreground: var(--accent-foreground, var(--org-brand-foreground, #ffffff));
+
+  --background: #f6f7f9;
   --surface: #ffffff;
-  --surface-muted: #f1f3f8;
-  --border: #e3e6ee;
-  --foreground: #111827;
-  --muted: #6b7280;
-  --danger: #dc2626;
-  --success: #16a34a;
-  --warning: #d97706;
-  --sidebar: #0f172a;
-  --sidebar-foreground: #cbd5e1;
+  --surface-muted: #f2f4f7;
+  --surface-hover: #f5f6f8;
+  --border: #e4e7ec;
+  --border-strong: #d0d5dd;
+  --foreground: #101828;
+  --foreground-soft: #344054;
+  --muted: #667085;
+  --overlay: rgb(16 24 40 / 0.45);
+
+  --danger: #d92d20;
+  --success: #079455;
+  --warning: #dc6803;
+  --danger-soft: #fef3f2;
+  --success-soft: #ecfdf3;
+  --warning-soft: #fffaeb;
+
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-md: 0 4px 8px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
+  --shadow-lg: 0 12px 24px -6px rgb(16 24 40 / 0.14), 0 4px 8px -4px rgb(16 24 40 / 0.06);
+
+  /* Sidebar (light by default) */
+  --sidebar: var(--surface);
+  --sidebar-border: var(--border);
+  --sidebar-heading: var(--foreground);
+  --sidebar-foreground: var(--foreground-soft);
+  --sidebar-muted: var(--muted);
+  --sidebar-hover: var(--surface-muted);
+  --sidebar-active: color-mix(in srgb, var(--brand) 10%, var(--surface));
+  --sidebar-active-foreground: var(--brand);
+
+  /* Density & shape */
+  --control-h: 2.25rem;
+  --card-p: 1.25rem;
+  --row-py: 0.75rem;
+  --radius: 0.5rem;
+
+  --app-font: var(--font-inter);
+  --sidebar-w: 16rem;
+  color-scheme: light;
+}
+
+[data-nav='collapsed'] {
+  --sidebar-w: 4.5rem;
+}
+
+[data-mode='dark'] {
+  --background: #0c111d;
+  --surface: #121826;
+  --surface-muted: #1a2232;
+  --surface-hover: #1d2638;
+  --border: #253046;
+  --border-strong: #344054;
+  --foreground: #f2f4f7;
+  --foreground-soft: #cfd4dc;
+  --muted: #98a2b3;
+  --overlay: rgb(0 0 0 / 0.6);
+
+  --danger: #f97066;
+  --success: #47cd89;
+  --warning: #fdb022;
+  --danger-soft: rgb(249 112 102 / 0.12);
+  --success-soft: rgb(71 205 137 / 0.12);
+  --warning-soft: rgb(253 176 34 / 0.12);
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 10px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 16px 32px -8px rgb(0 0 0 / 0.55);
+
+  --sidebar-active: color-mix(in srgb, var(--brand) 18%, var(--surface));
+  --sidebar-active-foreground: color-mix(in srgb, var(--brand) 60%, white);
+  color-scheme: dark;
+}
+
+[data-sidebar='dark'] {
+  --sidebar: #0f1729;
+  --sidebar-border: #0f1729;
+  --sidebar-heading: #ffffff;
+  --sidebar-foreground: #c3cad5;
+  --sidebar-muted: #7d8899;
+  --sidebar-hover: rgb(255 255 255 / 0.06);
+  --sidebar-active: rgb(255 255 255 / 0.1);
+  --sidebar-active-foreground: #ffffff;
+}
+
+[data-density='compact'] {
+  --control-h: 2rem;
+  --card-p: 1rem;
+  --row-py: 0.5rem;
+}
+
+[data-radius='sharp'] {
+  --radius: 0.25rem;
+}
+[data-radius='rounded'] {
+  --radius: 0.875rem;
+}
+
+[data-font='geist'] {
+  --app-font: var(--font-geist);
+}
+[data-font='plex'] {
+  --app-font: var(--font-plex);
+}
+[data-font='manrope'] {
+  --app-font: var(--font-manrope);
 }
 
 @theme inline {
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --color-brand-soft: color-mix(in srgb, var(--brand) 12%, white);
+  --color-brand-soft: color-mix(in srgb, var(--brand) 12%, var(--surface));
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
+  --color-foreground-soft: var(--foreground-soft);
   --color-muted: var(--muted);
+  --color-overlay: var(--overlay);
   --color-danger: var(--danger);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-danger-soft: var(--danger-soft);
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
   --color-sidebar: var(--sidebar);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-heading: var(--sidebar-heading);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-foreground: var(--sidebar-active-foreground);
+
+  --radius-ui: var(--radius);
+  --radius-ui-lg: calc(var(--radius) + 0.25rem);
+  --shadow-ui-sm: var(--shadow-sm);
+  --shadow-ui-md: var(--shadow-md);
+  --shadow-ui-lg: var(--shadow-lg);
+
+  --font-sans: var(--app-font), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', monospace;
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-pop-in: pop-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in-right: slide-in-right 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in-left: slide-in-left 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-html,
-body {
-  background: var(--background);
-  color: var(--foreground);
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+}
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
 }
 
-body {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
+@layer base {
+  html,
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
 
-* {
-  border-color: var(--border);
-}
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
 
-::selection {
-  background: color-mix(in srgb, var(--brand) 25%, white);
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--brand) 25%, var(--surface));
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--brand) 70%, transparent);
+    outline-offset: 2px;
+  }
 }
 
 .scrollbar-thin {
   scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Theme switches should not animate every element. */
+.theme-transition-off *,
+.theme-transition-off *::before,
+.theme-transition-off *::after {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

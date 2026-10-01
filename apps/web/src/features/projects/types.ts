@@ -1,4 +1,4 @@
-import type { ProjectRole } from '@/shared/constants/domain';
+import type { ProjectHealth, ProjectRole, StatusCategory } from '@/shared/constants/domain';
 import type { LookupCount, LookupRef, UserSummary } from '@/shared/types/api';
 
 export interface ProjectStats {
@@ -26,7 +26,21 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   _count: { members: number; milestones: number; issues: number };
+  /** First few members, for avatar previews. */
+  members: { user: UserSummary }[];
   stats: ProjectStats;
+  /** Present on list results. */
+  loggedMinutes?: number;
+  health?: ProjectHealth;
+}
+
+export interface ProjectSummary {
+  total: number;
+  archived: number;
+  byCategory: Record<StatusCategory, number>;
+  members: number;
+  projectsWithOverdue: number;
+  overdueTasks: number;
 }
 
 export interface ProjectDetail extends Project {
@@ -47,6 +61,7 @@ export interface ProjectQuery {
   limit?: number;
   search?: string;
   statusId?: string;
+  statusCategory?: StatusCategory;
   archived?: boolean;
   sortBy?: 'name' | 'createdAt' | 'updatedAt' | 'endDate' | 'key';
   sortOrder?: 'asc' | 'desc';

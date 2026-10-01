@@ -36,8 +36,8 @@ export function Dropdown({ trigger, children, align = 'right', className }: Drop
         <div
           role="menu"
           className={cn(
-            'absolute z-40 mt-2 min-w-48 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-xl',
-            align === 'right' ? 'right-0' : 'left-0',
+            'absolute z-40 mt-2 min-w-52 max-w-[calc(100vw-1.5rem)] animate-pop-in overflow-hidden rounded-ui-lg border border-border bg-surface p-1 shadow-ui-lg',
+            align === 'right' ? 'right-0 origin-top-right' : 'left-0 origin-top-left',
             className,
           )}
         >
@@ -54,9 +54,16 @@ export function DropdownItem({ onClick, children, danger }: { onClick: () => voi
       type="button"
       role="menuitem"
       onClick={onClick}
-      className={cn('flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface-muted', danger && 'text-danger')}
+      className={cn(
+        'flex w-full items-center gap-2.5 rounded-[calc(var(--radius)-2px)] px-2.5 py-2 text-left text-sm transition-colors [&_svg]:size-4 [&_svg]:text-muted',
+        danger ? 'text-danger hover:bg-danger-soft [&_svg]:text-danger' : 'text-foreground-soft hover:bg-surface-muted hover:text-foreground',
+      )}
     >
       {children}
     </button>
   );
+}
+
+export function DropdownSeparator() {
+  return <div className="-mx-1 my-1 h-px bg-border" />;
 }

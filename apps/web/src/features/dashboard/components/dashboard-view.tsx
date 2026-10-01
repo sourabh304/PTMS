@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Bug, CheckCircle2, Clock, Flag, FolderKanban, ListTodo, UserCheck } from 'lucide-react';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { useSession } from '@/features/auth/api';
 import { ActivityFeed } from '@/features/activity/components/activity-feed';
 import { routes } from '@/shared/config/routes';
@@ -33,15 +34,17 @@ export function DashboardView() {
     <>
       <PageHeader title={`${greeting()}, ${user?.firstName ?? ''}`} description="Here is what is happening across your projects." />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Active projects" value={counts.activeProjects} icon={<FolderKanban className="h-5 w-5" />} />
-        <StatCard label="Open tasks" value={counts.openTasks} icon={<ListTodo className="h-5 w-5" />} hint={`${counts.myOpenTasks} assigned to you`} />
-        <StatCard label="Overdue tasks" value={counts.overdueTasks} icon={<AlertTriangle className="h-5 w-5" />} tone="danger" />
-        <StatCard label="Open issues" value={counts.openIssues} icon={<Bug className="h-5 w-5" />} tone="warning" hint={`${counts.myOpenIssues} assigned to you`} />
-        <StatCard label="Completed this week" value={counts.completedThisWeek} icon={<CheckCircle2 className="h-5 w-5" />} tone="success" />
-        <StatCard label="My time this week" value={formatMinutes(counts.minutesThisWeek)} icon={<Clock className="h-5 w-5" />} />
-        <StatCard label="My open tasks" value={counts.myOpenTasks} icon={<UserCheck className="h-5 w-5" />} />
-        <StatCard label="Upcoming milestones" value={data.upcomingMilestones.length} icon={<Flag className="h-5 w-5" />} />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard label="Active projects" value={counts.activeProjects} icon={<FolderKanban />} hint={`${data.upcomingMilestones.length} upcoming milestones`} />
+        <StatCard label="Open tasks" value={counts.openTasks} icon={<ListTodo />} hint={`${counts.myOpenTasks} assigned to you`} />
+        <StatCard label="Overdue tasks" value={counts.overdueTasks} icon={<AlertTriangle />} tone="danger" hint="Past due and not completed" />
+        <StatCard label="Open issues" value={counts.openIssues} icon={<Bug />} tone="warning" hint={`${counts.myOpenIssues} assigned to you`} />
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <WeekMetric icon={<CheckCircle2 />} label="Tasks completed this week" value={counts.completedThisWeek} />
+        <WeekMetric icon={<Clock />} label="Your time logged this week" value={formatMinutes(counts.minutesThisWeek)} />
+        <WeekMetric icon={<UserCheck />} label="Your open tasks" value={counts.myOpenTasks} />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
@@ -96,8 +99,8 @@ export function DashboardView() {
           <CardBody className="space-y-3">
             {data.upcomingMilestones.length === 0 && <p className="text-sm text-muted">No upcoming milestones.</p>}
             {data.upcomingMilestones.map((milestone) => (
-              <Link key={milestone.id} href={routes.projectMilestones(milestone.project.id)} className="flex items-start gap-3 rounded-lg p-2 hover:bg-surface-muted">
-                <Flag className="mt-0.5 h-4 w-4 shrink-0" style={{ color: milestone.project.color ?? 'var(--brand)' }} />
+              <Link key={milestone.id} href={routes.projectMilestones(milestone.project.id)} className="flex items-start gap-3 rounded-ui p-2 hover:bg-surface-muted">
+                <Flag className="mt-0.5 size-4 shrink-0" style={{ color: milestone.project.color ?? 'var(--brand)' }} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{milestone.name}</p>
                   <p className="text-xs text-muted">
@@ -143,5 +146,15 @@ export function DashboardView() {
         </Card>
       </div>
     </>
+  );
+}
+
+function WeekMetric({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 rounded-ui-lg border border-border bg-surface px-4 py-3 shadow-ui-sm">
+      <span className="text-muted [&_svg]:size-4">{icon}</span>
+      <span className="min-w-0 flex-1 truncate text-sm text-muted">{label}</span>
+      <span className="text-sm font-semibold tabular-nums text-foreground">{value}</span>
+    </div>
   );
 }

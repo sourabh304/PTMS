@@ -23,14 +23,14 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Open tasks" value={data.stats.openTasks} icon={<ListTodo className="h-5 w-5" />} hint={`${data.stats.totalTasks} total`} />
-        <StatCard label="Completed" value={data.stats.completedTasks} icon={<CheckCircle2 className="h-5 w-5" />} tone="success" hint={`${data.stats.progress}% done`} />
-        <StatCard label="Overdue" value={data.stats.overdueTasks} icon={<AlertTriangle className="h-5 w-5" />} tone="danger" />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard label="Open tasks" value={data.stats.openTasks} icon={<ListTodo className="size-5" />} hint={`${data.stats.totalTasks} total`} />
+        <StatCard label="Completed" value={data.stats.completedTasks} icon={<CheckCircle2 className="size-5" />} tone="success" hint={`${data.stats.progress}% done`} />
+        <StatCard label="Overdue" value={data.stats.overdueTasks} icon={<AlertTriangle className="size-5" />} tone="danger" />
         <StatCard
           label="Time logged"
           value={formatMinutes(data.loggedMinutes)}
-          icon={<Clock className="h-5 w-5" />}
+          icon={<Clock className="size-5" />}
           tone="warning"
           hint={`${formatMinutes(data.billableMinutes)} billable`}
         />
@@ -61,8 +61,8 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
               <Metric label="Overdue" value={data.milestones.overdue} danger={data.milestones.overdue > 0} />
             </div>
             {data.milestones.next ? (
-              <div className="flex items-center gap-3 rounded-lg bg-surface-muted p-3 text-sm">
-                <Flag className="h-4 w-4 text-brand" />
+              <div className="flex items-center gap-3 rounded-ui bg-surface-muted p-3 text-sm">
+                <Flag className="size-4 text-brand" />
                 <div>
                   <p className="font-medium">{data.milestones.next.name}</p>
                   <p className="text-xs text-muted">Next milestone · due {formatDate(data.milestones.next.dueDate)}</p>
@@ -145,7 +145,7 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
 
 function Metric({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
   return (
-    <div className="rounded-lg bg-surface-muted py-2">
+    <div className="rounded-ui bg-surface-muted py-2">
       <p className={`text-xl font-semibold ${danger ? 'text-danger' : ''}`}>{value}</p>
       <p className="text-xs text-muted">{label}</p>
     </div>

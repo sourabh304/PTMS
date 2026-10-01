@@ -8,16 +8,39 @@ export interface NavItem {
   icon: LucideIcon;
   /** Hidden unless the user holds this permission. */
   permission?: Permission;
+  /** Counter shown as a badge (key of the nav-counts API response). */
+  badge?: 'myOpenTasks' | 'projects';
 }
 
-export const MAIN_NAVIGATION: NavItem[] = [
-  { label: 'Dashboard', href: routes.dashboard, icon: LayoutDashboard },
-  { label: 'My Work', href: routes.myWork, icon: CheckSquare },
-  { label: 'Projects', href: routes.projects, icon: FolderKanban },
-  { label: 'Timesheets', href: routes.timesheets, icon: Clock },
-  { label: 'Reports', href: routes.reports, icon: BarChart3, permission: Permission.REPORTS_VIEW },
+export interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+export const NAVIGATION: NavSection[] = [
+  {
+    label: 'Workspace',
+    items: [
+      { label: 'Dashboard', href: routes.dashboard, icon: LayoutDashboard },
+      { label: 'My Work', href: routes.myWork, icon: CheckSquare, badge: 'myOpenTasks' },
+      { label: 'Projects', href: routes.projects, icon: FolderKanban, badge: 'projects' },
+      { label: 'Timesheets', href: routes.timesheets, icon: Clock },
+    ],
+  },
+  {
+    label: 'Insights',
+    items: [{ label: 'Reports', href: routes.reports, icon: BarChart3, permission: Permission.REPORTS_VIEW }],
+  },
+  {
+    label: 'Administration',
+    items: [{ label: 'Settings', href: routes.settings, icon: Settings }],
+  },
 ];
 
-export const SECONDARY_NAVIGATION: NavItem[] = [
-  { label: 'Settings', href: routes.settings, icon: Settings, permission: Permission.USERS_VIEW },
+/** Settings sub-pages; Appearance is personal and available to everyone. */
+export const SETTINGS_NAVIGATION: (Omit<NavItem, 'icon'> & { description: string })[] = [
+  { label: 'Appearance', href: routes.settingsAppearance, description: 'Theme, colors and fonts' },
+  { label: 'Organization', href: routes.settingsOrganization, description: 'Name, brand color and working time', permission: Permission.USERS_VIEW },
+  { label: 'Users', href: routes.settingsUsers, description: 'People and access', permission: Permission.USERS_VIEW },
+  { label: 'Workflow', href: routes.settingsWorkflow, description: 'Statuses, priorities and severities', permission: Permission.USERS_VIEW },
 ];

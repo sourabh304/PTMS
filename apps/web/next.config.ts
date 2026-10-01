@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import packageJson from './package.json';
 
 const apiBasePath = process.env.NEXT_PUBLIC_API_BASE_PATH ?? '/api';
 const apiProxyTarget = process.env.API_PROXY_TARGET;
@@ -10,6 +11,11 @@ if (!apiProxyTarget) {
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  env: {
+    NEXT_PUBLIC_APP_VERSION: packageJson.version,
+  },
+  // Keep the dev-only badge away from the sidebar.
+  devIndicators: { position: 'bottom-right' },
   async rewrites() {
     return [{ source: `${apiBasePath}/:path*`, destination: `${apiProxyTarget}/:path*` }];
   },

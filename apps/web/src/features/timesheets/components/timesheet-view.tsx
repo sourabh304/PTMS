@@ -137,17 +137,17 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
           </Select>
         </div>
         <Button onClick={() => setEditing('new')} disabled={!!project && (!project.access.canEdit || project.isArchived)}>
-          <Plus className="h-4 w-4" /> Log time
+          <Plus className="size-4" /> Log time
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Total logged" value={formatMinutes(summary?.totalMinutes)} icon={<Clock className="h-5 w-5" />} hint={`${summary?.entries ?? 0} entries`} />
-        <StatCard label="Billable" value={formatMinutes(summary?.billableMinutes)} icon={<Check className="h-5 w-5" />} tone="success" />
+        <StatCard label="Total logged" value={formatMinutes(summary?.totalMinutes)} icon={<Clock className="size-5" />} hint={`${summary?.entries ?? 0} entries`} />
+        <StatCard label="Billable" value={formatMinutes(summary?.billableMinutes)} icon={<Check className="size-5" />} tone="success" />
         <StatCard
           label="Non-billable"
           value={formatMinutes((summary?.totalMinutes ?? 0) - (summary?.billableMinutes ?? 0))}
-          icon={<X className="h-5 w-5" />}
+          icon={<X className="size-5" />}
           tone="warning"
         />
       </div>
@@ -165,7 +165,7 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
         ) : isError ? (
           <ErrorState message={errorMessage(error)} onRetry={refetch} />
         ) : !data?.data.length ? (
-          <EmptyState icon={<Clock className="h-6 w-6" />} title="No time logged in this period" />
+          <EmptyState icon={<Clock className="size-6" />} title="No time logged in this period" />
         ) : (
           <>
             <Table>
@@ -208,21 +208,21 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
                       <div className="flex justify-end gap-1">
                         {canApprove && entry.userId !== session?.id && entry.approvalStatus !== ApprovalStatus.APPROVED && (
                           <Button variant="ghost" size="icon" aria-label="Approve" onClick={() => review.mutate({ id: entry.id, status: ApprovalStatus.APPROVED })}>
-                            <Check className="h-4 w-4 text-success" />
+                            <Check className="size-4 text-success" />
                           </Button>
                         )}
                         {canApprove && entry.userId !== session?.id && entry.approvalStatus !== ApprovalStatus.REJECTED && (
                           <Button variant="ghost" size="icon" aria-label="Reject" onClick={() => review.mutate({ id: entry.id, status: ApprovalStatus.REJECTED })}>
-                            <X className="h-4 w-4 text-danger" />
+                            <X className="size-4 text-danger" />
                           </Button>
                         )}
                         {editable(entry) && (
                           <>
                             <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(entry)}>
-                              <Pencil className="h-4 w-4" />
+                              <Pencil className="size-4" />
                             </Button>
                             <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => setDeleting(entry)}>
-                              <Trash2 className="h-4 w-4 text-danger" />
+                              <Trash2 className="size-4 text-danger" />
                             </Button>
                           </>
                         )}

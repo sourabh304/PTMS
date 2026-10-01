@@ -41,7 +41,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
           title="Project details"
           actions={
             <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-              <Pencil className="h-3.5 w-3.5" /> Edit
+              <Pencil className="size-3.5" /> Edit
             </Button>
           }
         />
@@ -66,7 +66,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
           description="Managers can edit the project; members can work on tasks; viewers have read-only access."
           actions={
             <Button size="sm" onClick={() => setAdding(true)}>
-              <UserPlus className="h-3.5 w-3.5" /> Add members
+              <UserPlus className="size-3.5" /> Add members
             </Button>
           }
         />
@@ -116,7 +116,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
                     <Td>
                       {!isOwner && (
                         <Button variant="ghost" size="icon" aria-label="Remove member" onClick={() => removeMember.mutate(member.userId)}>
-                          <Trash2 className="h-4 w-4 text-danger" />
+                          <Trash2 className="size-4 text-danger" />
                         </Button>
                       )}
                     </Td>
@@ -128,15 +128,15 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
         )}
       </Card>
 
-      <Card className="border-red-200">
+      <Card className="border-danger/30">
         <CardHeader title="Danger zone" />
         <CardBody className="flex flex-wrap gap-3">
           <Button variant="secondary" loading={updateProject.isPending} onClick={() => updateProject.mutate({ isArchived: !project.isArchived })}>
-            {project.isArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+            {project.isArchived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
             {project.isArchived ? 'Restore project' : 'Archive project'}
           </Button>
           <Button variant="danger" onClick={() => setDeleting(true)}>
-            <Trash2 className="h-4 w-4" /> Delete project
+            <Trash2 className="size-4" /> Delete project
           </Button>
         </CardBody>
       </Card>

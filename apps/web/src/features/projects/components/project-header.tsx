@@ -1,17 +1,31 @@
 'use client';
 
-import { Activity, BarChartHorizontal, Bug, Clock, Flag, KanbanSquare, LayoutDashboard, ListChecks, Settings } from 'lucide-react';
+import {
+  Activity,
+  BarChartHorizontal,
+  Bug,
+  CalendarDays,
+  ChevronRight,
+  Clock,
+  Flag,
+  KanbanSquare,
+  LayoutDashboard,
+  ListChecks,
+  Settings,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { routes } from '@/shared/config/routes';
 import { errorMessage } from '@/shared/lib/api-client';
-import { formatDate } from '@/shared/lib/utils';
+import { formatDate, fullName } from '@/shared/lib/utils';
+import { Avatar } from '@/shared/ui/avatar';
 import { Badge, ColorBadge } from '@/shared/ui/badge';
 import { ErrorState, Spinner } from '@/shared/ui/feedback';
 import { LinkTabs, ProgressBar, type TabItem } from '@/shared/ui/layout';
 import { useProject } from '../api';
 
-const icon = 'h-4 w-4';
+const icon = 'size-4';
 
 function projectTabs(id: string, canManage: boolean): TabItem[] {
   return [
@@ -35,33 +49,50 @@ export function ProjectWorkspace({ projectId, children }: { projectId: string; c
 
   return (
     <div>
-      <div className="mb-1 text-xs text-muted">
-        <Link href={routes.projects} className="hover:text-brand">
+      <nav aria-label="Breadcrumb" className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted">
+        <Link href={routes.projects} className="transition-colors hover:text-foreground">
           Projects
-        </Link>{' '}
-        / {project.key}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="h-9 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? 'var(--brand)' }} />
+        </Link>
+        <ChevronRight className="size-3.5" />
+        <span className="font-mono text-foreground-soft">{project.key}</span>
+      </nav>
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="mt-1.5 size-3 shrink-0 rounded-[4px]" style={{ backgroundColor: project.color ?? 'var(--brand)' }} />
           <div className="min-w-0">
-            <h1 className="flex items-center gap-2 truncate text-xl font-semibold tracking-tight">
-              {project.name}
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">{project.name}</h1>
               <ColorBadge color={project.status.color} label={project.status.name} />
               {project.isArchived && <Badge tone="warning">Archived</Badge>}
               {!project.access.canEdit && <Badge>Read only</Badge>}
-            </h1>
-            <p className="text-xs text-muted">
-              {formatDate(project.startDate)} → {formatDate(project.endDate)}
-            </p>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarDays className="size-3.5" />
+                {formatDate(project.startDate)} – {formatDate(project.endDate)}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Avatar user={project.owner} size="xs" className="ring-0" />
+                {fullName(project.owner)}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="size-3.5" />
+                {project._count.members} members
+              </span>
+            </div>
           </div>
         </div>
-        <div className="flex w-56 items-center gap-2">
+        <div className="w-full md:w-64">
+          <div className="mb-1.5 flex justify-between text-xs">
+            <span className="text-muted">
+              {project.stats.completedTasks} of {project.stats.totalTasks} tasks done
+            </span>
+            <span className="font-semibold tabular-nums text-foreground">{project.stats.progress}%</span>
+          </div>
           <ProgressBar value={project.stats.progress} color={project.color ?? undefined} />
-          <span className="text-sm font-semibold">{project.stats.progress}%</span>
         </div>
       </div>
-      <LinkTabs className="mt-4" items={projectTabs(project.id, project.access.canManage)} />
+      <LinkTabs className="mt-6" items={projectTabs(project.id, project.access.canManage)} />
       <div className="pt-6">{children}</div>
     </div>
   );

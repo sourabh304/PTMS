@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { routes } from '@/shared/config/routes';
 import { errorMessage } from '@/shared/lib/api-client';
 import { Button } from '@/shared/ui/button';
-import { Field, Input } from '@/shared/ui/form';
+import { Field, FormAlert, Input } from '@/shared/ui/form';
 import { useAuthConfig, useLogin } from '../api';
 import { loginSchema, type LoginValues } from '../schemas';
 
@@ -34,12 +34,8 @@ export function LoginForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate>
-      {login.isError && (
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {errorMessage(login.error)}
-        </div>
-      )}
+    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+      {login.isError && <FormAlert>{errorMessage(login.error)}</FormAlert>}
       <Field label="Work email" htmlFor="email" error={form.formState.errors.email?.message}>
         <Input id="email" type="email" autoComplete="email" autoFocus {...form.register('email')} />
       </Field>

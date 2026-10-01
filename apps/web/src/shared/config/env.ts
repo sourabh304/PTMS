@@ -9,8 +9,10 @@ const toNumber = (value: string | undefined, fallback: number) => {
 
 export const appConfig = {
   name: process.env.NEXT_PUBLIC_APP_NAME ?? 'Project Tracker',
-  shortName: process.env.NEXT_PUBLIC_APP_SHORT_NAME ?? process.env.NEXT_PUBLIC_APP_NAME ?? 'PT',
   tagline: process.env.NEXT_PUBLIC_APP_TAGLINE ?? '',
+  version: process.env.NEXT_PUBLIC_APP_VERSION ?? '',
+  /** How often the sidebar re-checks API health. */
+  healthPollMs: toNumber(process.env.NEXT_PUBLIC_HEALTH_POLL_MS, 60_000),
   companyName: process.env.NEXT_PUBLIC_COMPANY_NAME ?? '',
   brandColor: process.env.NEXT_PUBLIC_BRAND_COLOR ?? '#2563eb',
   apiBasePath: process.env.NEXT_PUBLIC_API_BASE_PATH ?? '/api',

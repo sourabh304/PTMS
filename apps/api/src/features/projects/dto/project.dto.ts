@@ -16,6 +16,7 @@ import {
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import { PROJECT_ROLES, ProjectRole } from '../../../common/constants/roles.constants';
+import { STATUS_CATEGORIES, StatusCategory } from '../../../common/constants/domain.constants';
 import { NullableString, ToBoolean, TrimString } from '../../../common/transformers/query.transformers';
 import { OptionalDate } from '../../../common/validation/date.decorators';
 import { HEX_COLOR } from '../../lookups/dto/lookup.dto';
@@ -33,6 +34,11 @@ export class ProjectQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   ownerId?: string;
+
+  @ApiPropertyOptional({ enum: STATUS_CATEGORIES, description: 'Filter by the semantic category of the project status' })
+  @IsOptional()
+  @IsIn(STATUS_CATEGORIES)
+  statusCategory?: StatusCategory;
 
   @ApiPropertyOptional({ default: false })
   @IsOptional()

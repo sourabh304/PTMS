@@ -34,14 +34,14 @@ export function MilestoneBoard({ projectId }: { projectId: string }) {
         <p className="text-sm text-muted">Key checkpoints and deliverables for this project.</p>
         {canEdit && (
           <Button onClick={() => setEditing('new')}>
-            <Plus className="h-4 w-4" /> New milestone
+            <Plus className="size-4" /> New milestone
           </Button>
         )}
       </div>
 
       {!milestones?.length ? (
         <Card>
-          <EmptyState icon={<Flag className="h-6 w-6" />} title="No milestones yet" description="Milestones help you track major phases and deadlines." />
+          <EmptyState icon={<Flag className="size-6" />} title="No milestones yet" description="Milestones help you track major phases and deadlines." />
         </Card>
       ) : (
         <div className="relative space-y-4 before:absolute before:bottom-4 before:left-5 before:top-4 before:w-0.5 before:bg-border">
@@ -57,7 +57,7 @@ export function MilestoneBoard({ projectId }: { projectId: string }) {
                   onClick={() => save.mutate({ id: milestone.id, projectId, completed: !done })}
                   className={cn('relative z-[1] mt-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-surface', done ? 'border-success text-success' : late ? 'border-danger text-danger' : 'border-brand text-brand')}
                 >
-                  {done ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                  {done ? <CheckCircle2 className="size-5" /> : <Circle className="size-5" />}
                 </button>
                 <Card className="flex-1 p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -73,10 +73,10 @@ export function MilestoneBoard({ projectId }: { projectId: string }) {
                       {canEdit && (
                         <>
                           <Button variant="ghost" size="icon" aria-label="Edit milestone" onClick={() => setEditing(milestone)}>
-                            <Pencil className="h-4 w-4" />
+                            <Pencil className="size-4" />
                           </Button>
                           <Button variant="ghost" size="icon" aria-label="Delete milestone" onClick={() => setDeleting(milestone)}>
-                            <Trash2 className="h-4 w-4 text-danger" />
+                            <Trash2 className="size-4 text-danger" />
                           </Button>
                         </>
                       )}

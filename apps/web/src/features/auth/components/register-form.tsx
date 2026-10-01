@@ -9,7 +9,7 @@ import { routes } from '@/shared/config/routes';
 import { errorMessage } from '@/shared/lib/api-client';
 import { Button } from '@/shared/ui/button';
 import { EmptyState, Spinner } from '@/shared/ui/feedback';
-import { Field, Input } from '@/shared/ui/form';
+import { Field, FormAlert, Input } from '@/shared/ui/form';
 import { useAuthConfig, useRegister } from '../api';
 import { registerSchema, type RegisterValues } from '../schemas';
 
@@ -53,12 +53,8 @@ function RegisterFormFields({ minLength }: { minLength: number }) {
   });
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate>
-      {register.isError && (
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {errorMessage(register.error)}
-        </div>
-      )}
+    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+      {register.isError && <FormAlert>{errorMessage(register.error)}</FormAlert>}
       <Field label="Organization name" htmlFor="organizationName" error={errors.organizationName?.message}>
         <Input id="organizationName" autoFocus {...form.register('organizationName')} />
       </Field>

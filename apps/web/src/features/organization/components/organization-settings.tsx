@@ -24,14 +24,13 @@ export function OrganizationSettings() {
   const { data: organization, isLoading } = useOrganization();
   const update = useUpdateOrganization();
   const timezones = useMemo(supportedTimezones, []);
-  const [values, setValues] = useState({ name: '', logoUrl: '', primaryColor: '', timezone: 'UTC', weekStartsOn: 1, workingHoursPerDay: 8 });
+  const [values, setValues] = useState({ name: '', primaryColor: '', timezone: 'UTC', weekStartsOn: 1, workingHoursPerDay: 8 });
   const readOnly = !can(Permission.ORG_MANAGE);
 
   useEffect(() => {
     if (!organization) return;
     setValues({
       name: organization.name,
-      logoUrl: organization.logoUrl ?? '',
       primaryColor: organization.primaryColor ?? appConfig.brandColor,
       timezone: organization.timezone,
       weekStartsOn: organization.weekStartsOn,
@@ -44,7 +43,6 @@ export function OrganizationSettings() {
   const submit = () =>
     update.mutate({
       name: values.name.trim(),
-      logoUrl: values.logoUrl.trim() || null,
       primaryColor: values.primaryColor || null,
       timezone: values.timezone,
       weekStartsOn: Number(values.weekStartsOn),
@@ -53,16 +51,13 @@ export function OrganizationSettings() {
 
   return (
     <Card>
-      <CardHeader title="Organization" description="Branding and working preferences used across reports and timesheets." />
+      <CardHeader title="Organization" description="Workspace name, default brand color and working time used in reports and timesheets." />
       <CardBody>
         <fieldset disabled={readOnly} className="grid max-w-3xl gap-4 sm:grid-cols-2">
           <Field label="Organization name" className="sm:col-span-2">
             <Input value={values.name} onChange={(e) => setValues({ ...values, name: e.target.value })} />
           </Field>
-          <Field label="Logo URL" hint="Square image shown in the sidebar" className="sm:col-span-2">
-            <Input type="url" placeholder="https://…" value={values.logoUrl} onChange={(e) => setValues({ ...values, logoUrl: e.target.value })} />
-          </Field>
-          <Field label="Brand color">
+          <Field label="Default brand color" hint="Members can choose a personal accent in Appearance">
             <div className="flex gap-2">
               <Input type="color" className="w-14 p-1" value={values.primaryColor} onChange={(e) => setValues({ ...values, primaryColor: e.target.value })} />
               <Input value={values.primaryColor} onChange={(e) => setValues({ ...values, primaryColor: e.target.value })} />

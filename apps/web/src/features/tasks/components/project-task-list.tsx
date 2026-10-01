@@ -71,10 +71,10 @@ export function ProjectTaskList({ projectId }: { projectId: string }) {
         {canEdit && (
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setEditingList({})}>
-              <FolderPlus className="h-4 w-4" /> Task list
+              <FolderPlus className="size-4" /> Task list
             </Button>
             <Button onClick={() => setCreating({})}>
-              <Plus className="h-4 w-4" /> New task
+              <Plus className="size-4" /> New task
             </Button>
           </div>
         )}
@@ -87,7 +87,7 @@ export function ProjectTaskList({ projectId }: { projectId: string }) {
       ) : !data?.data.length && !taskLists?.length ? (
         <Card>
           <EmptyState
-            icon={<ListChecks className="h-6 w-6" />}
+            icon={<ListChecks className="size-6" />}
             title="No tasks found"
             description="Create a task list to organize work, or add tasks directly."
             action={canEdit && <Button onClick={() => setCreating({})}>New task</Button>}
@@ -99,7 +99,7 @@ export function ProjectTaskList({ projectId }: { projectId: string }) {
             <Card key={list.id}>
               <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
                 <button type="button" onClick={() => toggle(list.id)} className="flex items-center gap-2 text-sm font-semibold">
-                  {collapsed.has(list.id) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {collapsed.has(list.id) ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
                   {list.name}
                   <span className="rounded-full bg-surface-muted px-2 text-xs font-medium text-muted">{tasks.length}</span>
                   {list.milestone && <span className="text-xs font-normal text-muted">⚑ {list.milestone.name}</span>}
@@ -107,13 +107,13 @@ export function ProjectTaskList({ projectId }: { projectId: string }) {
                 {canEdit && (
                   <div className="flex gap-1">
                     <Button variant="ghost" size="sm" onClick={() => setCreating({ taskListId: list.id, milestoneId: list.milestoneId ?? undefined })}>
-                      <Plus className="h-3.5 w-3.5" /> Task
+                      <Plus className="size-3.5" /> Task
                     </Button>
                     <Button variant="ghost" size="icon" aria-label="Rename list" onClick={() => setEditingList(list)}>
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil className="size-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" aria-label="Delete list" onClick={() => setDeletingList(list)}>
-                      <Trash2 className="h-3.5 w-3.5 text-danger" />
+                      <Trash2 className="size-3.5 text-danger" />
                     </Button>
                   </div>
                 )}

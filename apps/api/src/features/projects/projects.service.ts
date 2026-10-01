@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { ActivityAction, EntityType, LookupType, NotificationType } from '../../common/constants/domain.constants';
+import { ActivityAction, EntityType, LookupType, NotificationType, StatusCategory } from '../../common/constants/domain.constants';
 import { ProjectRole } from '../../common/constants/roles.constants';
 import { NotificationLinks } from '../../common/events/domain-events';
 import { EventPublisher } from '../../common/events/event-publisher.service';
@@ -12,11 +12,16 @@ import { LookupsService } from '../lookups/lookups.service';
 import { USER_SUMMARY_SELECT } from '../users/users.select';
 import { AddMembersDto, CreateProjectDto, ProjectQueryDto, UpdateProjectDto } from './dto/project.dto';
 import { ProjectAccessService } from './project-access.service';
-import { ProjectProgressService } from './project-progress.service';
+import { evaluateProjectHealth } from './project-health';
+import { ProjectProgressService, type ProgressStats } from './project-progress.service';
+
+/** Number of member avatars embedded in project payloads (the full list has its own endpoint). */
+const MEMBER_PREVIEW_COUNT = 4;
 
 const PROJECT_INCLUDE = {
   status: true,
   owner: { select: USER_SUMMARY_SELECT },
+  members: { take: MEMBER_PREVIEW_COUNT, orderBy: { createdAt: 'asc' }, select: { user: { select: USER_SUMMARY_SELECT } } },
   _count: { select: { members: true, milestones: true, issues: true } },
 } satisfies Prisma.ProjectInclude;
 
@@ -38,6 +43,7 @@ export class ProjectsService {
       isArchived: query.archived ?? false,
       ...(query.statusId ? { statusId: query.statusId } : {}),
       ...(query.ownerId ? { ownerId: query.ownerId } : {}),
+      ...(query.statusCategory ? { status: { category: query.statusCategory } } : {}),
       ...(query.search
         ? { OR: [{ name: { contains: query.search } }, { key: { contains: query.search.toUpperCase() } }] }
         : {}),
@@ -54,12 +60,33 @@ export class ProjectsService {
       this.prisma.project.count({ where }),
     ]);
 
-    const stats = await this.progress.forProjects(
-      user.organizationId,
-      projects.map((p) => p.id),
-    );
-    const data = projects.map((project) => ({ ...project, stats: stats.get(project.id)! }));
+    const data = await this.withInsights(user.organizationId, projects);
     return this.pagination.build(data, total, page);
+  }
+
+  /** Portfolio-level counts for the projects page header and status tabs. */
+  async summary(user: AuthenticatedUser) {
+    const visible = this.access.visibleProjectsWhere(user);
+    const active: Prisma.ProjectWhereInput = { ...visible, isArchived: false };
+    const [total, archived, byStatus, lookups, members] = await Promise.all([
+      this.prisma.project.count({ where: active }),
+      this.prisma.project.count({ where: { ...visible, isArchived: true } }),
+      this.prisma.project.groupBy({ by: ['statusId'], where: active, _count: { _all: true } }),
+      this.prisma.lookup.findMany({ where: { organizationId: user.organizationId, type: LookupType.PROJECT_STATUS } }),
+      this.prisma.projectMember.findMany({ where: { project: active }, distinct: ['userId'], select: { userId: true } }),
+    ]);
+    const projectIds = (await this.prisma.project.findMany({ where: active, select: { id: true } })).map((p) => p.id);
+    const stats = await this.progress.forProjects(user.organizationId, projectIds);
+
+    const byCategory = Object.fromEntries(Object.values(StatusCategory).map((category) => [category, 0])) as Record<StatusCategory, number>;
+    for (const row of byStatus) {
+      const category = lookups.find((l) => l.id === row.statusId)?.category as StatusCategory | undefined;
+      if (category) byCategory[category] += row._count._all;
+    }
+    const projectsWithOverdue = [...stats.values()].filter((s) => s.overdueTasks > 0).length;
+    const overdueTasks = [...stats.values()].reduce((sum, s) => sum + s.overdueTasks, 0);
+
+    return { total, archived, byCategory, members: members.length, projectsWithOverdue, overdueTasks };
   }
 
   async findOne(user: AuthenticatedUser, id: string) {
@@ -248,6 +275,41 @@ export class ProjectsService {
   }
 
   // ─── Private ─────────────────────────────────────────────────
+
+  /** Adds progress, logged hours and health to a page of projects (batched queries). */
+  private async withInsights<T extends { id: string; endDate: Date | null; budgetHours: number | null; status: { category: string | null } }>(
+    organizationId: string,
+    projects: T[],
+  ): Promise<(T & { stats: ProgressStats; loggedMinutes: number; health: string })[]> {
+    const ids = projects.map((p) => p.id);
+    const [stats, logged] = await Promise.all([
+      this.progress.forProjects(organizationId, ids),
+      ids.length
+        ? this.prisma.timeEntry.groupBy({ by: ['projectId'], where: { projectId: { in: ids } }, _sum: { minutes: true } })
+        : Promise.resolve([]),
+    ]);
+    const now = new Date();
+    return projects.map((project) => {
+      const projectStats = stats.get(project.id)!;
+      const loggedMinutes = logged.find((row) => row.projectId === project.id)?._sum.minutes ?? 0;
+      return {
+        ...project,
+        stats: projectStats,
+        loggedMinutes,
+        health: evaluateProjectHealth(
+          {
+            statusCategory: project.status.category,
+            openTasks: projectStats.openTasks,
+            overdueTasks: projectStats.overdueTasks,
+            endDate: project.endDate,
+            budgetHours: project.budgetHours,
+            loggedMinutes,
+          },
+          now,
+        ),
+      };
+    });
+  }
 
   private async findMembership(projectId: string, userId: string) {
     const member = await this.prisma.projectMember.findUnique({ where: { projectId_userId: { projectId, userId } } });

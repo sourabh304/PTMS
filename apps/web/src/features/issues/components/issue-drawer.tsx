@@ -110,7 +110,7 @@ function IssueBody({ issue, onClose }: { issue: Issue; onClose: () => void }) {
       {canEdit && (
         <div className="border-t border-border pt-4">
           <Button variant="ghost" className="text-danger" onClick={() => setConfirmDelete(true)}>
-            <Trash2 className="h-4 w-4" /> Delete issue
+            <Trash2 className="size-4" /> Delete issue
           </Button>
         </div>
       )}

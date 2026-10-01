@@ -21,6 +21,7 @@ export const routes = {
   settingsOrganization: '/settings/organization',
   settingsUsers: '/settings/users',
   settingsWorkflow: '/settings/workflow',
+  settingsAppearance: '/settings/appearance',
   profile: '/profile',
 } as const;
 

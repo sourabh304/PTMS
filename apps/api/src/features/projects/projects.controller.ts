@@ -23,6 +23,11 @@ export class ProjectsController {
     return this.projects.findAll(user, query);
   }
 
+  @Get('summary')
+  summary(@CurrentUser() user: AuthenticatedUser) {
+    return this.projects.summary(user);
+  }
+
   @Post()
   @RequirePermissions(Permission.PROJECTS_CREATE)
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateProjectDto) {

@@ -45,10 +45,10 @@ export function CommentThread({ target }: { target: CommentTarget }) {
                   {comment.authorId === user?.id && editing?.id !== comment.id && (
                     <span className="ml-auto flex gap-1">
                       <button type="button" aria-label="Edit comment" onClick={() => setEditing({ id: comment.id, body: comment.body })} className="text-muted hover:text-foreground">
-                        <Pencil className="h-3.5 w-3.5" />
+                        <Pencil className="size-3.5" />
                       </button>
                       <button type="button" aria-label="Delete comment" onClick={() => remove.mutate(comment.id)} className="text-muted hover:text-danger">
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="size-3.5" />
                       </button>
                     </span>
                   )}
@@ -70,7 +70,7 @@ export function CommentThread({ target }: { target: CommentTarget }) {
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-1 whitespace-pre-wrap rounded-lg bg-surface-muted px-3 py-2 text-sm">{comment.body}</p>
+                  <p className="mt-1 whitespace-pre-wrap rounded-ui bg-surface-muted px-3 py-2 text-sm">{comment.body}</p>
                 )}
               </div>
             </li>
