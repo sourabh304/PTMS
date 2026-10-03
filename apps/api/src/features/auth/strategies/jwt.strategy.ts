@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import type { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { AuthenticatedUser, JwtAccessPayload } from '../../../common/interfaces/authenticated-user.interface';
+import { JwtAccessPayload, Principal } from '../../../common/interfaces/authenticated-user.interface';
 import { AppConfig } from '../../../config/configuration';
 import { PrismaService } from '../../../prisma/prisma.service';
 
@@ -24,16 +24,28 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  /** Re-reads the user on every request so deactivation and role changes take effect immediately. */
-  async validate(payload: JwtAccessPayload): Promise<AuthenticatedUser> {
+  /**
+   * Re-reads the user on every request so deactivation, role changes and organization
+   * suspension take effect immediately.
+   */
+  async validate(payload: JwtAccessPayload): Promise<Principal> {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, organizationId: true, role: true, firstName: true, lastName: true, isActive: true },
+      select: {
+        id: true,
+        email: true,
+        organizationId: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        isActive: true,
+        organization: { select: { isActive: true } },
+      },
     });
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || (user.organization && !user.organization.isActive)) {
       throw new UnauthorizedException();
     }
-    const { isActive: _isActive, ...authenticated } = user;
-    return authenticated;
+    const { isActive: _isActive, organization: _organization, ...principal } = user;
+    return principal as Principal;
   }
 }

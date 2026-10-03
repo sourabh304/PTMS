@@ -74,7 +74,7 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
   const review = useReviewTimeEntry();
   const remove = useDeleteTimeEntry();
 
-  const range = useMemo(() => resolveRange(preset, session?.organization.weekStartsOn ?? 1, custom), [preset, session, custom]);
+  const range = useMemo(() => resolveRange(preset, session?.organization?.weekStartsOn ?? 1, custom), [preset, session, custom]);
   const filters = {
     projectId,
     ...range,

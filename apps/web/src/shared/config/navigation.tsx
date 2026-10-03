@@ -1,4 +1,4 @@
-import { BarChart3, CheckSquare, Clock, FolderKanban, LayoutDashboard, Settings, type LucideIcon } from 'lucide-react';
+import { BarChart3, Building2, CheckSquare, Clock, CreditCard, FolderKanban, LayoutDashboard, Package, Settings, type LucideIcon } from 'lucide-react';
 import { Permission } from '@/shared/constants/domain';
 import { routes } from './routes';
 
@@ -34,6 +34,19 @@ export const NAVIGATION: NavSection[] = [
   {
     label: 'Administration',
     items: [{ label: 'Settings', href: routes.settings, icon: Settings }],
+  },
+];
+
+/** Navigation of the platform console (root account only). */
+export const PLATFORM_NAVIGATION: NavSection[] = [
+  {
+    label: 'Platform',
+    items: [
+      { label: 'Overview', href: routes.platform, icon: LayoutDashboard },
+      { label: 'Organizations', href: routes.platformOrganizations, icon: Building2 },
+      { label: 'Plans', href: routes.platformPlans, icon: Package },
+      { label: 'Subscriptions', href: routes.platformSubscriptions, icon: CreditCard },
+    ],
   },
 ];
 

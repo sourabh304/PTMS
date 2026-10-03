@@ -108,7 +108,7 @@ export function ProjectList() {
     <>
       {/* Header */}
       <nav aria-label="Breadcrumb" className="mb-2 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wide text-muted">
-        <span className="truncate">{session?.organization.name}</span>
+        <span className="truncate">{session?.organization?.name}</span>
         <span>/</span>
         <span>Projects</span>
         <span>/</span>

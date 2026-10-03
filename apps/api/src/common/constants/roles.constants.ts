@@ -1,10 +1,14 @@
+/** Platform-level role: manages every organization, plan and subscription. Never belongs to an organization. */
+export const PlatformRole = {
+  ROOT: 'ROOT',
+} as const;
+export type PlatformRole = (typeof PlatformRole)[keyof typeof PlatformRole];
+
 /** Organization-wide roles, ordered from most to least privileged. */
 export const OrgRole = {
-  OWNER: 'OWNER',
+  SUPER_ADMIN: 'SUPER_ADMIN',
   ADMIN: 'ADMIN',
-  MANAGER: 'MANAGER',
-  MEMBER: 'MEMBER',
-  GUEST: 'GUEST',
+  EMPLOYEE: 'EMPLOYEE',
 } as const;
 export type OrgRole = (typeof OrgRole)[keyof typeof OrgRole];
 export const ORG_ROLES = Object.values(OrgRole);
@@ -18,7 +22,8 @@ export const ProjectRole = {
 export type ProjectRole = (typeof ProjectRole)[keyof typeof ProjectRole];
 export const PROJECT_ROLES = Object.values(ProjectRole);
 
-export const ORG_ADMIN_ROLES: readonly OrgRole[] = [OrgRole.OWNER, OrgRole.ADMIN];
+export const ORG_ADMIN_ROLES: readonly OrgRole[] = [OrgRole.SUPER_ADMIN, OrgRole.ADMIN];
 export const PROJECT_EDITOR_ROLES: readonly ProjectRole[] = [ProjectRole.MANAGER, ProjectRole.MEMBER];
 
 export const isOrgAdmin = (role: string): boolean => ORG_ADMIN_ROLES.includes(role as OrgRole);
+export const isRoot = (role: string): boolean => role === PlatformRole.ROOT;

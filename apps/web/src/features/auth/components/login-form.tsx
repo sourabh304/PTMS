@@ -8,7 +8,8 @@ import { routes } from '@/shared/config/routes';
 import { errorMessage } from '@/shared/lib/api-client';
 import { Button } from '@/shared/ui/button';
 import { Field, FormAlert, Input } from '@/shared/ui/form';
-import { useAuthConfig, useLogin } from '../api';
+import { PLATFORM_ROOT_ROLE } from '@/shared/constants/domain';
+import { authApi, useAuthConfig, useLogin } from '../api';
 import { loginSchema, type LoginValues } from '../schemas';
 
 /** Only allow same-app relative redirects after login. */
@@ -24,12 +25,15 @@ export function LoginForm() {
   const form = useForm<LoginValues>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
 
   const onSubmit = form.handleSubmit(async (values) => {
+    let destination: string;
     try {
       await login.mutateAsync(values);
+      const me = await authApi.me();
+      destination = me.role === PLATFORM_ROOT_ROLE ? routes.platform : safeNext(searchParams.get('next'));
     } catch {
       return; // surfaced through login.error
     }
-    router.replace(safeNext(searchParams.get('next')));
+    router.replace(destination);
     router.refresh();
   });
 

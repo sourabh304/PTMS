@@ -49,7 +49,7 @@ export class AuthService {
           email,
           firstName: dto.firstName,
           lastName: dto.lastName,
-          role: OrgRole.OWNER,
+          role: OrgRole.SUPER_ADMIN,
           passwordHash,
           lastLoginAt: new Date(),
         },
@@ -60,13 +60,19 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, meta: ClientMeta): Promise<TokenPair> {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase() } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email.toLowerCase() },
+      include: { organization: { select: { isActive: true } } },
+    });
     const valid = user ? await this.passwords.verify(dto.password, user.passwordHash) : false;
     if (!user || !valid) {
       throw new UnauthorizedException('Invalid email or password');
     }
     if (!user.isActive) {
       throw new ForbiddenException('Your account has been deactivated');
+    }
+    if (user.organization && !user.organization.isActive) {
+      throw new ForbiddenException('Your organization has been suspended. Contact the platform administrator.');
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
@@ -76,8 +82,11 @@ export class AuthService {
   async refresh(refreshToken: string | undefined, meta: ClientMeta): Promise<TokenPair> {
     if (!refreshToken) throw new UnauthorizedException('No active session');
     const userId = await this.tokens.consume(refreshToken);
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || !user.isActive) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { organization: { select: { isActive: true } } },
+    });
+    if (!user || !user.isActive || (user.organization && !user.organization.isActive)) {
       throw new UnauthorizedException('No active session');
     }
     return this.tokens.issue(user, meta);

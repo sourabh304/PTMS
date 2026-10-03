@@ -13,7 +13,8 @@ export interface SessionUser {
   hourlyRate: number | null;
   lastLoginAt: string | null;
   createdAt: string;
-  organization: Organization;
+  /** Null for the platform root account. */
+  organization: Organization | null;
   permissions: Permission[];
 }
 

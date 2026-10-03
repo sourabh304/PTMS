@@ -9,6 +9,7 @@ import { PaginationService } from '../../common/pagination/pagination.service';
 import { fullName } from '../../common/utils/string.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupsService } from '../lookups/lookups.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { USER_SUMMARY_SELECT } from '../users/users.select';
 import { AddMembersDto, CreateProjectDto, ProjectQueryDto, UpdateProjectDto } from './dto/project.dto';
 import { ProjectAccessService } from './project-access.service';
@@ -34,6 +35,7 @@ export class ProjectsService {
     private readonly lookups: LookupsService,
     private readonly pagination: PaginationService,
     private readonly events: EventPublisher,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async findAll(user: AuthenticatedUser, query: ProjectQueryDto) {
@@ -102,6 +104,7 @@ export class ProjectsService {
 
   async create(user: AuthenticatedUser, dto: CreateProjectDto) {
     this.assertDateRange(dto.startDate, dto.endDate);
+    await this.subscriptions.assertCapacity(user.organizationId, 'projects');
     const statusId = dto.statusId
       ? (await this.lookups.assertValid(user.organizationId, dto.statusId, LookupType.PROJECT_STATUS)).id
       : await this.lookups.getDefaultId(user.organizationId, LookupType.PROJECT_STATUS);

@@ -33,8 +33,9 @@ export function useDashboard() {
 }
 
 /** Badge counters for the sidebar; refreshed with any task/project change (shares the 'dashboard' key). */
-export function useNavCounts() {
+export function useNavCounts(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: dashboardKeys.navCounts,
     queryFn: () => api.get<{ myOpenTasks: number; projects: number }>('/dashboard/nav-counts'),
     staleTime: 60_000,

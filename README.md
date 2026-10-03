@@ -21,9 +21,26 @@ npm run setup   # creates env files with random secrets, installs, creates & see
 npm run dev     # API on http://localhost:4000, web on http://localhost:3000
 ```
 
-Sign in with the administrator defined by `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
-in `apps/api/.env`. When `SEED_DEMO_DATA=true`, demo users share `SEED_DEMO_USER_PASSWORD`
-(e.g. `priya.sharma@<admin email domain>`). **Change these values before any real deployment.**
+The seed creates two kinds of account (values from `apps/api/.env`):
+
+- **Root** (`ROOT_EMAIL` / `ROOT_PASSWORD`) opens the **Platform console** at `/platform`.
+- **Super Admin** of the seeded organization (`SEED_SUPER_ADMIN_EMAIL` / `SEED_SUPER_ADMIN_PASSWORD`).
+  When `SEED_DEMO_DATA=true`, demo users share `SEED_DEMO_USER_PASSWORD` (e.g. `priya.sharma@<super admin email domain>`).
+
+**Change these values before any real deployment.**
+
+## Accounts and roles
+
+| Account | Scope | Can do |
+| ------- | ----- | ------ |
+| **Root** | Whole platform, no organization | Manage every organization (create, rename, suspend, delete) and is the **only** role that can create, change and delete **plans** and **subscriptions**. Cannot open tenant data. |
+| **Super Admin** | One organization | Everything in the organization, including managing other Super Admins. Each organization keeps at least one. |
+| **Admin** | One organization | Users, settings, workflows, all projects, timesheet approval, reports, view the plan. Cannot change Super Admins. |
+| **Employee** | One organization | Works on the projects they belong to. |
+
+Inside a project, members additionally hold a project role (Manager / Member / Viewer).
+Plan limits (max users / projects) are enforced by the API; set `REQUIRE_ACTIVE_SUBSCRIPTION=true`
+to block adding users and projects for organizations without a current subscription.
 
 API documentation (Swagger) is served at `http://localhost:4000/api/docs` when `SWAGGER_ENABLED=true`.
 
@@ -50,9 +67,10 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Dashboards** – organization dashboard and per-project overview (status mix, priorities, workload, budget burn).
 - **Reports** – portfolio health (on track / at risk / off track) with CSV export, resource utilization vs capacity, time analysis, issue trends.
 - **Activity & notifications** – audit trail per project and in-app notifications for assignments, comments, reviews.
-- **Administration** – users & roles, organization name and default brand color, timezone, working hours, and fully configurable workflows.
+- **Administration** – users & roles (Super Admin, Admin, Employee), organization name and default brand color, timezone, working hours, fully configurable workflows, and a read-only view of the organization's plan and usage.
+- **Platform console (Root)** – overview with MRR, organizations (create with first Super Admin, suspend, delete), plan catalogue and subscriptions with enforced limits.
 - **Appearance** – per-user light/dark/system theme, accent color, font (Inter, Geist, IBM Plex Sans, Manrope), density, corner radius, light/dark sidebar, and a collapsible sidebar (Ctrl/⌘+B).
-- **Security** – httpOnly cookie auth, short-lived access tokens, rotating refresh tokens with reuse detection, bcrypt, Helmet, rate limiting, strict DTO validation, RBAC + project-level authorization.
+- **Security** – httpOnly cookie auth, short-lived access tokens, rotating refresh tokens with reuse detection, bcrypt, Helmet, rate limiting, strict DTO validation, RBAC + project-level authorization, strict separation of platform (root) and tenant routes.
 
 ---
 
@@ -62,7 +80,9 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 | ------- | -------------- |
 | Branding, API path, UI defaults | `apps/web/.env.local` (see `.env.example`) |
 | Ports, CORS, secrets, cookies, rate limits, pagination | `apps/api/.env` (validated with Zod at boot) |
-| Seed admin, demo data | `SEED_*` variables in `apps/api/.env` |
+| Root account, seed organization, demo data | `ROOT_*` and `SEED_*` variables in `apps/api/.env` |
+| Plan enforcement, default plan currency | `REQUIRE_ACTIVE_SUBSCRIPTION`, `DEFAULT_CURRENCY` in `apps/api/.env` |
+| Plans and subscriptions | Database — **Platform console** (root only) |
 | Statuses, priorities, severities | Database, per organization — **Settings → Workflow** |
 | Org name, default brand color, timezone, week start, working hours | Database — **Settings → Organization** |
 | Personal theme, accent, font, density, radius, sidebar | Browser storage — **Settings → Appearance** (options in `apps/web/src/shared/theme/theme.config.ts`) |

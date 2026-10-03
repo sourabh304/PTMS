@@ -38,6 +38,11 @@ export const envSchema = z.object({
 
   DEFAULT_PAGE_SIZE: z.coerce.number().int().positive(),
   MAX_PAGE_SIZE: z.coerce.number().int().positive(),
+
+  /** When true, organizations need a current subscription to add users or projects. */
+  REQUIRE_ACTIVE_SUBSCRIPTION: booleanish.default(false),
+  /** ISO-4217 currency used for new plans when none is given. */
+  DEFAULT_CURRENCY: z.string().regex(/^[A-Z]{3}$/, 'DEFAULT_CURRENCY must be a 3-letter ISO code'),
 });
 
 export type Env = z.infer<typeof envSchema>;

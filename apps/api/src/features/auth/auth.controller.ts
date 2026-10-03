@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@ne
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
+import { AccountScope, ForAccounts } from '../../common/decorators/account-scope.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { configuration } from '../../config/configuration';
@@ -76,6 +77,7 @@ export class AuthController {
   }
 
   @Get('me')
+  @ForAccounts(AccountScope.ANY)
   me(@CurrentUser('id') userId: string) {
     return this.auth.me(userId);
   }

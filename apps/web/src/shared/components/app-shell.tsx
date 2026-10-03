@@ -1,18 +1,19 @@
 'use client';
 
 import { ChevronsUpDown, LogOut, Menu, Palette, PanelLeftClose, PanelLeftOpen, UserRound, X } from 'lucide-react';
-import { useNavCounts } from '@/features/dashboard/api';
-import { GlobalSearch } from '@/features/search/components/global-search';
-import { appConfig } from '@/shared/config/env';
-import { useSystemStatus } from '@/shared/hooks/use-system-status';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLogout, useSession } from '@/features/auth/api';
 import type { SessionUser } from '@/features/auth/types';
+import { useNavCounts } from '@/features/dashboard/api';
 import { NotificationBell } from '@/features/notifications/components/notification-bell';
-import { NAVIGATION, type NavItem } from '@/shared/config/navigation';
+import { GlobalSearch } from '@/features/search/components/global-search';
+import { appConfig } from '@/shared/config/env';
+import { NAVIGATION, PLATFORM_NAVIGATION, type NavItem, type NavSection } from '@/shared/config/navigation';
 import { routes } from '@/shared/config/routes';
+import { PLATFORM_ROOT_ROLE } from '@/shared/constants/domain';
+import { useSystemStatus } from '@/shared/hooks/use-system-status';
 import { cn, fullName, humanize } from '@/shared/lib/utils';
 import { ThemeToggle } from '@/shared/theme/theme-toggle';
 import { useNavCollapsed } from '@/shared/theme/use-nav-collapsed';
@@ -24,30 +25,64 @@ import { Wordmark } from './wordmark';
 
 const isActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
-export function AppShell({ children }: { children: ReactNode }) {
+/** `tenant` is the organization workspace; `platform` is the root account's console. */
+export type ShellVariant = 'tenant' | 'platform';
+
+/** Visible identity of the current workspace in the sidebar. */
+interface WorkspaceInfo {
+  name: string;
+  subtitle: string;
+  caption: string;
+  href: string;
+}
+
+function workspaceOf(user: SessionUser, variant: ShellVariant): WorkspaceInfo {
+  if (variant === 'platform' || !user.organization) {
+    return { name: 'Platform console', subtitle: 'Root access', caption: 'platform', href: routes.platform };
+  }
+  return {
+    name: user.organization.name,
+    subtitle: `${humanize(user.role)} workspace`,
+    caption: user.organization.slug,
+    href: routes.settings,
+  };
+}
+
+export function AppShell({ children, variant = 'tenant' }: { children: ReactNode; variant?: ShellVariant }) {
   const { data: user, isLoading, isError, refetch } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const nav = useNavCollapsed();
+  const platform = variant === 'platform';
+  // The root account lives in the platform console; organization users never see it.
+  const misplaced = !!user && (user.role === PLATFORM_ROOT_ROLE) !== platform;
 
   useEffect(() => setMobileOpen(false), [pathname]);
+  useEffect(() => {
+    if (misplaced) router.replace(platform ? routes.dashboard : routes.platform);
+  }, [misplaced, platform, router]);
 
-  if (isLoading) return <Spinner className="min-h-screen" label="Loading your workspace" />;
+  if (isLoading || misplaced) return <Spinner className="min-h-screen" label="Loading your workspace" />;
   if (isError || !user) return <ErrorState message="We could not load your session." onRetry={() => refetch()} />;
+
+  const navigation = platform ? PLATFORM_NAVIGATION : NAVIGATION;
+  const workspace = workspaceOf(user, variant);
+  const sidebarProps = { user, pathname, navigation, workspace, showCounts: !platform };
 
   return (
     <div className="min-h-screen">
-      <BrandingStyles color={user.organization.primaryColor} />
+      <BrandingStyles color={user.organization?.primaryColor} />
 
       <aside data-collapsible className="fixed inset-y-0 left-0 z-30 hidden w-[var(--sidebar-w)] transition-[width] duration-200 ease-out lg:block">
-        <Sidebar user={user} pathname={pathname} collapsed={nav.collapsed} onToggleCollapse={nav.toggle} />
+        <Sidebar {...sidebarProps} collapsed={nav.collapsed} onToggleCollapse={nav.toggle} />
       </aside>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 animate-fade-in bg-overlay" onClick={() => setMobileOpen(false)} />
           <aside className="relative h-full w-72 max-w-[85vw] animate-slide-in-left shadow-ui-lg">
-            <Sidebar user={user} pathname={pathname} onClose={() => setMobileOpen(false)} />
+            <Sidebar {...sidebarProps} onClose={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
@@ -62,14 +97,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu className="size-5" />
           </button>
-          <div className="flex min-w-0 flex-1 items-center">
-            <GlobalSearch />
-          </div>
+          <div className="flex min-w-0 flex-1 items-center">{!platform && <GlobalSearch />}</div>
           <div className="flex items-center gap-1">
             <ThemeToggle />
-            <NotificationBell />
+            {!platform && <NotificationBell />}
             <div className="mx-1.5 hidden h-6 w-px bg-border sm:block" />
-            <UserMenu user={user} />
+            <UserMenu user={user} variant={variant} />
           </div>
         </header>
         <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
@@ -81,6 +114,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 interface SidebarProps {
   user: SessionUser;
   pathname: string;
+  navigation: NavSection[];
+  workspace: WorkspaceInfo;
+  /** Show tenant counters (open tasks, projects) as badges. */
+  showCounts: boolean;
   /** Mobile drawer close handler. */
   onClose?: () => void;
   /** Desktop only: icon-rail mode. */
@@ -88,16 +125,16 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
-function Sidebar({ user, pathname, onClose, collapsed, onToggleCollapse }: SidebarProps) {
-  const { data: counts } = useNavCounts();
+function Sidebar({ user, pathname, navigation, workspace, showCounts, onClose, collapsed, onToggleCollapse }: SidebarProps) {
+  const { data: counts } = useNavCounts(showCounts);
   const visible = (items: NavItem[]) => items.filter((item) => !item.permission || user.permissions.includes(item.permission));
 
   return (
     <div className="flex h-full flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border px-4 collapsed:justify-center collapsed:px-0">
-        <Link href={routes.dashboard} className="min-w-0 collapsed:hidden">
+        <Link href={navigation[0].items[0].href} className="min-w-0 collapsed:hidden">
           <Wordmark className="block text-sidebar-heading" />
-          <span className="block truncate font-mono text-[10px] uppercase tracking-wider text-sidebar-muted">{user.organization.slug}</span>
+          <span className="block truncate font-mono text-[10px] uppercase tracking-wider text-sidebar-muted">{workspace.caption}</span>
         </Link>
         {onToggleCollapse && (
           <button
@@ -120,7 +157,7 @@ function Sidebar({ user, pathname, onClose, collapsed, onToggleCollapse }: Sideb
       </div>
 
       <nav className="scrollbar-thin flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-3 py-4 collapsed:space-y-3">
-        {NAVIGATION.map((section) => {
+        {navigation.map((section) => {
           const items = visible(section.items);
           if (!items.length) return null;
           return (
@@ -130,7 +167,11 @@ function Sidebar({ user, pathname, onClose, collapsed, onToggleCollapse }: Sideb
               <ul className="space-y-0.5">
                 {items.map((item) => (
                   <li key={item.href}>
-                    <SidebarLink item={item} active={isActive(pathname, item.href)} count={item.badge ? counts?.[item.badge] : undefined} />
+                    <SidebarLink
+                      item={item}
+                      active={item.href === routes.platform ? pathname === item.href : isActive(pathname, item.href)}
+                      count={item.badge ? counts?.[item.badge] : undefined}
+                    />
                   </li>
                 ))}
               </ul>
@@ -141,16 +182,16 @@ function Sidebar({ user, pathname, onClose, collapsed, onToggleCollapse }: Sideb
 
       <div className="shrink-0 space-y-2 border-t border-sidebar-border p-3">
         <Link
-          href={routes.settings}
-          title={user.organization.name}
+          href={workspace.href}
+          title={workspace.name}
           className="flex items-center gap-2.5 rounded-ui border border-sidebar-border px-2.5 py-2 transition-colors hover:bg-sidebar-hover collapsed:justify-center collapsed:border-transparent collapsed:px-0"
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-ui bg-sidebar-hover text-xs font-semibold uppercase text-sidebar-heading">
-            {initialsOf(user.organization.name)}
+            {initialsOf(workspace.name)}
           </span>
           <span className="min-w-0 flex-1 collapsed:hidden">
-            <span className="block truncate text-sm font-medium text-sidebar-heading">{user.organization.name}</span>
-            <span className="block truncate text-xs text-sidebar-muted">{humanize(user.role)} workspace</span>
+            <span className="block truncate text-sm font-medium text-sidebar-heading">{workspace.name}</span>
+            <span className="block truncate text-xs text-sidebar-muted">{workspace.subtitle}</span>
           </span>
           <ChevronsUpDown className="size-3.5 shrink-0 text-sidebar-muted collapsed:hidden" />
         </Link>
@@ -211,7 +252,11 @@ function SidebarLink({ item, active, count }: { item: NavItem; active: boolean; 
   );
 }
 
-function UserMenu({ user }: { user: SessionUser }) {
+function UserMenu({ user, variant }: { user: SessionUser; variant: ShellVariant }) {
+  const links =
+    variant === 'platform'
+      ? { profile: routes.platformProfile, appearance: routes.platformAppearance }
+      : { profile: routes.profile, appearance: routes.settingsAppearance };
   const logout = useLogout();
   const router = useRouter();
 
@@ -248,10 +293,10 @@ function UserMenu({ user }: { user: SessionUser }) {
               <p className="truncate text-xs text-muted">{user.email}</p>
             </div>
             <DropdownSeparator />
-            <DropdownItem onClick={() => go(routes.profile)}>
+            <DropdownItem onClick={() => go(links.profile)}>
               <UserRound /> My profile
             </DropdownItem>
-            <DropdownItem onClick={() => go(routes.settingsAppearance)}>
+            <DropdownItem onClick={() => go(links.appearance)}>
               <Palette /> Appearance
             </DropdownItem>
             <DropdownSeparator />

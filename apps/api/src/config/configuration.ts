@@ -53,6 +53,10 @@ const buildConfiguration = () => {
       defaultPageSize: env.DEFAULT_PAGE_SIZE,
       maxPageSize: env.MAX_PAGE_SIZE,
     },
+    billing: {
+      requireActiveSubscription: env.REQUIRE_ACTIVE_SUBSCRIPTION,
+      defaultCurrency: env.DEFAULT_CURRENCY,
+    },
   };
 };
 

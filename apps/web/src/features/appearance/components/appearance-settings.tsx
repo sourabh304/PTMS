@@ -37,7 +37,7 @@ const FONT_VARIABLES: Record<FontOption, string> = {
 export function AppearanceSettings() {
   const { appearance, update, reset } = useTheme();
   const { data: session } = useSession();
-  const organizationColor = session?.organization.primaryColor ?? appConfig.brandColor;
+  const organizationColor = session?.organization?.primaryColor ?? appConfig.brandColor;
 
   return (
     <div className="space-y-6">
