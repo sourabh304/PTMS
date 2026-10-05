@@ -4,11 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { useSession } from '@/features/auth/api';
 import { LookupSelect } from '@/features/lookups/components/lookup-select';
 import { useActiveUsers } from '@/features/users/api';
 import { UserMultiSelect } from '@/features/users/components/user-multi-select';
 import { appConfig } from '@/shared/config/env';
-import { LookupType } from '@/shared/constants/domain';
+import { LookupType, PLATFORM_ROOT_ROLE } from '@/shared/constants/domain';
 import { compact, fullName, toInputDate } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Field, Input, Select, Textarea } from '@/shared/ui/form';
@@ -61,6 +62,9 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: Props) {
   const create = useCreateProject();
   const update = useUpdateProject(project?.id ?? '');
   const { data: users } = useActiveUsers();
+  const { data: session } = useSession();
+  // The root account is not a member of the organization, so it must assign an owner.
+  const ownerRequired = session?.role === PLATFORM_ROOT_ROLE;
 
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { memberIds: [] } });
   const { errors } = form.formState;
@@ -82,6 +86,10 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: Props) {
   }, [open, project, form]);
 
   const onSubmit = form.handleSubmit((values) => {
+    if (ownerRequired && !values.ownerId) {
+      form.setError('ownerId', { message: 'Choose who owns this project' });
+      return;
+    }
     const payload = {
       ...compact(
         {
@@ -149,9 +157,9 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: Props) {
         <Field label="Status" className="sm:col-span-2">
           <LookupSelect type={LookupType.PROJECT_STATUS} emptyLabel={isEdit ? undefined : 'Default'} {...form.register('statusId')} />
         </Field>
-        <Field label="Owner" className="sm:col-span-3">
+        <Field label="Owner" required={ownerRequired} error={form.formState.errors.ownerId?.message} className="sm:col-span-3">
           <Select {...form.register('ownerId')}>
-            {!isEdit && <option value="">Me</option>}
+            {!isEdit && <option value="">{ownerRequired ? 'Select owner' : 'Me'}</option>}
             {users?.data.map((user) => (
               <option key={user.id} value={user.id}>
                 {fullName(user)}

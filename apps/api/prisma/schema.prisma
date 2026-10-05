@@ -111,14 +111,17 @@ model RefreshToken {
   tokenHash String
   expiresAt DateTime
   revokedAt DateTime?
-  userAgent String?
-  ipAddress String?
-  createdAt DateTime  @default(now())
+  userAgent  String?
+  ipAddress  String?
+  /// "Keep me signed in": longer lifetime and a persistent cookie.
+  persistent Boolean   @default(false)
+  createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
+
 
 /// Configurable, per-organization values: task/issue/project statuses,
 /// priorities and issue severities.

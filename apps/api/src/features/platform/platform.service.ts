@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { BillingInterval, SUBSCRIPTION_STATUSES } from '../../common/constants/domain.constants';
 import { PlatformRole } from '../../common/constants/roles.constants';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -14,6 +14,10 @@ export class PlatformService {
     private readonly prisma: PrismaService,
     private readonly subscriptions: SubscriptionsService,
   ) {}
+
+  async assertOrganization(id: string): Promise<void> {
+    if (!(await this.prisma.organization.count({ where: { id } }))) throw new NotFoundException('Organization not found');
+  }
 
   /** Platform-wide health and revenue snapshot for the root console. */
   async overview() {

@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { OrgRole } from '../../common/constants/roles.constants';
+import { isSuperAdmin, OrgRole } from '../../common/constants/roles.constants';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { Paginated, PaginationService } from '../../common/pagination/pagination.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -97,7 +97,7 @@ export class UsersService {
     if (target.id === actor.id && (dto.role !== undefined || dto.isActive === false)) {
       throw new BadRequestException('You cannot change your own role or deactivate yourself');
     }
-    if (target.role === OrgRole.SUPER_ADMIN && actor.role !== OrgRole.SUPER_ADMIN) {
+    if (target.role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
       throw new ForbiddenException('Only a super admin can modify another super admin');
     }
     if (dto.role) this.assertCanAssignRole(actor, dto.role);
@@ -117,7 +117,7 @@ export class UsersService {
 
   async resetPassword(actor: AuthenticatedUser, id: string, password: string): Promise<void> {
     const target = await this.findOne(actor.organizationId, id);
-    if (target.role === OrgRole.SUPER_ADMIN && actor.role !== OrgRole.SUPER_ADMIN) {
+    if (target.role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
       throw new ForbiddenException('Only a super admin can reset another super admin’s password');
     }
     await this.prisma.user.update({ where: { id }, data: { passwordHash: await this.passwords.hash(password) } });
@@ -151,7 +151,7 @@ export class UsersService {
   }
 
   private assertCanAssignRole(actor: AuthenticatedUser, role: string): void {
-    if (role === OrgRole.SUPER_ADMIN && actor.role !== OrgRole.SUPER_ADMIN) {
+    if (role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
       throw new ForbiddenException('Only a super admin can grant the super admin role');
     }
   }

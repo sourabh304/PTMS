@@ -7,8 +7,8 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { Principal } from '../interfaces/authenticated-user.interface';
 
 /**
- * Keeps the platform and tenant worlds apart: the root account can only reach platform routes
- * (and shared "any" routes), organization users can never reach platform routes.
+ * Keeps the platform and tenant worlds apart: platform routes are root-only, tenant routes need an
+ * organization context (a member's own organization, or the workspace the root account opened).
  */
 @Injectable()
 export class AccountScopeGuard implements CanActivate {
@@ -26,8 +26,10 @@ export class AccountScopeGuard implements CanActivate {
     if (scope === AccountScope.PLATFORM && !root) {
       throw new ForbiddenException('This action requires the platform root account');
     }
-    if (scope === AccountScope.TENANT && (root || !user?.organizationId)) {
-      throw new ForbiddenException('This action is only available inside an organization');
+    if (scope === AccountScope.TENANT && !user?.organizationId) {
+      throw new ForbiddenException(
+        root ? 'Open an organization workspace from the platform console first' : 'This action is only available inside an organization',
+      );
     }
     return true;
   }

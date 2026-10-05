@@ -10,6 +10,13 @@ const toNumber = (value: string | undefined, fallback: number) => {
 export const appConfig = {
   name: process.env.NEXT_PUBLIC_APP_NAME ?? 'Project Tracker',
   tagline: process.env.NEXT_PUBLIC_APP_TAGLINE ?? '',
+  description: process.env.NEXT_PUBLIC_APP_DESCRIPTION ?? '',
+  /** Optional legal / trust links shown on the sign-in page; hidden when empty. */
+  privacyUrl: process.env.NEXT_PUBLIC_PRIVACY_URL ?? '',
+  termsUrl: process.env.NEXT_PUBLIC_TERMS_URL ?? '',
+  securityUrl: process.env.NEXT_PUBLIC_SECURITY_URL ?? '',
+  /** Where people without an account can ask for access; hidden when empty. */
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? '',
   version: process.env.NEXT_PUBLIC_APP_VERSION ?? '',
   /** How often the sidebar re-checks API health. */
   healthPollMs: toNumber(process.env.NEXT_PUBLIC_HEALTH_POLL_MS, 60_000),

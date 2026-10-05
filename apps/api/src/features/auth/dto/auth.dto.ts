@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { TrimString } from '../../../common/transformers/query.transformers';
 import { IsPassword } from '../../../common/validation/password.policy';
 
@@ -14,6 +14,11 @@ export class LoginDto {
   @MinLength(1)
   @MaxLength(128)
   password: string;
+
+  @ApiPropertyOptional({ description: 'Keep me signed in (longer, persistent session)' })
+  @IsOptional()
+  @IsBoolean()
+  remember?: boolean;
 }
 
 export class RegisterDto {

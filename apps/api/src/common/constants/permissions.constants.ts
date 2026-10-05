@@ -35,7 +35,8 @@ const ORGANIZATION_ADMIN_PERMISSIONS: readonly Permission[] = [
 ];
 
 export const ROLE_PERMISSIONS: Record<OrgRole | PlatformRole, readonly Permission[]> = {
-  [PlatformRole.ROOT]: [Permission.PLATFORM_MANAGE],
+  // Root manages the platform and has full super admin authority in any organization it opens.
+  [PlatformRole.ROOT]: [Permission.PLATFORM_MANAGE, ...ORGANIZATION_ADMIN_PERMISSIONS],
   [OrgRole.SUPER_ADMIN]: ORGANIZATION_ADMIN_PERMISSIONS,
   [OrgRole.ADMIN]: ORGANIZATION_ADMIN_PERMISSIONS,
   [OrgRole.EMPLOYEE]: [Permission.USERS_VIEW],

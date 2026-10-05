@@ -25,12 +25,14 @@ describe('AccountScopeGuard', () => {
     expect(run(tenant, {})).toBe(true);
   });
 
-  it('keeps the root account out of tenant routes', () => {
+  it('keeps the root account out of tenant routes until it opens a workspace', () => {
     expect(() => run(root, {})).toThrow(ForbiddenException);
+    expect(run({ ...root, organizationId: 'org-1' }, {})).toBe(true);
   });
 
   it('reserves platform routes for the root account', () => {
     expect(run(root, { scope: AccountScope.PLATFORM })).toBe(true);
+    expect(run({ ...root, organizationId: 'org-1' }, { scope: AccountScope.PLATFORM })).toBe(true);
     expect(() => run(tenant, { scope: AccountScope.PLATFORM })).toThrow(ForbiddenException);
   });
 

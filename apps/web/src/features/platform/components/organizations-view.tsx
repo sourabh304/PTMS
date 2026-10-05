@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, CreditCard, Pause, Play, Plus, Search, Trash2 } from 'lucide-react';
+import { Building2, CreditCard, LogIn, Pause, Play, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { SubscriptionFormModal } from '@/features/subscriptions/components/subscription-form-modal';
 import { SubscriptionStatusBadge } from '@/features/subscriptions/components/subscription-status-badge';
@@ -21,6 +21,7 @@ import { Table, Td, Th, Tr } from '@/shared/ui/table';
 import {
   useCreateOrganization,
   useDeletePlatformOrganization,
+  useEnterWorkspace,
   usePlatformOrganization,
   usePlatformOrganizations,
   useUpdatePlatformOrganization,
@@ -91,6 +92,7 @@ export function OrganizationsView() {
                   <Th className="text-right">Projects</Th>
                   <Th>Status</Th>
                   <Th>Created</Th>
+                  <Th className="w-32" />
                 </tr>
               </thead>
               <tbody>
@@ -122,6 +124,9 @@ export function OrganizationsView() {
                       </Td>
                       <Td>{org.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Suspended</Badge>}</Td>
                       <Td className="whitespace-nowrap text-muted">{formatDate(org.createdAt)}</Td>
+                      <Td onClick={(event) => event.stopPropagation()}>
+                        <OpenWorkspaceButton organizationId={org.id} size="sm" variant="secondary" />
+                      </Td>
                     </Tr>
                   );
                 })}
@@ -160,6 +165,14 @@ function OrganizationDetails({ org, onDeleted }: { org: PlatformOrganizationDeta
 
   return (
     <div className="space-y-6">
+      <section className="flex flex-col gap-3 rounded-ui-lg border border-brand/30 bg-brand-soft/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Manage this workspace</p>
+          <p className="text-xs text-muted">Open the organization with super admin rights: users, settings, projects and reports.</p>
+        </div>
+        <OpenWorkspaceButton organizationId={org.id} />
+      </section>
+
       <section className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <Field label="Organization name">
           <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -266,6 +279,15 @@ function OrganizationDetails({ org, onDeleted }: { org: PlatformOrganizationDeta
         </Field>
       </ConfirmDialog>
     </div>
+  );
+}
+
+function OpenWorkspaceButton({ organizationId, size = 'md', variant = 'primary' }: { organizationId: string; size?: 'sm' | 'md'; variant?: 'primary' | 'secondary' }) {
+  const enter = useEnterWorkspace();
+  return (
+    <Button size={size} variant={variant} loading={enter.isPending} onClick={() => enter.mutate(organizationId)}>
+      {!enter.isPending && <LogIn />} Open workspace
+    </Button>
   );
 }
 

@@ -25,5 +25,7 @@ export const PROJECT_ROLES = Object.values(ProjectRole);
 export const ORG_ADMIN_ROLES: readonly OrgRole[] = [OrgRole.SUPER_ADMIN, OrgRole.ADMIN];
 export const PROJECT_EDITOR_ROLES: readonly ProjectRole[] = [ProjectRole.MANAGER, ProjectRole.MEMBER];
 
-export const isOrgAdmin = (role: string): boolean => ORG_ADMIN_ROLES.includes(role as OrgRole);
 export const isRoot = (role: string): boolean => role === PlatformRole.ROOT;
+/** Root acts with super admin authority inside whichever organization it has opened. */
+export const isSuperAdmin = (role: string): boolean => role === OrgRole.SUPER_ADMIN || isRoot(role);
+export const isOrgAdmin = (role: string): boolean => ORG_ADMIN_ROLES.includes(role as OrgRole) || isRoot(role);

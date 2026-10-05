@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ActivityAction, EntityType, LookupType, NotificationType, StatusCategory } from '../../common/constants/domain.constants';
-import { ProjectRole } from '../../common/constants/roles.constants';
+import { isRoot, ProjectRole } from '../../common/constants/roles.constants';
 import { NotificationLinks } from '../../common/events/domain-events';
 import { EventPublisher } from '../../common/events/event-publisher.service';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
@@ -108,11 +108,15 @@ export class ProjectsService {
     const statusId = dto.statusId
       ? (await this.lookups.assertValid(user.organizationId, dto.statusId, LookupType.PROJECT_STATUS)).id
       : await this.lookups.getDefaultId(user.organizationId, LookupType.PROJECT_STATUS);
+    // The root account works in an organization without being part of it: it must pick an owner
+    // and is never added as a project member.
+    const actingAsRoot = isRoot(user.role);
+    if (actingAsRoot && !dto.ownerId) throw new BadRequestException('Choose a project owner from the organization');
     const ownerId = dto.ownerId ?? user.id;
     await this.assertOrgUsers(user.organizationId, [ownerId, ...(dto.memberIds ?? [])]);
 
     const memberIds = (dto.memberIds ?? []).filter((id) => id !== ownerId && id !== user.id);
-    const managerIds = [...new Set([ownerId, user.id])];
+    const managerIds = [...new Set(actingAsRoot ? [ownerId] : [ownerId, user.id])];
 
     const project = await this.prisma.project.create({
       data: {

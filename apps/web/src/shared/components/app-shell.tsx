@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronsUpDown, LogOut, Menu, Palette, PanelLeftClose, PanelLeftOpen, UserRound, X } from 'lucide-react';
+import { ArrowLeftRight, ChevronsUpDown, LogOut, Menu, Palette, PanelLeftClose, PanelLeftOpen, ShieldCheck, UserRound, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -8,6 +8,7 @@ import { useLogout, useSession } from '@/features/auth/api';
 import type { SessionUser } from '@/features/auth/types';
 import { useNavCounts } from '@/features/dashboard/api';
 import { NotificationBell } from '@/features/notifications/components/notification-bell';
+import { useExitWorkspace } from '@/features/platform/api';
 import { GlobalSearch } from '@/features/search/components/global-search';
 import { appConfig } from '@/shared/config/env';
 import { NAVIGATION, PLATFORM_NAVIGATION, type NavItem, type NavSection } from '@/shared/config/navigation';
@@ -36,13 +37,15 @@ interface WorkspaceInfo {
   href: string;
 }
 
+const isRootUser = (user: SessionUser) => user.role === PLATFORM_ROOT_ROLE;
+
 function workspaceOf(user: SessionUser, variant: ShellVariant): WorkspaceInfo {
   if (variant === 'platform' || !user.organization) {
     return { name: 'Platform console', subtitle: 'Root access', caption: 'platform', href: routes.platform };
   }
   return {
     name: user.organization.name,
-    subtitle: `${humanize(user.role)} workspace`,
+    subtitle: isRootUser(user) ? 'Opened with root access' : `${humanize(user.role)} workspace`,
     caption: user.organization.slug,
     href: routes.settings,
   };
@@ -55,8 +58,9 @@ export function AppShell({ children, variant = 'tenant' }: { children: ReactNode
   const router = useRouter();
   const nav = useNavCollapsed();
   const platform = variant === 'platform';
-  // The root account lives in the platform console; organization users never see it.
-  const misplaced = !!user && (user.role === PLATFORM_ROOT_ROLE) !== platform;
+  const root = !!user && isRootUser(user);
+  // The platform console is root-only; a workspace needs an organization (root gets one by opening it).
+  const misplaced = !!user && (platform ? !root : !user.organization);
 
   useEffect(() => setMobileOpen(false), [pathname]);
   useEffect(() => {
@@ -88,6 +92,7 @@ export function AppShell({ children, variant = 'tenant' }: { children: ReactNode
       )}
 
       <div className="transition-[padding] duration-200 ease-out lg:pl-[var(--sidebar-w)]">
+        {root && !platform && user.organization && <RootWorkspaceBanner organizationName={user.organization.name} />}
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-surface/85 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-surface/75 sm:px-6">
           <button
             type="button"
@@ -252,7 +257,32 @@ function SidebarLink({ item, active, count }: { item: NavItem; active: boolean; 
   );
 }
 
+/** Shown while the root account works inside an organization. */
+function RootWorkspaceBanner({ organizationName }: { organizationName: string }) {
+  const exit = useExitWorkspace();
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-foreground px-4 py-2 text-xs text-background sm:px-6">
+      <span className="flex min-w-0 items-center gap-2">
+        <ShieldCheck className="size-4 shrink-0" />
+        <span className="truncate">
+          Root access · You are managing <strong className="font-semibold">{organizationName}</strong> with super admin rights.
+        </span>
+      </span>
+      <button
+        type="button"
+        onClick={() => exit.mutate()}
+        disabled={exit.isPending}
+        className="inline-flex shrink-0 items-center gap-1.5 font-medium underline-offset-4 hover:underline disabled:opacity-60"
+      >
+        <ArrowLeftRight className="size-3.5" /> Back to platform console
+      </button>
+    </div>
+  );
+}
+
 function UserMenu({ user, variant }: { user: SessionUser; variant: ShellVariant }) {
+  const root = isRootUser(user);
+  const exit = useExitWorkspace();
   const links =
     variant === 'platform'
       ? { profile: routes.platformProfile, appearance: routes.platformAppearance }
@@ -299,6 +329,16 @@ function UserMenu({ user, variant }: { user: SessionUser; variant: ShellVariant 
             <DropdownItem onClick={() => go(links.appearance)}>
               <Palette /> Appearance
             </DropdownItem>
+            {root && variant === 'tenant' && (
+              <DropdownItem
+                onClick={() => {
+                  close();
+                  exit.mutate();
+                }}
+              >
+                <ArrowLeftRight /> Platform console
+              </DropdownItem>
+            )}
             <DropdownSeparator />
             <DropdownItem onClick={signOut} danger>
               <LogOut /> Sign out

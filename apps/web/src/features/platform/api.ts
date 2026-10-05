@@ -1,6 +1,8 @@
 'use client';
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { routes } from '@/shared/config/routes';
 import { api } from '@/shared/lib/api-client';
 import type { Paginated } from '@/shared/types/api';
 import type {
@@ -68,5 +70,33 @@ export function useDeletePlatformOrganization() {
     mutationFn: (id: string) => api.delete(`/platform/organizations/${id}`),
     meta: { successMessage: 'Organization deleted' },
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * Root opens an organization's workspace and acts there with super admin authority.
+ * Every cached query belongs to the previous context, so the cache is reset.
+ */
+export function useEnterWorkspace() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  return useMutation({
+    mutationFn: (organizationId: string) => api.post<void>(`/platform/workspace/${organizationId}`),
+    onSuccess: () => {
+      queryClient.clear();
+      router.push(routes.dashboard);
+    },
+  });
+}
+
+export function useExitWorkspace() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  return useMutation({
+    mutationFn: () => api.delete<void>('/platform/workspace'),
+    onSuccess: () => {
+      queryClient.clear();
+      router.push(routes.platform);
+    },
   });
 }
