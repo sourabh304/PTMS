@@ -1,14 +1,12 @@
-import { ConflictException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OrgRole } from '../../common/constants/roles.constants';
 import { permissionsForRole } from '../../common/constants/permissions.constants';
 import { PASSWORD_POLICY } from '../../common/validation/password.policy';
 import { AppConfig } from '../../config/configuration';
 import { PrismaService } from '../../prisma/prisma.service';
-import { OrganizationsService } from '../organizations/organizations.service';
 import { PasswordService } from '../users/password.service';
 import { USER_PUBLIC_SELECT } from '../users/users.select';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto } from './dto/auth.dto';
 import { ClientMeta, TokenPair, TokenService } from './token.service';
 
 const DAY_MS = 86_400_000;
@@ -19,7 +17,6 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly tokens: TokenService,
     private readonly passwords: PasswordService,
-    private readonly organizations: OrganizationsService,
     private readonly config: ConfigService<AppConfig, true>,
   ) {}
 
@@ -28,38 +25,9 @@ export class AuthService {
     const app = this.config.get('app', { infer: true });
     return {
       appName: app.name,
-      allowPublicRegistration: app.allowPublicRegistration,
       rememberMeDays: Math.round(this.config.get('auth', { infer: true }).rememberTtlMs / DAY_MS),
       passwordPolicy: PASSWORD_POLICY,
     };
-  }
-
-  async register(dto: RegisterDto, meta: ClientMeta): Promise<TokenPair> {
-    if (!this.config.get('app', { infer: true }).allowPublicRegistration) {
-      throw new ForbiddenException('Self sign-up is disabled. Ask your administrator for an account.');
-    }
-    const email = dto.email.toLowerCase();
-    if (await this.prisma.user.findUnique({ where: { email } })) {
-      throw new ConflictException('An account with this email already exists');
-    }
-
-    const passwordHash = await this.passwords.hash(dto.password);
-    const user = await this.prisma.$transaction(async (tx) => {
-      const organization = await this.organizations.provision(tx, dto.organizationName);
-      return tx.user.create({
-        data: {
-          organizationId: organization.id,
-          email,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          role: OrgRole.SUPER_ADMIN,
-          passwordHash,
-          lastLoginAt: new Date(),
-        },
-      });
-    });
-
-    return this.tokens.issue(user, meta);
   }
 
   async login(dto: LoginDto, meta: ClientMeta): Promise<TokenPair> {

@@ -2,7 +2,6 @@
 export const routes = {
   home: '/',
   login: '/login',
-  register: '/register',
   dashboard: '/dashboard',
   myWork: '/my-work',
   projects: '/projects',
@@ -32,4 +31,4 @@ export const routes = {
 } as const;
 
 /** Routes reachable without a session. */
-export const PUBLIC_ROUTES = [routes.login, routes.register];
+export const PUBLIC_ROUTES = [routes.login];

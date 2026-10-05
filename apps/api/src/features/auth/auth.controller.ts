@@ -9,7 +9,7 @@ import { Principal } from '../../common/interfaces/authenticated-user.interface'
 import { configuration } from '../../config/configuration';
 import { AuthCookieService } from './auth-cookie.service';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto } from './dto/auth.dto';
 import { ClientMeta } from './token.service';
 
 /** Stricter rate limit for credential endpoints; resolved lazily at request time once env is loaded. */
@@ -33,15 +33,6 @@ export class AuthController {
   @Get('config')
   config() {
     return this.auth.publicConfig();
-  }
-
-  @Public()
-  @authThrottle()
-  @Post('register')
-  async register(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const tokens = await this.auth.register(dto, this.meta(req));
-    this.cookies.set(res, tokens);
-    return { success: true };
   }
 
   @Public()

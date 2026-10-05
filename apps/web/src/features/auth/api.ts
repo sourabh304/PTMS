@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/lib/api-client';
-import type { AuthConfig, LoginInput, RegisterInput, SessionUser } from './types';
+import type { AuthConfig, LoginInput, SessionUser } from './types';
 
 export const authKeys = {
   session: ['auth', 'session'] as const,
@@ -13,7 +13,6 @@ export const authApi = {
   config: () => api.get<AuthConfig>('/auth/config'),
   me: () => api.get<SessionUser>('/auth/me'),
   login: (input: LoginInput) => api.post<{ success: boolean }>('/auth/login', input, { skipAuthRefresh: true }),
-  register: (input: RegisterInput) => api.post<{ success: boolean }>('/auth/register', input, { skipAuthRefresh: true }),
   logout: () => api.post<void>('/auth/logout', undefined, { skipAuthRefresh: true }),
 };
 
@@ -29,15 +28,6 @@ export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: authApi.login,
-    meta: { silentError: true },
-    onSuccess: () => queryClient.clear(),
-  });
-}
-
-export function useRegister() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: authApi.register,
     meta: { silentError: true },
     onSuccess: () => queryClient.clear(),
   });

@@ -1,7 +1,7 @@
 /**
- * Seeds the platform root account, the default plans, an organization with its super admin,
- * its subscription and (optionally) realistic demo data. Every input comes from environment
- * variables, see .env.example. Each step is idempotent, so the script is safe to re-run.
+ * Seeds the platform root account and the default plans and, when SEED_DEMO_DATA=true,
+ * a demo organization with its super admin, subscription and realistic demo data.
+ * Account details live in seed-data.ts. Each step is idempotent, so the script is safe to re-run.
  */
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
@@ -19,7 +19,7 @@ import { OrgRole, PlatformRole, ProjectRole } from '../src/common/constants/role
 import { slugify } from '../src/common/utils/string.util';
 import { DEFAULT_LOOKUPS } from '../src/features/lookups/lookup.defaults';
 import { ORGANIZATION_DEFAULTS } from '../src/features/organizations/organization.defaults';
-import { DEFAULT_PLANS, DEMO_PROJECTS, DEMO_USERS } from './seed-data';
+import { DEFAULT_PLANS, DEMO_ORGANIZATION, DEMO_PROJECTS, DEMO_USERS, ROOT_ACCOUNT } from './seed-data';
 
 const prisma = new PrismaClient();
 
@@ -37,26 +37,26 @@ const saltRounds = () => Number(requireEnv('BCRYPT_SALT_ROUNDS'));
 
 /** The platform root account: manages every organization, plan and subscription. */
 async function seedRoot(): Promise<void> {
-  const email = requireEnv('ROOT_EMAIL').toLowerCase();
+  const email = ROOT_ACCOUNT.email.toLowerCase();
   if (await prisma.user.findFirst({ where: { role: PlatformRole.ROOT } })) {
     console.log('✔ Root account already exists');
     return;
   }
   if (await prisma.user.findUnique({ where: { email } })) {
-    throw new Error(`ROOT_EMAIL ${email} is already used by an organization user; choose another address`);
+    throw new Error(`Root email ${email} is already used by an organization user; change ROOT_ACCOUNT in seed-data.ts`);
   }
   await prisma.user.create({
     data: {
       organizationId: null,
       email,
-      passwordHash: await bcrypt.hash(requireEnv('ROOT_PASSWORD'), saltRounds()),
-      firstName: requireEnv('ROOT_FIRST_NAME'),
-      lastName: requireEnv('ROOT_LAST_NAME'),
-      jobTitle: 'Platform Administrator',
+      passwordHash: await bcrypt.hash(ROOT_ACCOUNT.password, saltRounds()),
+      firstName: ROOT_ACCOUNT.firstName,
+      lastName: ROOT_ACCOUNT.lastName,
+      jobTitle: ROOT_ACCOUNT.jobTitle,
       role: PlatformRole.ROOT,
     },
   });
-  console.log(`✔ Created root account ${email}`);
+  console.log(`✔ Created root account ${email} (change its password after the first sign-in)`);
 }
 
 async function seedPlans(): Promise<void> {
@@ -69,24 +69,22 @@ async function seedPlans(): Promise<void> {
   console.log(`✔ Created ${DEFAULT_PLANS.length} plans`);
 }
 
-/** Gives the seeded organization a subscription when it has none. */
+/** Gives the demo organization a subscription when it has none. */
 async function seedSubscription(organizationId: string): Promise<void> {
   if (await prisma.subscription.count({ where: { organizationId } })) return;
-  const code = requireEnv('SEED_PLAN_CODE');
+  const code = DEMO_ORGANIZATION.planCode;
   const plan = await prisma.plan.findUnique({ where: { code } });
-  if (!plan) throw new Error(`SEED_PLAN_CODE ${code} does not match any plan`);
+  if (!plan) throw new Error(`Demo plan code ${code} does not match any plan`);
   await prisma.subscription.create({
     data: { organizationId, planId: plan.id, status: SubscriptionStatus.ACTIVE, startDate: today, notes: 'Created by seed' },
   });
   console.log(`✔ Subscribed the organization to the ${plan.name} plan`);
 }
 
-/** Creates the organization, its super admin and demo data; returns the organization id. */
-async function seedOrganization(): Promise<string> {
-  const orgName = requireEnv('SEED_ORG_NAME');
-  const adminEmail = requireEnv('SEED_SUPER_ADMIN_EMAIL').toLowerCase();
-  const adminPassword = requireEnv('SEED_SUPER_ADMIN_PASSWORD');
-  const withDemo = ['true', '1', 'yes'].includes((process.env.SEED_DEMO_DATA ?? 'false').toLowerCase());
+/** Creates the demo organization, its super admin and demo data; returns the organization id. */
+async function seedDemoOrganization(): Promise<string> {
+  const { name: orgName, superAdmin } = DEMO_ORGANIZATION;
+  const adminEmail = superAdmin.email.toLowerCase();
 
   const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (existing?.organizationId) {
@@ -111,20 +109,18 @@ async function seedOrganization(): Promise<string> {
     data: {
       organizationId: organization.id,
       email: adminEmail,
-      passwordHash: await bcrypt.hash(adminPassword, saltRounds()),
-      firstName: requireEnv('SEED_SUPER_ADMIN_FIRST_NAME'),
-      lastName: requireEnv('SEED_SUPER_ADMIN_LAST_NAME'),
-      jobTitle: 'Administrator',
+      passwordHash: await bcrypt.hash(superAdmin.password, saltRounds()),
+      firstName: superAdmin.firstName,
+      lastName: superAdmin.lastName,
+      jobTitle: superAdmin.jobTitle,
       role: OrgRole.SUPER_ADMIN,
     },
   });
   console.log(`✔ Created organization "${orgName}" and super admin ${adminEmail}`);
 
-  if (!withDemo) return organization.id;
-
   // ─── Demo users ─────────────────────────────────────────────
   const domain = adminEmail.split('@')[1];
-  const demoPasswordHash = await bcrypt.hash(requireEnv('SEED_DEMO_USER_PASSWORD'), saltRounds());
+  const demoPasswordHash = await bcrypt.hash(DEMO_ORGANIZATION.userPassword, saltRounds());
   const users = [admin];
   for (const demo of DEMO_USERS) {
     users.push(
@@ -306,14 +302,16 @@ async function seedOrganization(): Promise<string> {
     console.log(`✔ Seeded demo project ${spec.key} - ${spec.name}`);
   }
 
-  console.log(`✔ Demo users can sign in with the SEED_DEMO_USER_PASSWORD value (e.g. ${DEMO_USERS[0].handle}@${domain})`);
+  console.log(`✔ Demo users sign in with DEMO_ORGANIZATION.userPassword (e.g. ${DEMO_USERS[0].handle}@${domain})`);
   return organization.id;
 }
 
 async function main() {
   await seedRoot();
   await seedPlans();
-  await seedSubscription(await seedOrganization());
+  if (['true', '1', 'yes'].includes((process.env.SEED_DEMO_DATA ?? 'false').toLowerCase())) {
+    await seedSubscription(await seedDemoOrganization());
+  }
 }
 
 main()

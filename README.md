@@ -23,9 +23,11 @@ npm run dev     # API on http://localhost:4000, web on http://localhost:3000
 
 The seed creates two kinds of account (values from `apps/api/.env`):
 
-- **Root** (`ROOT_EMAIL` / `ROOT_PASSWORD`) opens the **Platform console** at `/platform`.
-- **Super Admin** of the seeded organization (`SEED_SUPER_ADMIN_EMAIL` / `SEED_SUPER_ADMIN_PASSWORD`).
-  When `SEED_DEMO_DATA=true`, demo users share `SEED_DEMO_USER_PASSWORD` (e.g. `priya.sharma@<super admin email domain>`).
+- **Root** (`ROOT_ACCOUNT` in `apps/api/prisma/seed-data.ts`) opens the **Platform console** at `/platform`
+  and is the only account that can create organizations, plans and subscriptions.
+- With `SEED_DEMO_DATA=true`, a demo organization is created too: its **Super Admin** and the shared demo-user
+  password are defined in `DEMO_ORGANIZATION` (e.g. `priya.sharma@segueit.com`).
+- Change these first-run passwords after signing in.
 
 **Change these values before any real deployment.**
 
@@ -80,7 +82,7 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 | ------- | -------------- |
 | Branding, API path, UI defaults | `apps/web/.env.local` (see `.env.example`) |
 | Ports, CORS, secrets, cookies, rate limits, pagination | `apps/api/.env` (validated with Zod at boot) |
-| Root account, seed organization, demo data | `ROOT_*` and `SEED_*` variables in `apps/api/.env` |
+| Root account, demo organization, demo data | `apps/api/prisma/seed-data.ts`; `SEED_DEMO_DATA` in `apps/api/.env` |
 | Plan enforcement, default plan currency | `REQUIRE_ACTIVE_SUBSCRIPTION`, `DEFAULT_CURRENCY` in `apps/api/.env` |
 | Plans and subscriptions | Database — **Platform console** (root only) |
 | Statuses, priorities, severities | Database, per organization — **Settings → Workflow** |
@@ -117,7 +119,7 @@ apps/
 └─ web/                         Next.js App Router client
    └─ src/
       ├─ app/                   routes only (thin pages composing feature components)
-      │  ├─ (auth)/login, register
+      │  ├─ (auth)/login
       │  └─ (app)/dashboard, my-work, projects/[projectId]/{tasks,board,gantt,…}, timesheets, reports, settings, profile
       ├─ features/              auth, projects, tasks, gantt, milestones, issues, comments,
       │                         timesheets, dashboard, reports, activity, notifications,

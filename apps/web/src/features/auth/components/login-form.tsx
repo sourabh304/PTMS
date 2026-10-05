@@ -2,7 +2,6 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, Eye, EyeOff, Info, Lock, Mail } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -105,22 +104,13 @@ export function LoginForm() {
         Sign in {!isSubmitting && <ArrowRight />}
       </Button>
 
-      {config?.allowPublicRegistration ? (
+      {appConfig.supportEmail && (
         <p className="text-center text-sm text-muted">
-          New to {config.appName}?{' '}
-          <Link href={routes.register} className="font-medium text-brand hover:underline">
-            Create a workspace
-          </Link>
+          Need an account?{' '}
+          <a href={`mailto:${appConfig.supportEmail}`} className="font-medium text-brand hover:underline">
+            Contact your administrator
+          </a>
         </p>
-      ) : (
-        appConfig.supportEmail && (
-          <p className="text-center text-sm text-muted">
-            Need an account?{' '}
-            <a href={`mailto:${appConfig.supportEmail}`} className="font-medium text-brand hover:underline">
-              Contact your administrator
-            </a>
-          </p>
-        )
       )}
     </form>
   );

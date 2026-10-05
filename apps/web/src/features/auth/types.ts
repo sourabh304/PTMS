@@ -20,7 +20,6 @@ export interface SessionUser {
 
 export interface AuthConfig {
   appName: string;
-  allowPublicRegistration: boolean;
   /** Length of a "Keep me signed in" session. */
   rememberMeDays: number;
   passwordPolicy: {
@@ -33,10 +32,4 @@ export interface LoginInput {
   email: string;
   password: string;
   remember?: boolean;
-}
-
-export interface RegisterInput extends LoginInput {
-  organizationName: string;
-  firstName: string;
-  lastName: string;
 }
