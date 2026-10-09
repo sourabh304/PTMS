@@ -23,9 +23,10 @@ import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Checkbox } from '@/shared/ui/form';
 import { PageHeader, Pagination, Segmented } from '@/shared/ui/layout';
+import { TaskCalendar } from '@/features/calendar/components/task-calendar';
 import { bucketFor, DATE_BUCKETS, type DateBucketId } from '../my-work.buckets';
 
-type Tab = 'tasks' | 'issues';
+type Tab = 'tasks' | 'calendar' | 'issues';
 
 export function MyWorkView() {
   const [tab, setTab] = useState<Tab>('tasks');
@@ -44,6 +45,7 @@ export function MyWorkView() {
           onChange={setTab}
           options={[
             { value: 'tasks', label: 'Tasks' },
+            { value: 'calendar', label: 'Calendar' },
             { value: 'issues', label: 'Issues' },
           ]}
         />
@@ -60,9 +62,12 @@ export function MyWorkView() {
         <Checkbox id="my-work-done" label="Show completed" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} />
       </div>
 
-      {tab === 'tasks' ? <TasksByDate search={debounced} showDone={showDone} onOpen={(task) => setTaskId(task.id)} /> : <MyIssues search={debounced} showDone={showDone} onOpen={setIssueId} />}
+      {tab === 'tasks' && <TasksByDate search={debounced} showDone={showDone} onOpen={(task) => setTaskId(task.id)} />}
+      {tab === 'calendar' && <TaskCalendar query={{ mine: true, search: debounced || undefined }} canEdit showProject />}
+      {tab === 'issues' && <MyIssues search={debounced} showDone={showDone} onOpen={setIssueId} />}
 
-      <TaskDetailDrawer taskId={taskId} onClose={() => setTaskId(null)} onOpenTask={setTaskId} />
+      {/* The calendar renders its own task drawer. */}
+      {tab !== 'calendar' && <TaskDetailDrawer taskId={taskId} onClose={() => setTaskId(null)} onOpenTask={setTaskId} />}
       <IssueDrawer issueId={issueId} onClose={() => setIssueId(null)} />
     </>
   );
