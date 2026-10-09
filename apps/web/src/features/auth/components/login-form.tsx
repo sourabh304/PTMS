@@ -7,7 +7,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { appConfig } from '@/shared/config/env';
 import { routes } from '@/shared/config/routes';
-import { PLATFORM_ROOT_ROLE } from '@/shared/constants/domain';
 import { errorMessage } from '@/shared/lib/api-client';
 import { Button } from '@/shared/ui/button';
 import { Checkbox, Field, FormAlert, Input } from '@/shared/ui/form';
@@ -36,8 +35,7 @@ export function LoginForm() {
     let destination: string;
     try {
       await login.mutateAsync(values);
-      const me = await authApi.me();
-      destination = me.role === PLATFORM_ROOT_ROLE ? routes.platform : safeNext(searchParams.get('next'));
+      destination = safeNext(searchParams.get('next'));
     } catch {
       return; // surfaced through login.error
     }

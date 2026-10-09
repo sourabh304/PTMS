@@ -13,8 +13,7 @@ export interface SessionUser {
   hourlyRate: number | null;
   lastLoginAt: string | null;
   createdAt: string;
-  /** For the root account: the workspace it has opened from the platform console, or null. */
-  organization: Organization | null;
+  organization: Organization;
   permissions: Permission[];
 }
 

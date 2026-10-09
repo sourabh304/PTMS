@@ -9,7 +9,7 @@ import { usePasswordMinLength, useSession } from '@/features/auth/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { passwordSchema } from '@/features/auth/schemas';
 import { appConfig } from '@/shared/config/env';
-import { ORG_ADMIN_ROLES, ORG_ROLES, Permission, type OrgRole } from '@/shared/constants/domain';
+import { ORG_ROLES, OrgRole, Permission } from '@/shared/constants/domain';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { errorMessage } from '@/shared/lib/api-client';
 import { formatDateTime, fullName, humanize } from '@/shared/lib/utils';
@@ -112,7 +112,7 @@ export function UserManagement() {
                     </div>
                   </Td>
                   <Td>
-                    <Badge tone={ORG_ADMIN_ROLES.includes(user.role) ? 'brand' : 'neutral'}>{humanize(user.role)}</Badge>
+                    <Badge tone={user.role === OrgRole.PROJECT_MANAGER ? 'brand' : 'neutral'}>{humanize(user.role)}</Badge>
                   </Td>
                   <Td className="text-muted">{user.jobTitle ?? '—'}</Td>
                   <Td>{user.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Deactivated</Badge>}</Td>
@@ -180,7 +180,7 @@ function UserFormModal({ user, onClose, isSelf }: { user: User | 'new' | null; o
       firstName: existing?.firstName ?? '',
       lastName: existing?.lastName ?? '',
       jobTitle: existing?.jobTitle ?? '',
-      role: existing?.role ?? 'EMPLOYEE',
+      role: existing?.role ?? OrgRole.EMPLOYEE,
       hourlyRate: existing?.hourlyRate?.toString() ?? '',
       password: '',
     });
@@ -228,7 +228,7 @@ function UserFormModal({ user, onClose, isSelf }: { user: User | 'new' | null; o
         <Field label="Email" required error={errors.email?.message} className="sm:col-span-2">
           <Input type="email" disabled={!isNew} {...form.register('email')} />
         </Field>
-        <Field label="Role" hint={isSelf ? 'You cannot change your own role' : roleLocked ? 'The root administrator always stays an Admin' : 'Admin: manages people, projects and settings. Employee: works on the projects they are added to.'}>
+        <Field label="Role" hint={isSelf ? 'You cannot change your own role' : 'Project Manager: manages people, projects and settings. Employee: works on the projects they are added to.'}>
           <Select disabled={roleLocked} {...form.register('role')}>
             {ORG_ROLES.map((r) => (
               <option key={r} value={r}>

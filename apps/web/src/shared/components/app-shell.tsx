@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeftRight, ChevronsUpDown, LogOut, Menu, Palette, PanelLeftClose, PanelLeftOpen, ShieldCheck, UserRound, X } from 'lucide-react';
+import { ChevronsUpDown, LogOut, Menu, Palette, PanelLeftClose, PanelLeftOpen, UserRound, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -8,13 +8,11 @@ import { useLogout, useSession } from '@/features/auth/api';
 import type { SessionUser } from '@/features/auth/types';
 import { useNavCounts } from '@/features/dashboard/api';
 import { NotificationBell } from '@/features/notifications/components/notification-bell';
-import { useExitWorkspace } from '@/features/platform/api';
 import { ProjectsNav } from '@/features/projects/components/projects-nav';
 import { GlobalSearch } from '@/features/search/components/global-search';
 import { appConfig } from '@/shared/config/env';
-import { FOOTER_NAVIGATION, NAVIGATION, PLATFORM_NAVIGATION, type NavItem, type NavSection } from '@/shared/config/navigation';
+import { FOOTER_NAVIGATION, NAVIGATION, type NavItem } from '@/shared/config/navigation';
 import { routes } from '@/shared/config/routes';
-import { PLATFORM_ROOT_ROLE } from '@/shared/constants/domain';
 import { useSystemStatus } from '@/shared/hooks/use-system-status';
 import { cn, fullName, humanize } from '@/shared/lib/utils';
 import { ThemeToggle } from '@/shared/theme/theme-toggle';
@@ -27,71 +25,35 @@ import { BrandingStyles } from './branding-styles';
 
 const isActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
-/** `tenant` is the organization workspace; `platform` is the root account's console. */
-export type ShellVariant = 'tenant' | 'platform';
-
-/** Visible identity of the current workspace in the sidebar. */
-interface WorkspaceInfo {
-  name: string;
-  subtitle: string;
-  href: string;
-}
-
-const isRootUser = (user: SessionUser) => user.role === PLATFORM_ROOT_ROLE;
-
-function workspaceOf(user: SessionUser, variant: ShellVariant): WorkspaceInfo {
-  if (variant === 'platform' || !user.organization) {
-    return { name: 'Platform console', subtitle: 'Root access', href: routes.platform };
-  }
-  return {
-    name: user.organization.name,
-    subtitle: isRootUser(user) ? 'Opened with root access' : `${humanize(user.role)} workspace`,
-    href: routes.settings,
-  };
-}
-
-export function AppShell({ children, variant = 'tenant' }: { children: ReactNode; variant?: ShellVariant }) {
+export function AppShell({ children }: { children: ReactNode }) {
   const { data: user, isLoading, isError, refetch } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
   const nav = useNavCollapsed();
-  const platform = variant === 'platform';
-  const root = !!user && isRootUser(user);
-  // The platform console is root-only; a workspace needs an organization (root gets one by opening it).
-  const misplaced = !!user && (platform ? !root : !user.organization);
 
   useEffect(() => setMobileOpen(false), [pathname]);
-  useEffect(() => {
-    if (misplaced) router.replace(platform ? routes.home : routes.platform);
-  }, [misplaced, platform, router]);
 
-  if (isLoading || misplaced) return <Spinner className="min-h-screen" label="Loading your workspace" />;
+  if (isLoading) return <Spinner className="min-h-screen" label="Loading your workspace" />;
   if (isError || !user) return <ErrorState message="We could not load your session." onRetry={() => refetch()} />;
-
-  const navigation = platform ? PLATFORM_NAVIGATION : NAVIGATION;
-  const workspace = workspaceOf(user, variant);
-  const sidebarProps = { user, pathname, navigation, workspace, tenant: !platform };
 
   return (
     <div className="min-h-screen">
-      <BrandingStyles color={user.organization?.primaryColor} />
+      <BrandingStyles color={user.organization.primaryColor} />
 
       <aside data-collapsible className="fixed inset-y-0 left-0 z-30 hidden w-[var(--sidebar-w)] transition-[width] duration-200 ease-out lg:block">
-        <Sidebar {...sidebarProps} collapsed={nav.collapsed} onToggleCollapse={nav.toggle} />
+        <Sidebar user={user} pathname={pathname} collapsed={nav.collapsed} onToggleCollapse={nav.toggle} />
       </aside>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 animate-fade-in bg-overlay" onClick={() => setMobileOpen(false)} />
           <aside className="relative h-full w-72 max-w-[85vw] animate-slide-in-left shadow-ui-lg">
-            <Sidebar {...sidebarProps} onClose={() => setMobileOpen(false)} />
+            <Sidebar user={user} pathname={pathname} onClose={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
 
       <div className="transition-[padding] duration-200 ease-out lg:pl-[var(--sidebar-w)]">
-        {root && !platform && user.organization && <RootWorkspaceBanner organizationName={user.organization.name} />}
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-surface/85 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-surface/75 sm:px-6">
           <button
             type="button"
@@ -101,12 +63,14 @@ export function AppShell({ children, variant = 'tenant' }: { children: ReactNode
           >
             <Menu className="size-5" />
           </button>
-          <div className="flex min-w-0 flex-1 items-center">{!platform && <GlobalSearch />}</div>
+          <div className="flex min-w-0 flex-1 items-center">
+            <GlobalSearch />
+          </div>
           <div className="flex items-center gap-1">
             <ThemeToggle />
-            {!platform && <NotificationBell />}
+            <NotificationBell />
             <div className="mx-1.5 hidden h-6 w-px bg-border sm:block" />
-            <UserMenu user={user} variant={variant} />
+            <UserMenu user={user} />
           </div>
         </header>
         <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
@@ -118,10 +82,6 @@ export function AppShell({ children, variant = 'tenant' }: { children: ReactNode
 interface SidebarProps {
   user: SessionUser;
   pathname: string;
-  navigation: NavSection[];
-  workspace: WorkspaceInfo;
-  /** Organization workspace: shows counters, the project list and settings. */
-  tenant: boolean;
   /** Mobile drawer close handler. */
   onClose?: () => void;
   /** Desktop only: icon-rail mode. */
@@ -129,14 +89,15 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
-function Sidebar({ user, pathname, navigation, workspace, tenant, onClose, collapsed, onToggleCollapse }: SidebarProps) {
-  const { data: counts } = useNavCounts(tenant);
+function Sidebar({ user, pathname, onClose, collapsed, onToggleCollapse }: SidebarProps) {
+  const { data: counts } = useNavCounts();
   const visible = (items: NavItem[]) => items.filter((item) => !item.permission || user.permissions.includes(item.permission));
+  const workspace = user.organization;
 
   return (
     <div data-sidebar-panel className="flex h-full flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border px-4 collapsed:justify-center collapsed:px-0">
-        <Link href={navigation[0].items[0].href} aria-label={`${appConfig.name} home`} className="min-w-0 text-sidebar-heading collapsed:hidden">
+        <Link href={routes.home} aria-label={`${appConfig.name} home`} className="min-w-0 text-sidebar-heading collapsed:hidden">
           <BrandLogo className="flex-col items-start gap-1 [&_img]:h-5 [&>span]:text-[11px] [&>span]:uppercase [&>span]:tracking-wider [&>span]:opacity-70" />
         </Link>
         {onToggleCollapse && (
@@ -160,7 +121,7 @@ function Sidebar({ user, pathname, navigation, workspace, tenant, onClose, colla
       </div>
 
       <nav className="scrollbar-thin flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-3 py-4 collapsed:space-y-3">
-        {navigation.map((section) => {
+        {NAVIGATION.map((section) => {
           const items = visible(section.items);
           if (!items.length) return null;
           return (
@@ -170,33 +131,27 @@ function Sidebar({ user, pathname, navigation, workspace, tenant, onClose, colla
               <ul className="space-y-0.5">
                 {items.map((item) => (
                   <li key={item.href}>
-                    <SidebarLink
-                      item={item}
-                      active={item.href === routes.platform ? pathname === item.href : isActive(pathname, item.href)}
-                      count={item.badge ? counts?.[item.badge] : undefined}
-                    />
+                    <SidebarLink item={item} active={isActive(pathname, item.href)} count={item.badge ? counts?.[item.badge] : undefined} />
                   </li>
                 ))}
               </ul>
             </div>
           );
         })}
-        {tenant && <ProjectsNav pathname={pathname} />}
+        <ProjectsNav pathname={pathname} />
       </nav>
 
-      {tenant && (
-        <ul className="shrink-0 space-y-0.5 border-t border-sidebar-border px-3 pt-3">
-          {visible(FOOTER_NAVIGATION).map((item) => (
-            <li key={item.href}>
-              <SidebarLink item={item} active={isActive(pathname, item.href)} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="shrink-0 space-y-0.5 border-t border-sidebar-border px-3 pt-3">
+        {visible(FOOTER_NAVIGATION).map((item) => (
+          <li key={item.href}>
+            <SidebarLink item={item} active={isActive(pathname, item.href)} />
+          </li>
+        ))}
+      </ul>
 
-      <div className="shrink-0 space-y-2 border-t border-sidebar-border p-3 [ul+&]:border-t-0">
+      <div className="shrink-0 space-y-2 p-3">
         <Link
-          href={workspace.href}
+          href={routes.settings}
           title={workspace.name}
           className="flex items-center gap-2.5 rounded-ui border border-sidebar-border px-2.5 py-2 transition-colors hover:bg-sidebar-hover collapsed:justify-center collapsed:border-transparent collapsed:px-0"
         >
@@ -205,7 +160,7 @@ function Sidebar({ user, pathname, navigation, workspace, tenant, onClose, colla
           </span>
           <span className="min-w-0 flex-1 collapsed:hidden">
             <span className="block truncate text-sm font-medium text-sidebar-heading">{workspace.name}</span>
-            <span className="block truncate text-xs text-sidebar-muted">{workspace.subtitle}</span>
+            <span className="block truncate text-xs text-sidebar-muted">{humanize(user.role)}</span>
           </span>
           <ChevronsUpDown className="size-3.5 shrink-0 text-sidebar-muted collapsed:hidden" />
         </Link>
@@ -266,36 +221,7 @@ function SidebarLink({ item, active, count }: { item: NavItem; active: boolean; 
   );
 }
 
-/** Shown while the root account works inside an organization. */
-function RootWorkspaceBanner({ organizationName }: { organizationName: string }) {
-  const exit = useExitWorkspace();
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-foreground px-4 py-2 text-xs text-background sm:px-6">
-      <span className="flex min-w-0 items-center gap-2">
-        <ShieldCheck className="size-4 shrink-0" />
-        <span className="truncate">
-          Root access · You are managing <strong className="font-semibold">{organizationName}</strong> with super admin rights.
-        </span>
-      </span>
-      <button
-        type="button"
-        onClick={() => exit.mutate()}
-        disabled={exit.isPending}
-        className="inline-flex shrink-0 items-center gap-1.5 font-medium underline-offset-4 hover:underline disabled:opacity-60"
-      >
-        <ArrowLeftRight className="size-3.5" /> Back to platform console
-      </button>
-    </div>
-  );
-}
-
-function UserMenu({ user, variant }: { user: SessionUser; variant: ShellVariant }) {
-  const root = isRootUser(user);
-  const exit = useExitWorkspace();
-  const links =
-    variant === 'platform'
-      ? { profile: routes.platformProfile, appearance: routes.platformAppearance }
-      : { profile: routes.profile, appearance: routes.settingsAppearance };
+function UserMenu({ user }: { user: SessionUser }) {
   const logout = useLogout();
   const router = useRouter();
 
@@ -332,22 +258,12 @@ function UserMenu({ user, variant }: { user: SessionUser; variant: ShellVariant 
               <p className="truncate text-xs text-muted">{user.email}</p>
             </div>
             <DropdownSeparator />
-            <DropdownItem onClick={() => go(links.profile)}>
+            <DropdownItem onClick={() => go(routes.profile)}>
               <UserRound /> My profile
             </DropdownItem>
-            <DropdownItem onClick={() => go(links.appearance)}>
+            <DropdownItem onClick={() => go(routes.settingsAppearance)}>
               <Palette /> Appearance
             </DropdownItem>
-            {root && variant === 'tenant' && (
-              <DropdownItem
-                onClick={() => {
-                  close();
-                  exit.mutate();
-                }}
-              >
-                <ArrowLeftRight /> Platform console
-              </DropdownItem>
-            )}
             <DropdownSeparator />
             <DropdownItem onClick={signOut} danger>
               <LogOut /> Sign out

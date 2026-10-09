@@ -1,4 +1,4 @@
-/** A user signed in to an organization (tenant). All tenant routes receive this shape. */
+/** The signed-in workspace user every protected route receives. */
 export interface AuthenticatedUser {
   id: string;
   email: string;
@@ -8,17 +8,9 @@ export interface AuthenticatedUser {
   lastName: string;
 }
 
-/** The platform root account; it is not part of any organization. */
-export interface PlatformUser extends Omit<AuthenticatedUser, 'organizationId'> {
-  organizationId: null;
-}
-
-/** Whoever is signed in. AccountScopeGuard narrows it to the right shape per route. */
-export type Principal = AuthenticatedUser | PlatformUser;
-
 export interface JwtAccessPayload {
   sub: string;
-  org: string | null;
+  org: string;
   role: string;
 }
 

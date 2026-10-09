@@ -6,7 +6,6 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { CommonModule } from './common/common.module';
 import { EventsModule } from './common/events/event-publisher.service';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
-import { AccountScopeGuard } from './common/guards/account-scope.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { AppConfig, configuration } from './config/configuration';
@@ -20,11 +19,8 @@ import { LookupsModule } from './features/lookups/lookups.module';
 import { MilestonesModule } from './features/milestones/milestones.module';
 import { NotificationsModule } from './features/notifications/notifications.module';
 import { OrganizationsModule } from './features/organizations/organizations.module';
-import { PlansModule } from './features/plans/plans.module';
-import { PlatformModule } from './features/platform/platform.module';
 import { ProjectsModule } from './features/projects/projects.module';
 import { ReportsModule } from './features/reports/reports.module';
-import { SubscriptionsModule } from './features/subscriptions/subscriptions.module';
 import { TaskListsModule } from './features/task-lists/task-lists.module';
 import { TasksModule } from './features/tasks/tasks.module';
 import { TimesheetsModule } from './features/timesheets/timesheets.module';
@@ -62,15 +58,10 @@ import { PrismaModule } from './prisma/prisma.module';
     NotificationsModule,
     DashboardModule,
     ReportsModule,
-    // Platform (root account)
-    PlatformModule,
-    PlansModule,
-    SubscriptionsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: AccountScopeGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_FILTER, useClass: PrismaExceptionFilter },
   ],

@@ -24,12 +24,6 @@ export const routes = {
   settingsWorkflow: '/settings/workflow',
   settingsAppearance: '/settings/appearance',
   profile: '/profile',
-  platform: '/platform',
-  platformOrganizations: '/platform/organizations',
-  platformPlans: '/platform/plans',
-  platformSubscriptions: '/platform/subscriptions',
-  platformProfile: '/platform/profile',
-  platformAppearance: '/platform/appearance',
 } as const;
 
 /** Routes reachable without a session. */

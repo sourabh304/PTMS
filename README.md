@@ -21,28 +21,22 @@ npm run setup   # creates env files with random secrets, installs, creates & see
 npm run dev     # API on http://localhost:4000, web on http://localhost:3000
 ```
 
-The seed creates two kinds of account (values from `apps/api/.env`):
-
-- **Root** (`ROOT_ACCOUNT` in `apps/api/prisma/seed-data.ts`) opens the **Platform console** at `/platform`
-  and is the only account that can create organizations, plans and subscriptions.
-- With `SEED_DEMO_DATA=true`, a demo organization is created too: its **Super Admin** and the shared demo-user
-  password are defined in `DEMO_ORGANIZATION` (e.g. `priya.sharma@segueit.com`).
-- Change these first-run passwords after signing in.
+The seed creates the **SegueIT workspace** and its first **Project Manager** (`WORKSPACE` in
+`apps/api/prisma/seed-data.ts`). With `SEED_DEMO_DATA=true` it also adds demo users and projects; they share
+`DEMO_USER_PASSWORD` (e.g. `priya.sharma@segueit.com`). Change these first-run passwords after signing in.
 
 **Change these values before any real deployment.**
 
 ## Accounts and roles
 
-| Account | Scope | Can do |
-| ------- | ----- | ------ |
-| **Root** | Whole platform, no organization | Manage every organization (create, rename, suspend, delete) and is the **only** role that can create, change and delete **plans** and **subscriptions**. Can open any organization's workspace with Super Admin rights. |
-| **Super Admin** | One organization | Everything in the organization, including managing other Super Admins. Each organization keeps at least one. |
-| **Admin** | One organization | Users, settings, workflows, all projects, timesheet approval, reports, view the plan. Cannot change Super Admins. |
-| **Employee** | One organization | Works on the projects they belong to. |
+There are exactly two roles:
 
-Inside a project, members additionally hold a project role (Manager / Member / Viewer).
-Plan limits (max users / projects) are enforced by the API; set `REQUIRE_ACTIVE_SUBSCRIPTION=true`
-to block adding users and projects for organizations without a current subscription.
+| Role | Can do |
+| ---- | ------ |
+| **Project Manager** | Everything: people and roles, workspace settings and workflows, create and manage every project, approve timesheets, reports. The workspace always keeps at least one active Project Manager. |
+| **Employee** | Works on the projects they are a member of: create and update tasks, issues, comments and their own time. Manages a project only if they own it. |
+
+Projects simply have members; there are no per-project roles.
 
 API documentation (Swagger) is served at `http://localhost:4000/api/docs` when `SWAGGER_ENABLED=true`.
 
@@ -54,16 +48,15 @@ Requirements: **Docker** with Docker Compose. No Node.js needed.
 docker compose up --build
 ```
 
-Open http://localhost:3000 and sign in with the root account from `apps/api/prisma/seed-data.ts`
-(`ROOT_ACCOUNT`), then create organizations from the Platform console. Change its password after signing in.
+Open http://localhost:3000 and sign in with the project manager from `apps/api/prisma/seed-data.ts`
+(`WORKSPACE`). Change its password after signing in.
 Data is kept in the `api-data` volume; JWT secrets are generated on first start and stored there too.
 
 Change settings with environment variables or a `.env` file next to `docker-compose.yml`:
 
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
-| `SEED_DEMO_DATA` | `false` | `true` adds a demo organization with sample users and projects (`DEMO_ORGANIZATION` in seed-data.ts) |
-| `REQUIRE_ACTIVE_SUBSCRIPTION` | `false` | `true` blocks adding users/projects for organizations without a current plan |
+| `SEED_DEMO_DATA` | `false` | `true` adds demo users and projects on the first start |
 | `WEB_PORT` | `3000` | Port on your machine |
 | `COOKIE_SECURE` | `false` | Set `true` when served over HTTPS |
 | `APP_NAME`, `BRAND_COLOR` | SegueIT Projects, `#0b5cad` | Branding (rebuild after changing) |
@@ -100,10 +93,9 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Dashboards** – organization dashboard and per-project overview (status mix, priorities, workload, budget burn).
 - **Reports** – portfolio health (on track / at risk / off track) with CSV export, resource utilization vs capacity, time analysis, issue trends.
 - **Activity & notifications** – audit trail per project and in-app notifications: task/issue assignment, task and issue status changes, due date changes, new comments (creator, assignees and everyone in the thread), added to / removed from a project, time submitted for approval and reviewed, due today/tomorrow and overdue reminders (hourly, in the organization's timezone), and plan changes for organization admins.
-- **Administration** – users & roles (Super Admin, Admin, Employee), organization name and default brand color, timezone, working hours, fully configurable workflows, and a read-only view of the organization's plan and usage.
-- **Platform console (Root)** – overview with MRR, organizations (create with first Super Admin, suspend, delete), plan catalogue and subscriptions with enforced limits.
+- **Administration** – users and roles (Project Manager, Employee), workspace name and default brand color, timezone, working hours and fully configurable workflows.
 - **Appearance** – per-user light/dark/system theme, accent color, font (Figtree, Inter, Geist, IBM Plex Sans, Manrope), density, corner radius, light/dark sidebar, and a collapsible sidebar (Ctrl/⌘+B).
-- **Security** – httpOnly cookie auth, short-lived access tokens, rotating refresh tokens with reuse detection, bcrypt, Helmet, rate limiting, strict DTO validation, RBAC + project-level authorization, strict separation of platform (root) and tenant routes.
+- **Security** – httpOnly cookie auth, short-lived access tokens, rotating refresh tokens with reuse detection, bcrypt, Helmet, rate limiting, strict DTO validation, role-based permissions + project-level authorization.
 
 ---
 
@@ -115,9 +107,7 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 | Main table columns | `apps/web/src/features/tasks/components/table/table-columns.ts` |
 | Group color palette | `apps/web/src/features/task-lists/group-colors.ts` (UI) and `apps/api/src/features/task-lists/task-list.colors.ts` (defaults for new groups) |
 | Ports, CORS, secrets, cookies, rate limits, pagination | `apps/api/.env` (validated with Zod at boot) |
-| Root account, demo organization, demo data | `apps/api/prisma/seed-data.ts`; `SEED_DEMO_DATA` in `apps/api/.env` |
-| Plan enforcement, default plan currency | `REQUIRE_ACTIVE_SUBSCRIPTION`, `DEFAULT_CURRENCY` in `apps/api/.env` |
-| Plans and subscriptions | Database — **Platform console** (root only) |
+| Workspace, first project manager, demo data | `apps/api/prisma/seed-data.ts`; `SEED_DEMO_DATA` in `apps/api/.env` |
 | Statuses, priorities, severities | Database, per organization — **Settings → Workflow** |
 | Org name, default brand color, timezone, week start, working hours | Database — **Settings → Organization** |
 | Personal theme, accent, font, density, radius, sidebar | Browser storage — **Settings → Appearance** (options in `apps/web/src/shared/theme/theme.config.ts`) |
@@ -145,7 +135,7 @@ apps/
 │     ├─ common/                guards, decorators, filters, events, pagination, validation
 │     ├─ prisma/                PrismaService
 │     └─ features/
-│        ├─ auth/  users/  organizations/  platform/  plans/  subscriptions/  lookups/
+│        ├─ auth/  users/  organizations/  lookups/
 │        ├─ projects/  task-lists/  tasks/  milestones/  issues/  comments/
 │        ├─ timesheets/  activity/  notifications/
 │        └─ dashboard/  reports/  health/

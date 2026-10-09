@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ActivityAction, EntityType, LookupType, NotificationType, StatusCategory } from '../../common/constants/domain.constants';
-import { isRoot, ProjectRole } from '../../common/constants/roles.constants';
 import { NotificationLinks } from '../../common/events/domain-events';
 import { EventPublisher } from '../../common/events/event-publisher.service';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
@@ -9,7 +8,6 @@ import { PaginationService } from '../../common/pagination/pagination.service';
 import { fullName } from '../../common/utils/string.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupsService } from '../lookups/lookups.service';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { USER_SUMMARY_SELECT } from '../users/users.select';
 import { AddMembersDto, CreateProjectDto, ProjectQueryDto, UpdateProjectDto } from './dto/project.dto';
 import { ProjectAccessService } from './project-access.service';
@@ -35,7 +33,6 @@ export class ProjectsService {
     private readonly lookups: LookupsService,
     private readonly pagination: PaginationService,
     private readonly events: EventPublisher,
-    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async findAll(user: AuthenticatedUser, query: ProjectQueryDto) {
@@ -121,25 +118,19 @@ export class ProjectsService {
       ...project,
       stats,
       isFavorite: favorite > 0,
-      access: { role: access.memberRole, canEdit: access.canEdit, canManage: access.canManage },
+      access: { isMember: access.isMember, canEdit: access.canEdit, canManage: access.canManage },
     };
   }
 
   async create(user: AuthenticatedUser, dto: CreateProjectDto) {
     this.assertDateRange(dto.startDate, dto.endDate);
-    await this.subscriptions.assertCapacity(user.organizationId, 'projects');
     const statusId = dto.statusId
       ? (await this.lookups.assertValid(user.organizationId, dto.statusId, LookupType.PROJECT_STATUS)).id
       : await this.lookups.getDefaultId(user.organizationId, LookupType.PROJECT_STATUS);
-    // The root account works in an organization without being part of it: it must pick an owner
-    // and is never added as a project member.
-    const actingAsRoot = isRoot(user.role);
-    if (actingAsRoot && !dto.ownerId) throw new BadRequestException('Choose a project owner from the organization');
     const ownerId = dto.ownerId ?? user.id;
     await this.assertOrgUsers(user.organizationId, [ownerId, ...(dto.memberIds ?? [])]);
-
-    const memberIds = (dto.memberIds ?? []).filter((id) => id !== ownerId && id !== user.id);
-    const managerIds = [...new Set(actingAsRoot ? [ownerId] : [ownerId, user.id])];
+    // The creator and the owner always belong to the project.
+    const memberIds = [...new Set([ownerId, user.id, ...(dto.memberIds ?? [])])];
 
     const project = await this.prisma.project.create({
       data: {
@@ -153,12 +144,7 @@ export class ProjectsService {
         startDate: dto.startDate ?? null,
         endDate: dto.endDate ?? null,
         budgetHours: dto.budgetHours ?? null,
-        members: {
-          create: [
-            ...managerIds.map((userId) => ({ userId, role: ProjectRole.MANAGER })),
-            ...memberIds.map((userId) => ({ userId, role: ProjectRole.MEMBER })),
-          ],
-        },
+        members: { create: memberIds.map((userId) => ({ userId })) },
       },
       include: PROJECT_INCLUDE,
     });
@@ -173,7 +159,7 @@ export class ProjectsService {
       summary: `created project ${project.name}`,
     });
     this.events.notify({
-      recipientIds: [...managerIds, ...memberIds],
+      recipientIds: memberIds,
       actorId: user.id,
       type: NotificationType.PROJECT_ADDED,
       title: `You were added to ${project.name}`,
@@ -196,8 +182,8 @@ export class ProjectsService {
       if (dto.ownerId && dto.ownerId !== project.ownerId) {
         await tx.projectMember.upsert({
           where: { projectId_userId: { projectId: id, userId: dto.ownerId } },
-          create: { projectId: id, userId: dto.ownerId, role: ProjectRole.MANAGER },
-          update: { role: ProjectRole.MANAGER },
+          create: { projectId: id, userId: dto.ownerId },
+          update: {},
         });
       }
       return tx.project.update({ where: { id }, data: dto, include: PROJECT_INCLUDE });
@@ -248,7 +234,7 @@ export class ProjectsService {
     const newIds = dto.userIds.filter((id) => !existingIds.has(id));
     if (newIds.length) {
       await this.prisma.projectMember.createMany({
-        data: newIds.map((userId) => ({ projectId, userId, role: dto.role })),
+        data: newIds.map((userId) => ({ projectId, userId })),
       });
       this.events.activity({
         organizationId: user.organizationId,
@@ -269,18 +255,6 @@ export class ProjectsService {
       });
     }
     return this.members(user, projectId);
-  }
-
-  async updateMember(user: AuthenticatedUser, projectId: string, userId: string, role: ProjectRole) {
-    const { project } = await this.access.assertCanManage(user, projectId);
-    if (userId === project.ownerId && role !== ProjectRole.MANAGER) {
-      throw new BadRequestException('The project owner must remain a manager');
-    }
-    await this.findMembership(projectId, userId);
-    return this.prisma.projectMember.update({
-      where: { projectId_userId: { projectId, userId } },
-      data: { role },
-    });
   }
 
   async removeMember(user: AuthenticatedUser, projectId: string, userId: string): Promise<void> {

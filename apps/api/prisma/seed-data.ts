@@ -1,40 +1,24 @@
 /**
- * Data created by `npm run db:seed`. The root account and plans are always created;
- * everything marked "demo" only when SEED_DEMO_DATA=true. Dates are offsets (in days)
+ * Data created by `npm run db:seed`. The workspace and its first project manager are always
+ * created; the demo users and projects only when SEED_DEMO_DATA=true. Dates are offsets (in days)
  * from the day the seed runs, so the demo always looks current.
- * The handle "admin" refers to the demo organization's super admin.
+ * The handle "admin" refers to the workspace's first project manager.
  *
  * These are first-run credentials: change the passwords after the first sign-in.
  */
-import { BillingInterval } from '../src/common/constants/domain.constants';
 import { OrgRole } from '../src/common/constants/roles.constants';
 
-/** Platform root account: manages every organization, plan and subscription. */
-export const ROOT_ACCOUNT = {
-  email: 'root@segueit.com',
-  password: 'ChangeRoot@123',
-  firstName: 'Platform',
-  lastName: 'Root',
-  jobTitle: 'Platform Administrator',
-};
-
-/** Demo organization, its super admin and the password shared by all demo users. */
-export const DEMO_ORGANIZATION = {
+/** The workspace and the project manager who administers it. */
+export const WORKSPACE = {
   name: 'SegueIT',
-  planCode: 'BUSINESS',
-  superAdmin: { email: 'admin@segueit.com', password: 'ChangeMe@123', firstName: 'System', lastName: 'Administrator', jobTitle: 'Administrator' },
-  userPassword: 'Welcome@123',
+  projectManager: { email: 'admin@segueit.com', password: 'ChangeMe@123', firstName: 'System', lastName: 'Administrator', jobTitle: 'Project Manager' },
 };
 
-/** Starter catalogue created on first seed; the root account manages plans afterwards. Prices in minor units. */
-export const DEFAULT_PLANS = [
-  { code: 'STARTER', name: 'Starter', description: 'For small teams getting started.', priceCents: 2900, billingInterval: BillingInterval.MONTHLY, maxUsers: 10, maxProjects: 5 },
-  { code: 'BUSINESS', name: 'Business', description: 'For growing teams running several projects.', priceCents: 9900, billingInterval: BillingInterval.MONTHLY, maxUsers: 50, maxProjects: 50 },
-  { code: 'ENTERPRISE', name: 'Enterprise', description: 'Unlimited users and projects.', priceCents: 499000, billingInterval: BillingInterval.YEARLY, maxUsers: null, maxProjects: null },
-];
+/** Password shared by every demo user. */
+export const DEMO_USER_PASSWORD = 'Welcome@123';
 
 export const DEMO_USERS = [
-  { handle: 'priya.sharma', firstName: 'Priya', lastName: 'Sharma', jobTitle: 'Delivery Manager', role: OrgRole.ADMIN, hourlyRate: 65 },
+  { handle: 'priya.sharma', firstName: 'Priya', lastName: 'Sharma', jobTitle: 'Delivery Manager', role: OrgRole.PROJECT_MANAGER, hourlyRate: 65 },
   { handle: 'arjun.mehta', firstName: 'Arjun', lastName: 'Mehta', jobTitle: 'Senior Engineer', role: OrgRole.EMPLOYEE, hourlyRate: 55 },
   { handle: 'neha.verma', firstName: 'Neha', lastName: 'Verma', jobTitle: 'Frontend Engineer', role: OrgRole.EMPLOYEE, hourlyRate: 45 },
   { handle: 'rahul.iyer', firstName: 'Rahul', lastName: 'Iyer', jobTitle: 'QA Engineer', role: OrgRole.EMPLOYEE, hourlyRate: 40 },

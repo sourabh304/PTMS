@@ -21,19 +21,16 @@ model Organization {
   timezone           String
   weekStartsOn       Int
   workingHoursPerDay Float
-  /// Suspended organizations cannot sign in (managed by the platform root account).
-  isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  users         User[]
-  projects      Project[]
-  lookups       Lookup[]
-  activities    Activity[]
-  subscriptions Subscription[]
+  users      User[]
+  projects   Project[]
+  lookups    Lookup[]
+  activities Activity[]
 }
 
-/// Tenant users belong to an organization; the platform ROOT account has no organization.
+/// Workspace users. `organizationId` is empty only for retired platform accounts of earlier versions.
 model User {
   id             String    @id @default(cuid())
   organizationId String?
@@ -67,43 +64,6 @@ model User {
   favoriteProjects    ProjectFavorite[]
 
   @@index([organizationId])
-}
-
-/// Commercial plan offered by the platform. Limits are null when unlimited.
-model Plan {
-  id              String   @id @default(cuid())
-  code            String   @unique
-  name            String
-  description     String?
-  priceCents      Int
-  currency        String
-  billingInterval String
-  maxUsers        Int?
-  maxProjects     Int?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  subscriptions Subscription[]
-}
-
-/// Plan assigned to an organization. At most one TRIAL/ACTIVE subscription is current at a time.
-model Subscription {
-  id             String    @id @default(cuid())
-  organizationId String
-  planId         String
-  status         String
-  startDate      DateTime
-  endDate        DateTime?
-  notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  plan         Plan         @relation(fields: [planId], references: [id], onDelete: Restrict)
-
-  @@index([organizationId, status])
-  @@index([planId])
 }
 
 model RefreshToken {
@@ -188,7 +148,6 @@ model ProjectMember {
   id        String   @id @default(cuid())
   projectId String
   userId    String
-  role      String
   createdAt DateTime @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

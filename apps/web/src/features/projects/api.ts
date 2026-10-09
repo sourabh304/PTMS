@@ -1,7 +1,6 @@
 'use client';
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ProjectRole } from '@/shared/constants/domain';
 import { api } from '@/shared/lib/api-client';
 import type { Paginated } from '@/shared/types/api';
 import type { Project, ProjectDashboard, ProjectDetail, ProjectInput, ProjectMember, ProjectNavItem, ProjectQuery, ProjectSummary } from './types';
@@ -96,18 +95,9 @@ export function useDeleteProject() {
 export function useAddMembers(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { userIds: string[]; role: ProjectRole }) => api.post<ProjectMember[]>(`/projects/${projectId}/members`, input),
+    mutationFn: (input: { userIds: string[] }) => api.post<ProjectMember[]>(`/projects/${projectId}/members`, input),
     meta: { successMessage: 'Members added' },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
-  });
-}
-
-export function useUpdateMember(projectId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: ProjectRole }) => api.patch(`/projects/${projectId}/members/${userId}`, { role }),
-    meta: { successMessage: 'Member role updated' },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.members(projectId) }),
   });
 }
 

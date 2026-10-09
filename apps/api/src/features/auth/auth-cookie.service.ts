@@ -35,16 +35,6 @@ export class AuthCookieService {
     const { cookies } = this.auth;
     response.clearCookie(cookies.accessName, this.baseOptions());
     response.clearCookie(cookies.refreshName, this.baseOptions());
-    this.clearWorkspace(response);
-  }
-
-  /** Remembers which organization the root account has opened (browser-session cookie). */
-  setWorkspace(response: Response, organizationId: string): void {
-    response.cookie(this.auth.cookies.workspaceName, organizationId, this.baseOptions());
-  }
-
-  clearWorkspace(response: Response): void {
-    response.clearCookie(this.auth.cookies.workspaceName, this.baseOptions());
   }
 
   readRefreshToken(request: Request): string | undefined {

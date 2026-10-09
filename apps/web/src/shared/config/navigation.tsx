@@ -1,4 +1,4 @@
-import { BarChart3, Building2, CalendarCheck, Clock, CreditCard, House, LayoutDashboard, Package, Settings, type LucideIcon } from 'lucide-react';
+import { BarChart3, CalendarCheck, Clock, House, Settings, type LucideIcon } from 'lucide-react';
 import { Permission } from '@/shared/constants/domain';
 import { routes } from './routes';
 
@@ -33,23 +33,10 @@ export const NAVIGATION: NavSection[] = [
 /** Pinned to the bottom of the workspace sidebar. */
 export const FOOTER_NAVIGATION: NavItem[] = [{ label: 'Settings', href: routes.settings, icon: Settings }];
 
-/** Navigation of the platform console (root account only). */
-export const PLATFORM_NAVIGATION: NavSection[] = [
-  {
-    label: 'Platform',
-    items: [
-      { label: 'Overview', href: routes.platform, icon: LayoutDashboard },
-      { label: 'Organizations', href: routes.platformOrganizations, icon: Building2 },
-      { label: 'Plans', href: routes.platformPlans, icon: Package },
-      { label: 'Subscriptions', href: routes.platformSubscriptions, icon: CreditCard },
-    ],
-  },
-];
-
 /** Settings sub-pages; Appearance is personal and available to everyone. */
 export const SETTINGS_NAVIGATION: (Omit<NavItem, 'icon'> & { description: string })[] = [
   { label: 'Appearance', href: routes.settingsAppearance, description: 'Theme, colors and fonts' },
-  { label: 'Organization', href: routes.settingsOrganization, description: 'Name, brand color and working time', permission: Permission.USERS_VIEW },
-  { label: 'Users', href: routes.settingsUsers, description: 'People and access', permission: Permission.USERS_VIEW },
-  { label: 'Workflow', href: routes.settingsWorkflow, description: 'Statuses, priorities and severities', permission: Permission.USERS_VIEW },
+  { label: 'Organization', href: routes.settingsOrganization, description: 'Name, brand color and working time', permission: Permission.ORG_MANAGE },
+  { label: 'Users', href: routes.settingsUsers, description: 'People and roles', permission: Permission.USERS_MANAGE },
+  { label: 'Workflow', href: routes.settingsWorkflow, description: 'Statuses, priorities and severities', permission: Permission.LOOKUPS_MANAGE },
 ];

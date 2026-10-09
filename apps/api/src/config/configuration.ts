@@ -39,7 +39,6 @@ const buildConfiguration = () => {
       cookies: {
         accessName: env.ACCESS_COOKIE_NAME,
         refreshName: env.REFRESH_COOKIE_NAME,
-        workspaceName: env.ROOT_WORKSPACE_COOKIE_NAME,
         secure: env.COOKIE_SECURE,
         sameSite: env.COOKIE_SAME_SITE,
         domain: env.COOKIE_DOMAIN || undefined,
@@ -53,10 +52,6 @@ const buildConfiguration = () => {
     pagination: {
       defaultPageSize: env.DEFAULT_PAGE_SIZE,
       maxPageSize: env.MAX_PAGE_SIZE,
-    },
-    billing: {
-      requireActiveSubscription: env.REQUIRE_ACTIVE_SUBSCRIPTION,
-      defaultCurrency: env.DEFAULT_CURRENCY,
     },
   };
 };

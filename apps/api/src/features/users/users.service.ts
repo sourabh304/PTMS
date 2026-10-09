@@ -1,17 +1,9 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { isSuperAdmin, OrgRole } from '../../common/constants/roles.constants';
+import { isProjectManager, OrgRole } from '../../common/constants/roles.constants';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { Paginated, PaginationService } from '../../common/pagination/pagination.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import {
   ChangePasswordDto,
   CreateUserDto,
@@ -28,7 +20,6 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly pagination: PaginationService,
-    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async findAll(organizationId: string, query: UserQueryDto): Promise<Paginated<PublicUser>> {
@@ -73,7 +64,6 @@ export class UsersService {
     if (await this.prisma.user.findUnique({ where: { email } })) {
       throw new ConflictException('A user with this email already exists');
     }
-    await this.subscriptions.assertCapacity(actor.organizationId, 'users');
 
     return this.prisma.user.create({
       data: {
@@ -96,16 +86,8 @@ export class UsersService {
     if (target.id === actor.id && (dto.role !== undefined || dto.isActive === false)) {
       throw new BadRequestException('You cannot change your own role or deactivate yourself');
     }
-    if (target.role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
-      throw new ForbiddenException('Only a super admin can modify another super admin');
-    }
-    if (dto.role) this.assertCanAssignRole(actor, dto.role);
-    if (target.role === OrgRole.SUPER_ADMIN && ((dto.role && dto.role !== OrgRole.SUPER_ADMIN) || dto.isActive === false)) {
-      await this.assertAnotherSuperAdminExists(actor.organizationId, target.id);
-    }
-    if (dto.isActive === true && !target.isActive) {
-      await this.subscriptions.assertCapacity(actor.organizationId, 'users');
-    }
+    const losesManagerRole = isProjectManager(target.role) && ((dto.role && dto.role !== OrgRole.PROJECT_MANAGER) || dto.isActive === false);
+    if (losesManagerRole) await this.assertAnotherProjectManagerExists(actor.organizationId, target.id);
 
     const user = await this.prisma.user.update({ where: { id }, data: dto, select: USER_PUBLIC_SELECT });
     if (dto.isActive === false) {
@@ -115,10 +97,7 @@ export class UsersService {
   }
 
   async resetPassword(actor: AuthenticatedUser, id: string, password: string): Promise<void> {
-    const target = await this.findOne(actor.organizationId, id);
-    if (target.role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
-      throw new ForbiddenException('Only a super admin can reset another super admin’s password');
-    }
+    await this.findOne(actor.organizationId, id);
     await this.prisma.user.update({ where: { id }, data: { passwordHash: await this.passwords.hash(password) } });
     await this.revokeSessions(id);
   }
@@ -149,18 +128,13 @@ export class UsersService {
     });
   }
 
-  private assertCanAssignRole(actor: AuthenticatedUser, role: string): void {
-    if (role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
-      throw new ForbiddenException('Only a super admin can grant the super admin role');
-    }
-  }
-
-  private async assertAnotherSuperAdminExists(organizationId: string, excludeId: string): Promise<void> {
-    const superAdmins = await this.prisma.user.count({
-      where: { organizationId, role: OrgRole.SUPER_ADMIN, isActive: true, id: { not: excludeId } },
+  /** A workspace always keeps at least one active Project Manager to administer it. */
+  private async assertAnotherProjectManagerExists(organizationId: string, excludeId: string): Promise<void> {
+    const managers = await this.prisma.user.count({
+      where: { organizationId, role: OrgRole.PROJECT_MANAGER, isActive: true, id: { not: excludeId } },
     });
-    if (superAdmins === 0) {
-      throw new BadRequestException('The organization must keep at least one active super admin');
+    if (managers === 0) {
+      throw new BadRequestException('The workspace must keep at least one active project manager');
     }
   }
 }

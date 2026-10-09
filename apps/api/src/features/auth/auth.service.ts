@@ -31,46 +31,39 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, meta: ClientMeta): Promise<TokenPair> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email.toLowerCase() },
-      include: { organization: { select: { isActive: true } } },
-    });
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase() } });
     const valid = user ? await this.passwords.verify(dto.password, user.passwordHash) : false;
     if (!user || !valid) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    if (!user.isActive) {
+    if (!user.isActive || !user.organizationId) {
       throw new ForbiddenException('Your account has been deactivated');
-    }
-    if (user.organization && !user.organization.isActive) {
-      throw new ForbiddenException('Your organization has been suspended. Contact the platform administrator.');
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    return this.tokens.issue(user, meta, dto.remember ?? false);
+    return this.tokens.issue({ ...user, organizationId: user.organizationId }, meta, dto.remember ?? false);
   }
 
   async refresh(refreshToken: string | undefined, meta: ClientMeta): Promise<TokenPair> {
     if (!refreshToken) throw new UnauthorizedException('No active session');
     const { userId, persistent } = await this.tokens.consume(refreshToken);
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { organization: { select: { isActive: true } } },
-    });
-    if (!user || !user.isActive || (user.organization && !user.organization.isActive)) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.isActive || !user.organizationId) {
       throw new UnauthorizedException('No active session');
     }
-    return this.tokens.issue(user, meta, persistent);
+    return this.tokens.issue({ ...user, organizationId: user.organizationId }, meta, persistent);
   }
 
   async logout(refreshToken: string | undefined): Promise<void> {
     if (refreshToken) await this.tokens.revoke(refreshToken);
   }
 
-  /** The signed-in account; for root, `organization` is the workspace it currently has open (or null). */
-  async me(userId: string, organizationId: string | null) {
-    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: USER_PUBLIC_SELECT });
-    const organization = organizationId ? await this.prisma.organization.findUnique({ where: { id: organizationId } }) : null;
+  /** The signed-in user with their workspace and the permissions of their role. */
+  async me(userId: string, organizationId: string) {
+    const [user, organization] = await Promise.all([
+      this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: USER_PUBLIC_SELECT }),
+      this.prisma.organization.findUniqueOrThrow({ where: { id: organizationId } }),
+    ]);
     return { ...user, organization, permissions: permissionsForRole(user.role) };
   }
 }

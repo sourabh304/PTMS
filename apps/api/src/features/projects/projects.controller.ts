@@ -8,7 +8,6 @@ import {
   AddMembersDto,
   CreateProjectDto,
   ProjectQueryDto,
-  UpdateMemberDto,
   UpdateProjectDto,
 } from './dto/project.dto';
 import { ProjectsService } from './projects.service';
@@ -76,16 +75,6 @@ export class ProjectsController {
   @Post(':id/members')
   addMembers(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: AddMembersDto) {
     return this.projects.addMembers(user, id, dto);
-  }
-
-  @Patch(':id/members/:userId')
-  updateMember(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-    @Param('userId') userId: string,
-    @Body() dto: UpdateMemberDto,
-  ) {
-    return this.projects.updateMember(user, id, userId, dto.role);
   }
 
   @Delete(':id/members/:userId')

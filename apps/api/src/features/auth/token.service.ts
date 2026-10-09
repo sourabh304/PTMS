@@ -21,7 +21,7 @@ export interface ClientMeta {
 
 interface TokenSubject {
   id: string;
-  organizationId: string | null;
+  organizationId: string;
   role: string;
 }
 

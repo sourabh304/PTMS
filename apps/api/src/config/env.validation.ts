@@ -29,8 +29,6 @@ export const envSchema = z.object({
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(8).max(15),
   ACCESS_COOKIE_NAME: z.string().min(1),
   REFRESH_COOKIE_NAME: z.string().min(1),
-  /** Holds the organization the root account is currently working in. */
-  ROOT_WORKSPACE_COOKIE_NAME: z.string().min(1),
   COOKIE_SECURE: booleanish.default(false),
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
   COOKIE_DOMAIN: z.string().optional(),
@@ -42,10 +40,6 @@ export const envSchema = z.object({
   DEFAULT_PAGE_SIZE: z.coerce.number().int().positive(),
   MAX_PAGE_SIZE: z.coerce.number().int().positive(),
 
-  /** When true, organizations need a current subscription to add users or projects. */
-  REQUIRE_ACTIVE_SUBSCRIPTION: booleanish.default(false),
-  /** ISO-4217 currency used for new plans when none is given. */
-  DEFAULT_CURRENCY: z.string().regex(/^[A-Z]{3}$/, 'DEFAULT_CURRENCY must be a 3-letter ISO code'),
 });
 
 export type Env = z.infer<typeof envSchema>;

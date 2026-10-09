@@ -6,17 +6,16 @@ import { useMemo, useState } from 'react';
 import { useActiveUsers } from '@/features/users/api';
 import { UserMultiSelect } from '@/features/users/components/user-multi-select';
 import { routes } from '@/shared/config/routes';
-import { PROJECT_ROLES, type ProjectRole } from '@/shared/constants/domain';
-import { formatDate, fullName, humanize } from '@/shared/lib/utils';
+import { formatDate, fullName } from '@/shared/lib/utils';
 import { Avatar } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardBody, CardHeader } from '@/shared/ui/card';
 import { Spinner } from '@/shared/ui/feedback';
-import { Field, Input, Select } from '@/shared/ui/form';
+import { Field, Input } from '@/shared/ui/form';
 import { ConfirmDialog, Modal } from '@/shared/ui/modal';
 import { Table, Td, Th, Tr } from '@/shared/ui/table';
-import { useAddMembers, useDeleteProject, useProject, useProjectMembers, useRemoveMember, useUpdateMember, useUpdateProject } from '../api';
+import { useAddMembers, useDeleteProject, useProject, useProjectMembers, useRemoveMember, useUpdateProject } from '../api';
 import { ProjectFormModal } from './project-form-modal';
 
 export function ProjectSettings({ projectId }: { projectId: string }) {
@@ -25,7 +24,6 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
   const { data: members, isLoading } = useProjectMembers(projectId);
   const updateProject = useUpdateProject(projectId);
   const deleteProject = useDeleteProject();
-  const updateMember = useUpdateMember(projectId);
   const removeMember = useRemoveMember(projectId);
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -63,7 +61,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
       <Card>
         <CardHeader
           title="Members"
-          description="Managers can edit the project; members can work on tasks; viewers have read-only access."
+          description="Members work on the project's tasks. Project managers and the owner manage it."
           actions={
             <Button size="sm" onClick={() => setAdding(true)}>
               <UserPlus className="size-3.5" /> Add members
@@ -77,7 +75,6 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
             <thead>
               <tr>
                 <Th>Member</Th>
-                <Th>Role</Th>
                 <Th>Joined</Th>
                 <Th className="w-16" />
               </tr>
@@ -97,20 +94,6 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
                           <p className="text-xs text-muted">{member.user.jobTitle ?? member.user.email}</p>
                         </div>
                       </div>
-                    </Td>
-                    <Td>
-                      <Select
-                        className="w-36"
-                        value={member.role}
-                        disabled={isOwner}
-                        onChange={(event) => updateMember.mutate({ userId: member.userId, role: event.target.value as ProjectRole })}
-                      >
-                        {PROJECT_ROLES.map((role) => (
-                          <option key={role} value={role}>
-                            {humanize(role)}
-                          </option>
-                        ))}
-                      </Select>
                     </Td>
                     <Td className="text-muted">{formatDate(member.createdAt)}</Td>
                     <Td>
@@ -176,7 +159,6 @@ function AddMembersModal({ projectId, open, onClose, existingIds }: { projectId:
   const { data: users } = useActiveUsers();
   const addMembers = useAddMembers(projectId);
   const [selected, setSelected] = useState<string[]>([]);
-  const [role, setRole] = useState<ProjectRole>(PROJECT_ROLES[1]);
   const candidates = useMemo(() => (users?.data ?? []).filter((u) => !existingIds.includes(u.id)), [users, existingIds]);
 
   const close = () => {
@@ -194,7 +176,7 @@ function AddMembersModal({ projectId, open, onClose, existingIds }: { projectId:
           <Button variant="secondary" onClick={close}>
             Cancel
           </Button>
-          <Button disabled={!selected.length} loading={addMembers.isPending} onClick={() => addMembers.mutate({ userIds: selected, role }, { onSuccess: close })}>
+          <Button disabled={!selected.length} loading={addMembers.isPending} onClick={() => addMembers.mutate({ userIds: selected }, { onSuccess: close })}>
             Add {selected.length || ''}
           </Button>
         </>
@@ -203,15 +185,6 @@ function AddMembersModal({ projectId, open, onClose, existingIds }: { projectId:
       <div className="space-y-4">
         <Field label="People">
           <UserMultiSelect options={candidates} value={selected} onChange={setSelected} placeholder="Choose people to add" />
-        </Field>
-        <Field label="Role">
-          <Select value={role} onChange={(e) => setRole(e.target.value as ProjectRole)}>
-            {PROJECT_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {humanize(r)}
-              </option>
-            ))}
-          </Select>
         </Field>
       </div>
     </Modal>

@@ -179,7 +179,6 @@ export class DashboardService {
         const own = openAssignments.filter((a) => a.userId === member.userId);
         return {
           user: member.user,
-          role: member.role,
           openTasks: own.length,
           overdueTasks: own.filter((a) => a.task.dueDate && a.task.dueDate < now).length,
         };

@@ -51,7 +51,7 @@ export class DueRemindersService implements OnApplicationBootstrap, OnModuleDest
     if (this.running) return;
     this.running = true;
     try {
-      const organizations = await this.prisma.organization.findMany({ where: { isActive: true }, select: { id: true, timezone: true } });
+      const organizations = await this.prisma.organization.findMany({ select: { id: true, timezone: true } });
       for (const organization of organizations) {
         const today = todayInTimezone(organization.timezone, now);
         await this.remindTasks(organization.id, today);

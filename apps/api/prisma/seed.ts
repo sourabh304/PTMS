@@ -1,10 +1,10 @@
 /**
- * Seeds the platform root account and the default plans and, when SEED_DEMO_DATA=true,
- * a demo organization with its super admin, subscription and realistic demo data.
- * Account details live in seed-data.ts. Each step is idempotent, so the script is safe to re-run.
+ * Seeds the workspace with its first project manager and, when SEED_DEMO_DATA=true, realistic
+ * demo users and projects. It also upgrades databases from earlier versions (old roles, retired
+ * platform accounts). Account details live in seed-data.ts. Every step is idempotent.
  */
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import {
   ActivityAction,
@@ -13,14 +13,13 @@ import {
   EntityType,
   LookupType,
   StatusCategory,
-  SubscriptionStatus,
 } from '../src/common/constants/domain.constants';
-import { OrgRole, PlatformRole, ProjectRole } from '../src/common/constants/roles.constants';
+import { LEGACY_ORG_ROLES, LEGACY_ROOT_ROLE, OrgRole } from '../src/common/constants/roles.constants';
 import { slugify } from '../src/common/utils/string.util';
 import { DEFAULT_LOOKUPS } from '../src/features/lookups/lookup.defaults';
 import { ORGANIZATION_DEFAULTS } from '../src/features/organizations/organization.defaults';
 import { nextGroupColor } from '../src/features/task-lists/task-list.colors';
-import { DEFAULT_PLANS, DEMO_ORGANIZATION, DEMO_PROJECTS, DEMO_USERS, ROOT_ACCOUNT } from './seed-data';
+import { DEMO_PROJECTS, DEMO_USER_PASSWORD, DEMO_USERS, WORKSPACE } from './seed-data';
 
 const prisma = new PrismaClient();
 
@@ -36,61 +35,30 @@ const dayOffset = (days: number) => new Date(today.getTime() + days * DAY);
 
 const saltRounds = () => Number(requireEnv('BCRYPT_SALT_ROUNDS'));
 
-/** The platform root account: manages every organization, plan and subscription. */
-async function seedRoot(): Promise<void> {
-  const email = ROOT_ACCOUNT.email.toLowerCase();
-  if (await prisma.user.findFirst({ where: { role: PlatformRole.ROOT } })) {
-    console.log('✔ Root account already exists');
-    return;
+/** Upgrades accounts from earlier versions to the Project Manager / Employee model. */
+async function migrateLegacyAccounts(): Promise<void> {
+  for (const [legacy, role] of Object.entries(LEGACY_ORG_ROLES)) {
+    const { count } = await prisma.user.updateMany({ where: { role: legacy }, data: { role } });
+    if (count) console.log(`✔ Converted ${count} ${legacy} account(s) to ${role}`);
   }
-  if (await prisma.user.findUnique({ where: { email } })) {
-    throw new Error(`Root email ${email} is already used by an organization user; change ROOT_ACCOUNT in seed-data.ts`);
+  // The platform root account no longer exists: keep its history, but it can never sign in again.
+  const roots = await prisma.user.findMany({ where: { role: LEGACY_ROOT_ROLE }, select: { id: true } });
+  for (const { id } of roots) {
+    await prisma.user.update({ where: { id }, data: { role: OrgRole.EMPLOYEE, isActive: false } });
+    await prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
   }
-  await prisma.user.create({
-    data: {
-      organizationId: null,
-      email,
-      passwordHash: await bcrypt.hash(ROOT_ACCOUNT.password, saltRounds()),
-      firstName: ROOT_ACCOUNT.firstName,
-      lastName: ROOT_ACCOUNT.lastName,
-      jobTitle: ROOT_ACCOUNT.jobTitle,
-      role: PlatformRole.ROOT,
-    },
-  });
-  console.log(`✔ Created root account ${email} (change its password after the first sign-in)`);
+  if (roots.length) console.log(`✔ Retired ${roots.length} root account(s)`);
 }
 
-async function seedPlans(): Promise<void> {
-  if (await prisma.plan.count()) {
-    console.log('✔ Plans already exist');
-    return;
-  }
-  const currency = requireEnv('DEFAULT_CURRENCY');
-  await prisma.plan.createMany({ data: DEFAULT_PLANS.map((plan) => ({ ...plan, currency })) });
-  console.log(`✔ Created ${DEFAULT_PLANS.length} plans`);
-}
+/** Creates the workspace and its first project manager unless they exist. */
+async function seedWorkspace(): Promise<{ organizationId: string; manager: User; created: boolean }> {
+  const { name: orgName, projectManager } = WORKSPACE;
+  const managerEmail = projectManager.email.toLowerCase();
 
-/** Gives the demo organization a subscription when it has none. */
-async function seedSubscription(organizationId: string): Promise<void> {
-  if (await prisma.subscription.count({ where: { organizationId } })) return;
-  const code = DEMO_ORGANIZATION.planCode;
-  const plan = await prisma.plan.findUnique({ where: { code } });
-  if (!plan) throw new Error(`Demo plan code ${code} does not match any plan`);
-  await prisma.subscription.create({
-    data: { organizationId, planId: plan.id, status: SubscriptionStatus.ACTIVE, startDate: today, notes: 'Created by seed' },
-  });
-  console.log(`✔ Subscribed the organization to the ${plan.name} plan`);
-}
-
-/** Creates the demo organization, its super admin and demo data; returns the organization id. */
-async function seedDemoOrganization(): Promise<string> {
-  const { name: orgName, superAdmin } = DEMO_ORGANIZATION;
-  const adminEmail = superAdmin.email.toLowerCase();
-
-  const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const existing = await prisma.user.findUnique({ where: { email: managerEmail } });
   if (existing?.organizationId) {
-    console.log(`✔ Super admin ${adminEmail} already exists`);
-    return existing.organizationId;
+    console.log(`✔ Project manager ${managerEmail} already exists`);
+    return { organizationId: existing.organizationId, manager: existing, created: false };
   }
 
   // ─── Organization & workflow ────────────────────────────────
@@ -106,22 +74,28 @@ async function seedDemoOrganization(): Promise<string> {
     }),
   });
 
-  const admin = await prisma.user.create({
+  const manager = await prisma.user.create({
     data: {
       organizationId: organization.id,
-      email: adminEmail,
-      passwordHash: await bcrypt.hash(superAdmin.password, saltRounds()),
-      firstName: superAdmin.firstName,
-      lastName: superAdmin.lastName,
-      jobTitle: superAdmin.jobTitle,
-      role: OrgRole.SUPER_ADMIN,
+      email: managerEmail,
+      passwordHash: await bcrypt.hash(projectManager.password, saltRounds()),
+      firstName: projectManager.firstName,
+      lastName: projectManager.lastName,
+      jobTitle: projectManager.jobTitle,
+      role: OrgRole.PROJECT_MANAGER,
     },
   });
-  console.log(`✔ Created organization "${orgName}" and super admin ${adminEmail}`);
+  console.log(`✔ Created workspace "${orgName}" and project manager ${managerEmail}`);
+  return { organizationId: organization.id, manager, created: true };
+}
+
+/** Demo users, projects, tasks, issues and time entries for a freshly created workspace. */
+async function seedDemoData(organizationId: string, admin: User): Promise<void> {
+  const organization = { id: organizationId };
 
   // ─── Demo users ─────────────────────────────────────────────
-  const domain = adminEmail.split('@')[1];
-  const demoPasswordHash = await bcrypt.hash(DEMO_ORGANIZATION.userPassword, saltRounds());
+  const domain = admin.email.split('@')[1];
+  const demoPasswordHash = await bcrypt.hash(DEMO_USER_PASSWORD, saltRounds());
   const users = [admin];
   for (const demo of DEMO_USERS) {
     users.push(
@@ -167,15 +141,7 @@ async function seedDemoOrganization(): Promise<string> {
         startDate: dayOffset(spec.startOffset),
         endDate: dayOffset(spec.endOffset),
         budgetHours: spec.budgetHours,
-        members: {
-          create: [
-            ...(memberHandles.includes('admin') ? [] : [{ userId: admin.id, role: ProjectRole.MANAGER }]),
-            ...memberHandles.map((handle) => ({
-              userId: byHandle(handle).id,
-              role: handle === spec.owner ? ProjectRole.MANAGER : ProjectRole.MEMBER,
-            })),
-          ],
-        },
+        members: { create: [...new Set([admin.id, ...memberHandles.map((handle) => byHandle(handle).id)])].map((userId) => ({ userId })) },
       },
     });
 
@@ -309,8 +275,7 @@ async function seedDemoOrganization(): Promise<string> {
     console.log(`✔ Seeded demo project ${spec.key} - ${spec.name}`);
   }
 
-  console.log(`✔ Demo users sign in with DEMO_ORGANIZATION.userPassword (e.g. ${DEMO_USERS[0].handle}@${domain})`);
-  return organization.id;
+  console.log(`✔ Demo users sign in with DEMO_USER_PASSWORD (e.g. ${DEMO_USERS[0].handle}@${domain})`);
 }
 
 /** Gives groups created before group colors existed a color from the palette. */
@@ -323,11 +288,10 @@ async function backfillGroupColors(): Promise<void> {
 }
 
 async function main() {
-  await seedRoot();
-  await seedPlans();
-  if (['true', '1', 'yes'].includes((process.env.SEED_DEMO_DATA ?? 'false').toLowerCase())) {
-    await seedSubscription(await seedDemoOrganization());
-  }
+  await migrateLegacyAccounts();
+  const workspace = await seedWorkspace();
+  const withDemo = ['true', '1', 'yes'].includes((process.env.SEED_DEMO_DATA ?? 'false').toLowerCase());
+  if (withDemo && workspace.created) await seedDemoData(workspace.organizationId, workspace.manager);
   await backfillGroupColors();
 }
 

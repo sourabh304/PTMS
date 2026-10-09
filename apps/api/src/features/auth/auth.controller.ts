@@ -2,10 +2,9 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@ne
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
-import { AccountScope, ForAccounts } from '../../common/decorators/account-scope.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
-import { Principal } from '../../common/interfaces/authenticated-user.interface';
+import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { configuration } from '../../config/configuration';
 import { AuthCookieService } from './auth-cookie.service';
 import { AuthService } from './auth.service';
@@ -42,7 +41,6 @@ export class AuthController {
   async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const tokens = await this.auth.login(dto, this.meta(req));
     this.cookies.set(res, tokens);
-    this.cookies.clearWorkspace(res);
     return { success: true };
   }
 
@@ -70,9 +68,8 @@ export class AuthController {
   }
 
   @Get('me')
-  @ForAccounts(AccountScope.ANY)
-  me(@CurrentUser() principal: Principal) {
-    return this.auth.me(principal.id, principal.organizationId);
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return this.auth.me(user.id, user.organizationId);
   }
 
   private meta(req: Request): ClientMeta {

@@ -1,13 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, Project } from '@prisma/client';
 import { hasPermission, Permission } from '../../common/constants/permissions.constants';
-import { isOrgAdmin, PROJECT_EDITOR_ROLES, ProjectRole } from '../../common/constants/roles.constants';
+import { isProjectManager } from '../../common/constants/roles.constants';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface ProjectAccess {
   project: Project;
-  memberRole: ProjectRole | null;
+  isMember: boolean;
   canView: boolean;
   canEdit: boolean;
   canManage: boolean;
@@ -35,13 +35,13 @@ export class ProjectAccessService {
     const membership = await this.prisma.projectMember.findUnique({
       where: { projectId_userId: { projectId, userId: user.id } },
     });
-    const memberRole = (membership?.role as ProjectRole | undefined) ?? null;
-    const admin = isOrgAdmin(user.role);
-    const canManage = admin || project.ownerId === user.id || memberRole === ProjectRole.MANAGER;
-    const canEdit = canManage || (memberRole !== null && PROJECT_EDITOR_ROLES.includes(memberRole));
-    const canView = canEdit || memberRole !== null || hasPermission(user.role, Permission.PROJECTS_VIEW_ALL);
+    const isMember = !!membership;
+    // Project managers run every project; the owner runs their own; members work in it.
+    const canManage = isProjectManager(user.role) || project.ownerId === user.id;
+    const canEdit = canManage || isMember;
+    const canView = canEdit || hasPermission(user.role, Permission.PROJECTS_VIEW_ALL);
 
-    return { project, memberRole, canView, canEdit, canManage };
+    return { project, isMember, canView, canEdit, canManage };
   }
 
   async assertCanView(user: AuthenticatedUser, projectId: string): Promise<ProjectAccess> {
@@ -59,7 +59,7 @@ export class ProjectAccessService {
 
   async assertCanManage(user: AuthenticatedUser, projectId: string): Promise<ProjectAccess> {
     const access = await this.assertCanView(user, projectId);
-    if (!access.canManage) throw new ForbiddenException('Only project managers can perform this action');
+    if (!access.canManage) throw new ForbiddenException('Only project managers and the project owner can do this');
     return access;
   }
 

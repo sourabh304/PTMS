@@ -1,7 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '../../common/constants/permissions.constants';
-import { AccountScope, ForAccounts } from '../../common/decorators/account-scope.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
@@ -27,14 +26,12 @@ export class UsersController {
   }
 
   @Patch('me')
-  @ForAccounts(AccountScope.ANY)
   updateProfile(@CurrentUser('id') userId: string, @Body() dto: UpdateProfileDto) {
     return this.users.updateProfile(userId, dto);
   }
 
   @Post('me/password')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ForAccounts(AccountScope.ANY)
   changePassword(@CurrentUser('id') userId: string, @Body() dto: ChangePasswordDto) {
     return this.users.changePassword(userId, dto);
   }
