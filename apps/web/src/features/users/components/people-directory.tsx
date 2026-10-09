@@ -15,10 +15,19 @@ import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Input, Select } from '@/shared/ui/form';
 import { PageHeader, Pagination, Toolbar } from '@/shared/ui/layout';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Permission } from '@/shared/constants/domain';
 import { useUsers } from '../api';
 
 /** Everyone in the organization; each person opens their details page. */
 export function PeopleDirectory() {
+  const { can, user } = usePermissions();
+  if (!user) return <Spinner />;
+  if (!can(Permission.USERS_MANAGE)) return <EmptyState icon={<Users />} title="Only project coordinators can open people's details" />;
+  return <PeopleDirectoryContent />;
+}
+
+function PeopleDirectoryContent() {
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
   const [page, setPage] = useState(1);

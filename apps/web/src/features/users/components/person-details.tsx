@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, ArrowLeft, Bug, CheckCircle2, Clock, FolderKanban, ListTodo, Mail } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Bug, CheckCircle2, Clock, FolderKanban, ListTodo, Mail, Users } from 'lucide-react';
 import Link from 'next/link';
 import { routes } from '@/shared/config/routes';
 import { OrgRole, roleLabel } from '@/shared/constants/domain';
@@ -10,13 +10,22 @@ import { Avatar } from '@/shared/ui/avatar';
 import { Badge, ColorBadge } from '@/shared/ui/badge';
 import { Card } from '@/shared/ui/card';
 import { CollapsibleCard } from '@/shared/ui/collapsible';
-import { ErrorState, Spinner } from '@/shared/ui/feedback';
+import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
 import { StatCard } from '@/shared/ui/layout';
 import { cn } from '@/shared/lib/utils';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { Permission } from '@/shared/constants/domain';
 import { useUserDetails } from '../api';
 
 /** One person's projects, open work, time and activity, for coordinators and root. */
 export function PersonDetails({ userId }: { userId: string }) {
+  const { can, user } = usePermissions();
+  if (!user) return <Spinner />;
+  if (!can(Permission.USERS_MANAGE)) return <EmptyState icon={<Users />} title="Only project coordinators can open people's details" />;
+  return <PersonDetailsContent userId={userId} />;
+}
+
+function PersonDetailsContent({ userId }: { userId: string }) {
   const { data, isLoading, isError, error, refetch } = useUserDetails(userId);
   if (isLoading) return <Spinner />;
   if (isError || !data) return <ErrorState message={errorMessage(error, 'Person not found')} onRetry={refetch} />;
