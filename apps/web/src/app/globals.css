@@ -126,6 +126,97 @@
   --app-font: var(--font-manrope);
 }
 
+/*
+ * Claymorphic style (default). Cream surfaces; every shadow token becomes a soft clay
+ * shadow (outer drop + warm glow + inner highlights), corners get rounder and borders
+ * fade so panels read as puffy objects. Text inputs are pressed in.
+ */
+[data-style='clay'] {
+  --clay-dark: 150 122 84;
+  --clay-light: 255 251 242;
+  --background: #f5eedf;
+  --surface: #fbf6ec;
+  --surface-muted: #efe6d4;
+  --surface-hover: #f6eedf;
+  --border: #eadfca;
+  --border-strong: #d9c9ab;
+  --foreground: #2d2a24;
+  --foreground-soft: #4a4438;
+  --muted: #7a6f5f;
+  --overlay: rgb(59 47 30 / 0.3);
+  --danger-soft: #fbe9e4;
+  --success-soft: #e6f4e7;
+  --warning-soft: #fbf0d9;
+
+  --shadow-sm:
+    4px 4px 10px rgb(var(--clay-dark) / 0.18), -3px -3px 8px rgb(var(--clay-light) / 0.9),
+    inset 1px 1px 2px rgb(var(--clay-light) / 0.7), inset -1px -1px 3px rgb(var(--clay-dark) / 0.08);
+  --shadow-md:
+    10px 10px 24px rgb(var(--clay-dark) / 0.2), -8px -8px 20px rgb(var(--clay-light) / 0.95),
+    inset 2px 2px 5px rgb(var(--clay-light) / 0.75), inset -2px -2px 6px rgb(var(--clay-dark) / 0.08);
+  --shadow-lg:
+    22px 22px 44px rgb(var(--clay-dark) / 0.28), -10px -10px 28px rgb(var(--clay-light) / 0.6),
+    inset 3px 3px 7px rgb(var(--clay-light) / 0.8), inset -3px -3px 8px rgb(var(--clay-dark) / 0.08);
+  --clay-inset: inset 3px 3px 7px rgb(var(--clay-dark) / 0.17), inset -3px -3px 7px rgb(var(--clay-light) / 0.95);
+
+  --radius: 0.875rem;
+}
+[data-style='clay']:not([data-sidebar='dark']) {
+  --sidebar: #f8f1e4;
+  --sidebar-border: #eadfca;
+  --sidebar-hover: #efe6d4;
+}
+[data-style='clay'][data-radius='sharp'] {
+  --radius: 0.5rem;
+}
+[data-style='clay'][data-radius='rounded'] {
+  --radius: 1.25rem;
+}
+[data-style='clay'][data-mode='dark'] {
+  --clay-dark: 0 0 0;
+  --clay-light: 120 104 80;
+  --background: #221e19;
+  --surface: #2b2620;
+  --surface-muted: #342e26;
+  --surface-hover: #3a332a;
+  --border: #3d362c;
+  --border-strong: #52493b;
+  --foreground: #f1eadc;
+  --foreground-soft: #d9cfbd;
+  --muted: #a89c88;
+  --overlay: rgb(0 0 0 / 0.55);
+  --shadow-sm: 4px 4px 10px rgb(0 0 0 / 0.35), -2px -2px 6px rgb(var(--clay-light) / 0.12), inset 1px 1px 2px rgb(var(--clay-light) / 0.15);
+  --shadow-md: 10px 10px 22px rgb(0 0 0 / 0.4), -6px -6px 16px rgb(var(--clay-light) / 0.1), inset 2px 2px 4px rgb(var(--clay-light) / 0.14);
+  --shadow-lg: 20px 20px 40px rgb(0 0 0 / 0.5), -8px -8px 22px rgb(var(--clay-light) / 0.08), inset 3px 3px 6px rgb(var(--clay-light) / 0.14);
+  --clay-inset: inset 3px 3px 7px rgb(0 0 0 / 0.35), inset -2px -2px 6px rgb(var(--clay-light) / 0.12);
+}
+[data-style='clay'][data-mode='dark']:not([data-sidebar='dark']) {
+  --sidebar: #27231d;
+  --sidebar-border: #3d362c;
+  --sidebar-hover: #342e26;
+}
+
+/* Unlayered on purpose so it wins over the shadow utility on form controls. */
+[data-style='clay'] :is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='file']), textarea, select) {
+  background-color: var(--surface-muted);
+  border-color: transparent;
+  box-shadow: var(--clay-inset);
+}
+[data-style='clay'] :is(input, textarea, select):focus {
+  background-color: var(--surface);
+  box-shadow: var(--clay-inset), 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+[data-style='clay'] body {
+  background:
+    radial-gradient(1100px 560px at 100% -10%, rgb(255 214 165 / 0.35), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgb(232 170 96 / 0.12), transparent 60%),
+    var(--background);
+  background-attachment: fixed;
+}
+[data-style='clay'][data-mode='dark'] body {
+  background: var(--background);
+}
+
 @theme inline {
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);

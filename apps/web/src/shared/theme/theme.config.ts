@@ -6,6 +6,12 @@ export const THEME_STORAGE_KEY = 'pt-appearance';
 /** Desktop sidebar collapsed/expanded preference. */
 export const NAV_STORAGE_KEY = 'pt-nav';
 
+/** Visual style: soft, puffy cream "clay" surfaces or the flat classic look. */
+export const STYLE_OPTIONS = [
+  { value: 'clay', label: 'Claymorphic', description: 'Soft cream surfaces with puffy, tactile depth' },
+  { value: 'classic', label: 'Classic', description: 'Flat, crisp surfaces with subtle borders' },
+] as const;
+
 export const THEME_MODES = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
@@ -49,6 +55,7 @@ export const SIDEBAR_OPTIONS = [
   { value: 'dark', label: 'Dark' },
 ] as const;
 
+export type StyleOption = (typeof STYLE_OPTIONS)[number]['value'];
 export type ThemeMode = (typeof THEME_MODES)[number]['value'];
 export type AccentPreset = (typeof ACCENT_PRESETS)[number]['value'];
 export type FontOption = (typeof FONT_OPTIONS)[number]['value'];
@@ -57,6 +64,7 @@ export type Radius = (typeof RADIUS_OPTIONS)[number]['value'];
 export type SidebarStyle = (typeof SIDEBAR_OPTIONS)[number]['value'];
 
 export interface Appearance {
+  style: StyleOption;
   mode: ThemeMode;
   accent: AccentPreset;
   font: FontOption;
@@ -66,7 +74,8 @@ export interface Appearance {
 }
 
 export const DEFAULT_APPEARANCE: Appearance = {
-  mode: 'system',
+  style: 'clay',
+  mode: 'light',
   accent: 'organization',
   font: 'figtree',
   density: 'comfortable',
@@ -75,6 +84,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
 };
 
 const ALLOWED: { [K in keyof Appearance]: readonly string[] } = {
+  style: STYLE_OPTIONS.map((o) => o.value),
   mode: THEME_MODES.map((o) => o.value),
   accent: ACCENT_PRESETS.map((o) => o.value),
   font: FONT_OPTIONS.map((o) => o.value),

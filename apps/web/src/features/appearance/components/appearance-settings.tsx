@@ -11,6 +11,7 @@ import {
   FONT_OPTIONS,
   RADIUS_OPTIONS,
   SIDEBAR_OPTIONS,
+  STYLE_OPTIONS,
   THEME_MODES,
   type FontOption,
   type ThemeMode,
@@ -53,6 +54,31 @@ export function AppearanceSettings() {
           }
         />
         <CardBody className="divide-y divide-border p-0">
+          <Setting title="Style" description="Overall look of cards, buttons and inputs.">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {STYLE_OPTIONS.map((style) => (
+                <button
+                  key={style.value}
+                  type="button"
+                  onClick={() => update({ style: style.value })}
+                  aria-pressed={appearance.style === style.value}
+                  className={cn(
+                    'flex items-start gap-3 rounded-ui-lg border p-3 text-left transition-colors',
+                    appearance.style === style.value ? 'border-brand bg-brand-soft' : 'border-border hover:bg-surface-hover',
+                  )}
+                >
+                  <span className={cn('mt-0.5 size-8 shrink-0 rounded-ui', style.value === 'clay' ? 'bg-[#f5eedf] shadow-[4px_4px_10px_rgb(150_122_84/0.3),-3px_-3px_8px_rgb(255_251_242/0.9),inset_2px_2px_3px_rgb(255_251_242/0.8)]' : 'border border-border bg-surface')} />
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                      {style.label}
+                      {appearance.style === style.value && <Check className="size-3.5 text-brand" />}
+                    </span>
+                    <span className="block text-xs text-muted">{style.description}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </Setting>
           <Setting title="Theme" description="Use light, dark, or follow your operating system.">
             <div className="grid grid-cols-3 gap-3">
               {THEME_MODES.map((mode) => (

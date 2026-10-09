@@ -12,6 +12,7 @@ export function applyAppearance(appearance: Appearance): void {
   // Avoid every element transitioning while the palette swaps.
   root.classList.add('theme-transition-off');
 
+  root.dataset.style = appearance.style;
   root.dataset.mode = resolveMode(appearance.mode);
   root.dataset.font = appearance.font;
   root.dataset.density = appearance.density;

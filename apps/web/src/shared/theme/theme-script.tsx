@@ -11,7 +11,7 @@ var d=${JSON.stringify(DEFAULT_APPEARANCE)},a=${JSON.stringify(accents)},s={};
 try{s=JSON.parse(localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})||'{}')||{};}catch(e){}
 var t=Object.assign({},d,s),r=document.documentElement;
 var m=t.mode==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t.mode;
-r.dataset.mode=m;r.dataset.font=t.font;r.dataset.density=t.density;r.dataset.radius=t.radius;r.dataset.sidebar=t.sidebar;
+r.dataset.style=t.style;r.dataset.mode=m;r.dataset.font=t.font;r.dataset.density=t.density;r.dataset.radius=t.radius;r.dataset.sidebar=t.sidebar;
 var c=a[t.accent];if(c){var h=c.slice(1),n=parseInt(h,16),l=((n>>16)*299+((n>>8)&255)*587+(n&255)*114)/1000;
 r.style.setProperty('--accent',c);r.style.setProperty('--accent-foreground',l>150?'#101828':'#ffffff');}
 try{r.dataset.nav=localStorage.getItem(${JSON.stringify(NAV_STORAGE_KEY)})==='collapsed'?'collapsed':'expanded';}catch(e){}
