@@ -24,16 +24,26 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  /** Re-reads the user on every request so deactivation and role changes take effect immediately. */
+  /** Re-reads the user on every request so deactivation, role changes and deleted workspaces take effect immediately. */
   async validate(payload: JwtAccessPayload): Promise<AuthenticatedUser> {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, organizationId: true, role: true, isRootAdmin: true, firstName: true, lastName: true, isActive: true },
+      select: {
+        id: true,
+        email: true,
+        organizationId: true,
+        role: true,
+        isRootAdmin: true,
+        firstName: true,
+        lastName: true,
+        isActive: true,
+        organization: { select: { deletedAt: true } },
+      },
     });
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || user.organization.deletedAt) {
       throw new UnauthorizedException();
     }
-    const { isActive: _isActive, ...authenticated } = user;
+    const { isActive: _isActive, organization: _organization, ...authenticated } = user;
     return authenticated;
   }
 }

@@ -17,17 +17,9 @@ export type Permission = (typeof Permission)[keyof typeof Permission];
 const ALL_PERMISSIONS = Object.values(Permission);
 
 export const ROLE_PERMISSIONS: Record<OrgRole, readonly Permission[]> = {
-  [OrgRole.OWNER]: ALL_PERMISSIONS,
   [OrgRole.ADMIN]: ALL_PERMISSIONS,
-  [OrgRole.MANAGER]: [
-    Permission.USERS_VIEW,
-    Permission.PROJECTS_CREATE,
-    Permission.TIMESHEETS_APPROVE,
-    Permission.TIMESHEETS_VIEW_ALL,
-    Permission.REPORTS_VIEW,
-  ],
-  [OrgRole.MEMBER]: [Permission.USERS_VIEW],
-  [OrgRole.GUEST]: [],
+  // Project-level rights (editing tasks, managing a project they lead) come from project roles.
+  [OrgRole.EMPLOYEE]: [Permission.USERS_VIEW],
 };
 
 export const permissionsForRole = (role: string): readonly Permission[] =>

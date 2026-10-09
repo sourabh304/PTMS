@@ -75,8 +75,18 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Timesheets** – log time against projects/tasks, billable flag, approval workflow, daily charts.
 - **Dashboards** – organization dashboard and per-project overview (status mix, priorities, workload, budget burn).
 - **Reports** – portfolio health (on track / at risk / off track) with CSV export, resource utilization vs capacity, time analysis, issue trends.
-- **Activity & notifications** – audit trail per project and in-app notifications for assignments, comments, reviews.
-- **Workspaces** – each company or team gets its own isolated workspace. There is no public sign-up: only the **root administrator** (the setup admin, `SEED_ADMIN_EMAIL`) can create workspaces and their first owner, under **Settings → Workspaces**, and see a list of all of them. Other owners cannot demote, deactivate or reset the password of the root administrator.
+- **Activity & notifications** – audit trail per project and in-app notifications (the bell) for: task or issue assigned, new comments, added to a project, time waiting for approval (admins and project managers), time approved or rejected, and reminders when a task or issue is due today or tomorrow or becomes overdue (checked hourly, sent once per due date, in the workspace's timezone).
+- **Workspaces & roles** – each company or team gets its own isolated workspace; there is no public sign-up.
+
+  | Role | Can do |
+  | ---- | ------ |
+  | Root admin | The setup admin (`SEED_ADMIN_EMAIL`). Everything an Admin can, plus create workspaces with their first admin, see all workspaces, and soft delete / restore them (**Settings → Workspaces**). Other admins cannot demote, deactivate or reset the root admin's password. |
+  | Admin | Add and manage users, create and manage every project, approve time, reports and settings for their workspace. |
+  | Employee | See the projects they are added to, work on their tasks, issues and milestones, and log and edit their own time. |
+
+  Inside a project people also have a project role: **Manager** (manages that project's members and approves its time), **Member** (works on it) or **Viewer** (read-only).
+  A soft-deleted workspace keeps its data; its users are signed out and cannot sign in until the root admin restores it.
+  Databases from earlier versions are converted on the next seed / container start: Owner, Admin and Manager become Admin; Member and Guest become Employee.
 - **Administration** – users & roles, organization branding (name, logo, brand color), timezone, working hours, and fully configurable workflows.
 - **Security** – httpOnly cookie auth, short-lived access tokens, rotating refresh tokens with reuse detection, bcrypt, Helmet, rate limiting, strict DTO validation, RBAC + project-level authorization.
 

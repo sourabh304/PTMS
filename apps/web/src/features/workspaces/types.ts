@@ -5,15 +5,17 @@ export interface Workspace {
   name: string;
   slug: string;
   createdAt: string;
-  owners: UserSummary[];
+  /** Set when the root administrator soft deleted it. */
+  deletedAt: string | null;
+  admins: UserSummary[];
   userCount: number;
   projectCount: number;
 }
 
 export interface CreateWorkspaceInput {
   name: string;
-  ownerFirstName: string;
-  ownerLastName: string;
-  ownerEmail: string;
-  ownerPassword: string;
+  adminFirstName: string;
+  adminLastName: string;
+  adminEmail: string;
+  adminPassword: string;
 }

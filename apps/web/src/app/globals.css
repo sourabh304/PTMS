@@ -36,7 +36,6 @@
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-instrument), ui-serif, Georgia, serif;
 }
 
 /* Base styles live in the base layer so Tailwind utilities (e.g. border-brand) can override them. */

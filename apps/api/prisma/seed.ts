@@ -14,7 +14,7 @@ import {
   LookupType,
   StatusCategory,
 } from '../src/common/constants/domain.constants';
-import { OrgRole, ProjectRole } from '../src/common/constants/roles.constants';
+import { LEGACY_ORG_ROLES, OrgRole, ProjectRole } from '../src/common/constants/roles.constants';
 import { slugify } from '../src/common/utils/string.util';
 import { DEFAULT_LOOKUPS } from '../src/features/lookups/lookup.defaults';
 import { ORGANIZATION_DEFAULTS } from '../src/features/organizations/organization.defaults';
@@ -38,6 +38,12 @@ async function main() {
   const adminPassword = requireEnv('SEED_ADMIN_PASSWORD');
   const saltRounds = Number(requireEnv('BCRYPT_SALT_ROUNDS'));
   const withDemo = ['true', '1', 'yes'].includes((process.env.SEED_DEMO_DATA ?? 'false').toLowerCase());
+
+  // Databases created before the Admin / Employee roles: map the old roles onto them.
+  for (const [legacy, role] of Object.entries(LEGACY_ORG_ROLES)) {
+    const { count } = await prisma.user.updateMany({ where: { role: legacy }, data: { role } });
+    if (count) console.log(`✔ Changed ${count} ${legacy} account(s) to ${role}`);
+  }
 
   const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (existingAdmin) {
@@ -71,7 +77,7 @@ async function main() {
       firstName: requireEnv('SEED_ADMIN_FIRST_NAME'),
       lastName: requireEnv('SEED_ADMIN_LAST_NAME'),
       jobTitle: 'Administrator',
-      role: OrgRole.OWNER,
+      role: OrgRole.ADMIN,
       isRootAdmin: true,
     },
   });

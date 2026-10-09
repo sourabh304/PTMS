@@ -28,13 +28,19 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, meta: ClientMeta): Promise<TokenPair> {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase() } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email.toLowerCase() },
+      include: { organization: { select: { deletedAt: true } } },
+    });
     const valid = user ? await this.passwords.verify(dto.password, user.passwordHash) : false;
     if (!user || !valid) {
       throw new UnauthorizedException('Invalid email or password');
     }
     if (!user.isActive) {
       throw new ForbiddenException('Your account has been deactivated');
+    }
+    if (user.organization.deletedAt) {
+      throw new ForbiddenException('This workspace has been deleted. Contact the root administrator.');
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
@@ -44,8 +50,11 @@ export class AuthService {
   async refresh(refreshToken: string | undefined, meta: ClientMeta): Promise<TokenPair> {
     if (!refreshToken) throw new UnauthorizedException('No active session');
     const userId = await this.tokens.consume(refreshToken);
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || !user.isActive) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { organization: { select: { deletedAt: true } } },
+    });
+    if (!user || !user.isActive || user.organization.deletedAt) {
       throw new UnauthorizedException('No active session');
     }
     return this.tokens.issue(user, meta);

@@ -12,6 +12,24 @@ export function useWorkspaces(enabled = true) {
   return useQuery({ queryKey: workspaceKeys.all, queryFn: () => api.get<Workspace[]>('/workspaces'), enabled });
 }
 
+export function useDeleteWorkspace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<Workspace>(`/workspaces/${id}`),
+    meta: { successMessage: 'Workspace deleted' },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: workspaceKeys.all }),
+  });
+}
+
+export function useRestoreWorkspace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<Workspace>(`/workspaces/${id}/restore`),
+    meta: { successMessage: 'Workspace restored' },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: workspaceKeys.all }),
+  });
+}
+
 export function useCreateWorkspace() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -15,14 +15,14 @@ import { useCreateWorkspace } from '../api';
 const workspaceSchema = (minLength: number) =>
   z.object({
     name: z.string().trim().min(2, 'Enter the company or team name'),
-    ownerFirstName: z.string().trim().min(1, 'Required'),
-    ownerLastName: z.string().trim().min(1, 'Required'),
-    ownerEmail: z.string().trim().email('Enter a valid email'),
-    ownerPassword: passwordSchema(minLength),
+    adminFirstName: z.string().trim().min(1, 'Required'),
+    adminLastName: z.string().trim().min(1, 'Required'),
+    adminEmail: z.string().trim().email('Enter a valid email'),
+    adminPassword: passwordSchema(minLength),
   });
 type WorkspaceValues = z.infer<ReturnType<typeof workspaceSchema>>;
 
-const EMPTY: WorkspaceValues = { name: '', ownerFirstName: '', ownerLastName: '', ownerEmail: '', ownerPassword: '' };
+const EMPTY: WorkspaceValues = { name: '', adminFirstName: '', adminLastName: '', adminEmail: '', adminPassword: '' };
 
 export function WorkspaceFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const create = useCreateWorkspace();
@@ -58,24 +58,24 @@ export function WorkspaceFormModal({ open, onClose }: { open: boolean; onClose: 
         <Field label="Workspace name" required error={errors.name?.message} hint="Usually the company or team name" className="sm:col-span-2">
           <Input autoFocus placeholder="Acme Inc." {...form.register('name')} />
         </Field>
-        <p className="text-sm font-medium sm:col-span-2">Workspace owner</p>
-        <Field label="First name" required error={errors.ownerFirstName?.message}>
-          <Input autoComplete="off" {...form.register('ownerFirstName')} />
+        <p className="text-sm font-medium sm:col-span-2">Workspace admin</p>
+        <Field label="First name" required error={errors.adminFirstName?.message}>
+          <Input autoComplete="off" {...form.register('adminFirstName')} />
         </Field>
-        <Field label="Last name" required error={errors.ownerLastName?.message}>
-          <Input autoComplete="off" {...form.register('ownerLastName')} />
+        <Field label="Last name" required error={errors.adminLastName?.message}>
+          <Input autoComplete="off" {...form.register('adminLastName')} />
         </Field>
-        <Field label="Email" required error={errors.ownerEmail?.message} hint="They sign in with this email" className="sm:col-span-2">
-          <Input type="email" autoComplete="off" {...form.register('ownerEmail')} />
+        <Field label="Email" required error={errors.adminEmail?.message} hint="They sign in with this email" className="sm:col-span-2">
+          <Input type="email" autoComplete="off" {...form.register('adminEmail')} />
         </Field>
         <Field
           label="First password"
           required
-          error={errors.ownerPassword?.message}
-          hint={`At least ${minLength} characters, with an upper-case letter, a lower-case letter and a number. Share it with the owner; they can change it in My profile.`}
+          error={errors.adminPassword?.message}
+          hint={`At least ${minLength} characters, with an upper-case letter, a lower-case letter and a number. Share it with the admin; they can change it in My profile.`}
           className="sm:col-span-2"
         >
-          <PasswordInput autoComplete="new-password" {...form.register('ownerPassword')} />
+          <PasswordInput autoComplete="new-password" {...form.register('adminPassword')} />
         </Field>
       </form>
     </Modal>

@@ -19,5 +19,5 @@ export const MAIN_NAVIGATION: NavItem[] = [
 ];
 
 export const SECONDARY_NAVIGATION: NavItem[] = [
-  { label: 'Settings', href: routes.settings, icon: Settings, permission: Permission.USERS_VIEW },
+  { label: 'Settings', href: routes.settings, icon: Settings, permission: Permission.USERS_MANAGE },
 ];

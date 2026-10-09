@@ -6,12 +6,12 @@
 import { OrgRole } from '../src/common/constants/roles.constants';
 
 export const DEMO_USERS = [
-  { handle: 'priya.sharma', firstName: 'Priya', lastName: 'Sharma', jobTitle: 'Delivery Manager', role: OrgRole.MANAGER, hourlyRate: 65 },
-  { handle: 'arjun.mehta', firstName: 'Arjun', lastName: 'Mehta', jobTitle: 'Senior Engineer', role: OrgRole.MEMBER, hourlyRate: 55 },
-  { handle: 'neha.verma', firstName: 'Neha', lastName: 'Verma', jobTitle: 'Frontend Engineer', role: OrgRole.MEMBER, hourlyRate: 45 },
-  { handle: 'rahul.iyer', firstName: 'Rahul', lastName: 'Iyer', jobTitle: 'QA Engineer', role: OrgRole.MEMBER, hourlyRate: 40 },
-  { handle: 'sara.khan', firstName: 'Sara', lastName: 'Khan', jobTitle: 'UX Designer', role: OrgRole.MEMBER, hourlyRate: 50 },
-  { handle: 'client.viewer', firstName: 'Client', lastName: 'Stakeholder', jobTitle: 'Product Owner', role: OrgRole.GUEST, hourlyRate: null },
+  { handle: 'priya.sharma', firstName: 'Priya', lastName: 'Sharma', jobTitle: 'Delivery Manager', role: OrgRole.ADMIN, hourlyRate: 65 },
+  { handle: 'arjun.mehta', firstName: 'Arjun', lastName: 'Mehta', jobTitle: 'Senior Engineer', role: OrgRole.EMPLOYEE, hourlyRate: 55 },
+  { handle: 'neha.verma', firstName: 'Neha', lastName: 'Verma', jobTitle: 'Frontend Engineer', role: OrgRole.EMPLOYEE, hourlyRate: 45 },
+  { handle: 'rahul.iyer', firstName: 'Rahul', lastName: 'Iyer', jobTitle: 'QA Engineer', role: OrgRole.EMPLOYEE, hourlyRate: 40 },
+  { handle: 'sara.khan', firstName: 'Sara', lastName: 'Khan', jobTitle: 'UX Designer', role: OrgRole.EMPLOYEE, hourlyRate: 50 },
+  { handle: 'client.viewer', firstName: 'Client', lastName: 'Stakeholder', jobTitle: 'Product Owner', role: OrgRole.EMPLOYEE, hourlyRate: null },
 ] as const;
 
 interface DemoTask {

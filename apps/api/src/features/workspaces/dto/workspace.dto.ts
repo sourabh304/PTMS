@@ -3,7 +3,7 @@ import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 import { TrimString } from '../../../common/transformers/query.transformers';
 import { IsPassword } from '../../../common/validation/password.policy';
 
-/** A new workspace together with its first owner. */
+/** A new workspace together with its first admin. */
 export class CreateWorkspaceDto {
   @ApiProperty()
   @TrimString()
@@ -17,22 +17,22 @@ export class CreateWorkspaceDto {
   @IsString()
   @MinLength(1)
   @MaxLength(60)
-  ownerFirstName: string;
+  adminFirstName: string;
 
   @ApiProperty()
   @TrimString()
   @IsString()
   @MinLength(1)
   @MaxLength(60)
-  ownerLastName: string;
+  adminLastName: string;
 
   @ApiProperty()
   @TrimString()
   @IsEmail()
   @MaxLength(254)
-  ownerEmail: string;
+  adminEmail: string;
 
   @ApiProperty()
   @IsPassword()
-  ownerPassword: string;
+  adminPassword: string;
 }

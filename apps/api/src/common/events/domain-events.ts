@@ -31,4 +31,5 @@ export const NotificationLinks = {
   task: (projectId: string, taskId: string) => `/projects/${projectId}/tasks?taskId=${taskId}`,
   issue: (projectId: string, issueId: string) => `/projects/${projectId}/issues?issueId=${issueId}`,
   timesheet: () => `/timesheets`,
+  projectTimesheet: (projectId: string) => `/projects/${projectId}/timesheets`,
 };

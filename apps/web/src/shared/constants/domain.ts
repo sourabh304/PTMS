@@ -15,7 +15,7 @@ export const Permission = {
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
 
-export const ORG_ROLES = ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'GUEST'] as const;
+export const ORG_ROLES = ['ADMIN', 'EMPLOYEE'] as const;
 export type OrgRole = (typeof ORG_ROLES)[number];
 
 export const PROJECT_ROLES = ['MANAGER', 'MEMBER', 'VIEWER'] as const;

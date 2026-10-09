@@ -21,6 +21,8 @@ model Organization {
   timezone           String
   weekStartsOn       Int
   workingHoursPerDay Float
+  /// Set when the root administrator soft deletes the workspace: its users cannot sign in, data is kept.
+  deletedAt          DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -204,6 +206,9 @@ model Task {
   priorityId     String
   startDate      DateTime?
   dueDate        DateTime?
+  /// Due date the "due soon" / "overdue" reminders were last sent for (a new due date re-arms them).
+  dueSoonNotifiedFor DateTime?
+  overdueNotifiedFor DateTime?
   estimatedHours Float?
   progress       Int       @default(0)
   position       Float     @default(0)
@@ -271,6 +276,9 @@ model Issue {
   milestoneId String?
   taskId      String?
   dueDate     DateTime?
+  /// Due date the "due soon" / "overdue" reminders were last sent for (a new due date re-arms them).
+  dueSoonNotifiedFor DateTime?
+  overdueNotifiedFor DateTime?
   resolvedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

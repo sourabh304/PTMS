@@ -67,7 +67,6 @@ export class UsersService {
   }
 
   async create(actor: AuthenticatedUser, dto: CreateUserDto): Promise<PublicUser> {
-    this.assertCanAssignRole(actor, dto.role);
     const email = dto.email.toLowerCase();
     if (await this.prisma.user.findUnique({ where: { email } })) {
       throw new ConflictException('A user with this email already exists');
@@ -97,12 +96,8 @@ export class UsersService {
     if (target.isRootAdmin && (dto.role !== undefined || dto.isActive === false)) {
       throw new ForbiddenException('The root administrator cannot be demoted or deactivated');
     }
-    if (target.role === OrgRole.OWNER && actor.role !== OrgRole.OWNER) {
-      throw new ForbiddenException('Only an owner can modify another owner');
-    }
-    if (dto.role) this.assertCanAssignRole(actor, dto.role);
-    if (target.role === OrgRole.OWNER && (dto.role && dto.role !== OrgRole.OWNER || dto.isActive === false)) {
-      await this.assertAnotherOwnerExists(actor.organizationId, target.id);
+    if (target.role === OrgRole.ADMIN && ((dto.role && dto.role !== OrgRole.ADMIN) || dto.isActive === false)) {
+      await this.assertAnotherAdminExists(actor.organizationId, target.id);
     }
 
     const user = await this.prisma.user.update({ where: { id }, data: dto, select: USER_PUBLIC_SELECT });
@@ -116,9 +111,6 @@ export class UsersService {
     const target = await this.findOne(actor.organizationId, id);
     if (target.isRootAdmin && target.id !== actor.id) {
       throw new ForbiddenException('Only the root administrator can change their own password');
-    }
-    if (target.role === OrgRole.OWNER && actor.role !== OrgRole.OWNER) {
-      throw new ForbiddenException('Only an owner can reset another owner’s password');
     }
     await this.prisma.user.update({ where: { id }, data: { passwordHash: await this.passwords.hash(password) } });
     await this.revokeSessions(id);
@@ -150,18 +142,12 @@ export class UsersService {
     });
   }
 
-  private assertCanAssignRole(actor: AuthenticatedUser, role: string): void {
-    if (role === OrgRole.OWNER && actor.role !== OrgRole.OWNER) {
-      throw new ForbiddenException('Only an owner can grant the owner role');
-    }
-  }
-
-  private async assertAnotherOwnerExists(organizationId: string, excludeId: string): Promise<void> {
-    const owners = await this.prisma.user.count({
-      where: { organizationId, role: OrgRole.OWNER, isActive: true, id: { not: excludeId } },
+  private async assertAnotherAdminExists(organizationId: string, excludeId: string): Promise<void> {
+    const admins = await this.prisma.user.count({
+      where: { organizationId, role: OrgRole.ADMIN, isActive: true, id: { not: excludeId } },
     });
-    if (owners === 0) {
-      throw new BadRequestException('The organization must keep at least one active owner');
+    if (admins === 0) {
+      throw new BadRequestException('The workspace must keep at least one active admin');
     }
   }
 }
