@@ -231,8 +231,7 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
                   <Th>Date</Th>
                   <Th>Person</Th>
                   {!projectId && <Th>Project</Th>}
-                  <Th>Work item</Th>
-                  <Th>Notes</Th>
+                  <Th>Work item · notes</Th>
                   <Th className="text-right">Duration</Th>
                   <Th>Status</Th>
                   <Th className="w-12" />
@@ -249,12 +248,14 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
                     </Td>
                     {!projectId && <Td className="whitespace-nowrap">{entry.project.name}</Td>}
                     <Td className="text-sm">
-                      <span className="block max-w-52 truncate">
+                      <span className="block max-w-72 truncate">
                         {entry.task ? `${entry.project.key}-${entry.task.number} ${entry.task.title}` : entry.issue ? `${entry.project.key}-BUG-${entry.issue.number} ${entry.issue.title}` : <span className="text-muted">General</span>}
                       </span>
-                    </Td>
-                    <Td className="text-sm text-muted" title={entry.notes ?? ''}>
-                      <span className="block max-w-48 truncate">{entry.notes ?? '—'}</span>
+                      {entry.notes && (
+                        <span className="block max-w-72 truncate text-xs text-muted" title={entry.notes}>
+                          {entry.notes}
+                        </span>
+                      )}
                     </Td>
                     <Td className="whitespace-nowrap text-right font-medium">
                       {formatMinutes(entry.minutes)}

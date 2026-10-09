@@ -32,7 +32,7 @@ export function ProfileView() {
   return (
     <>
       <PageHeader title="My profile" description="Manage your personal details and password." />
-      <div className="mx-auto max-w-4xl space-y-4">
+      <div className="max-w-4xl space-y-4">
         <Card>
           <CardBody className="flex flex-wrap items-center gap-4">
             <Avatar user={user} size="lg" />
