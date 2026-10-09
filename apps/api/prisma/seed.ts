@@ -32,6 +32,37 @@ const DAY = 86_400_000;
 const today = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
 const dayOffset = (days: number) => new Date(today.getTime() + days * DAY);
 
+/**
+ * Makes sure the platform root administrator exists (the only account allowed to create
+ * workspaces). Runs on every seed so existing databases get one too; never resets a password.
+ */
+async function ensureRootAdmin(organizationId: string, saltRounds: number) {
+  const email = process.env.SEED_ROOT_ADMIN_EMAIL?.trim().toLowerCase();
+  if (!email) {
+    console.warn('⚠ SEED_ROOT_ADMIN_EMAIL is not set - no root admin, so nobody can create workspaces');
+    return;
+  }
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    if (!existing.isRootAdmin) await prisma.user.update({ where: { id: existing.id }, data: { isRootAdmin: true } });
+    console.log(`✔ Root admin ${email} ready`);
+    return;
+  }
+  await prisma.user.create({
+    data: {
+      organizationId,
+      email,
+      passwordHash: await bcrypt.hash(requireEnv('SEED_ROOT_ADMIN_PASSWORD'), saltRounds),
+      firstName: 'Root',
+      lastName: 'Admin',
+      jobTitle: 'Platform Administrator',
+      role: OrgRole.OWNER,
+      isRootAdmin: true,
+    },
+  });
+  console.log(`✔ Created root admin ${email}`);
+}
+
 async function main() {
   const orgName = requireEnv('SEED_ORG_NAME');
   const adminEmail = requireEnv('SEED_ADMIN_EMAIL').toLowerCase();
@@ -39,8 +70,10 @@ async function main() {
   const saltRounds = Number(requireEnv('BCRYPT_SALT_ROUNDS'));
   const withDemo = ['true', '1', 'yes'].includes((process.env.SEED_DEMO_DATA ?? 'false').toLowerCase());
 
-  if (await prisma.user.findUnique({ where: { email: adminEmail } })) {
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  if (existingAdmin) {
     console.log(`✔ Admin ${adminEmail} already exists - skipping seed`);
+    await ensureRootAdmin(existingAdmin.organizationId, saltRounds);
     return;
   }
 
@@ -69,6 +102,7 @@ async function main() {
     },
   });
   console.log(`✔ Created organization "${orgName}" and owner ${adminEmail}`);
+  await ensureRootAdmin(organization.id, saltRounds);
 
   if (!withDemo) return;
 

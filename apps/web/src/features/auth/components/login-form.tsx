@@ -1,14 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { routes } from '@/shared/config/routes';
 import { errorMessage } from '@/shared/lib/api-client';
 import { Button } from '@/shared/ui/button';
 import { Field, Input } from '@/shared/ui/form';
-import { useAuthConfig, useLogin } from '../api';
+import { useLogin } from '../api';
 import { loginSchema, type LoginValues } from '../schemas';
 
 /** Only allow same-app relative redirects after login. */
@@ -20,7 +19,6 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useLogin();
-  const { data: config } = useAuthConfig();
   const form = useForm<LoginValues>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -49,14 +47,6 @@ export function LoginForm() {
       <Button type="submit" size="lg" className="w-full justify-center" loading={form.formState.isSubmitting}>
         Sign in
       </Button>
-      {config?.allowPublicRegistration && (
-        <p className="text-center text-sm text-muted">
-          New to {config.appName}?{' '}
-          <Link href={routes.register} className="font-medium text-brand hover:underline">
-            Create a workspace
-          </Link>
-        </p>
-      )}
     </form>
   );
 }

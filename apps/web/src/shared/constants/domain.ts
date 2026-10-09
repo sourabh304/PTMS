@@ -12,6 +12,8 @@ export const Permission = {
   TIMESHEETS_APPROVE: 'timesheets:approve',
   TIMESHEETS_VIEW_ALL: 'timesheets:view-all',
   REPORTS_VIEW: 'reports:view',
+  /** Root admins only: create and list workspaces. */
+  WORKSPACES_MANAGE: 'workspaces:manage',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
 

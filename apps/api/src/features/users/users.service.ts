@@ -94,6 +94,9 @@ export class UsersService {
     if (target.id === actor.id && (dto.role !== undefined || dto.isActive === false)) {
       throw new BadRequestException('You cannot change your own role or deactivate yourself');
     }
+    if (target.isRootAdmin && !actor.isRootAdmin) {
+      throw new ForbiddenException('Only a root administrator can change the root administrator account');
+    }
     if (target.role === OrgRole.OWNER && actor.role !== OrgRole.OWNER) {
       throw new ForbiddenException('Only an owner can modify another owner');
     }
@@ -111,6 +114,9 @@ export class UsersService {
 
   async resetPassword(actor: AuthenticatedUser, id: string, password: string): Promise<void> {
     const target = await this.findOne(actor.organizationId, id);
+    if (target.isRootAdmin && !actor.isRootAdmin) {
+      throw new ForbiddenException('Only a root administrator can change the root administrator account');
+    }
     if (target.role === OrgRole.OWNER && actor.role !== OrgRole.OWNER) {
       throw new ForbiddenException('Only an owner can reset another owner’s password');
     }

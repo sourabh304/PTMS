@@ -8,10 +8,10 @@ const toNumber = (value: string | undefined, fallback: number) => {
 };
 
 export const appConfig = {
-  name: process.env.NEXT_PUBLIC_APP_NAME ?? 'Project Tracker',
-  shortName: process.env.NEXT_PUBLIC_APP_SHORT_NAME ?? process.env.NEXT_PUBLIC_APP_NAME ?? 'PT',
-  tagline: process.env.NEXT_PUBLIC_APP_TAGLINE ?? '',
-  companyName: process.env.NEXT_PUBLIC_COMPANY_NAME ?? '',
+  name: process.env.NEXT_PUBLIC_APP_NAME ?? 'SegueIT Projects',
+  shortName: process.env.NEXT_PUBLIC_APP_SHORT_NAME ?? 'SegueIT',
+  tagline: process.env.NEXT_PUBLIC_APP_TAGLINE ?? 'Plan, track and deliver every project with confidence.',
+  companyName: process.env.NEXT_PUBLIC_COMPANY_NAME ?? 'SegueIT',
   brandColor: process.env.NEXT_PUBLIC_BRAND_COLOR ?? '#2563eb',
   /** Default product logo served from apps/web/public; organizations can override it. */
   logoUrl: process.env.NEXT_PUBLIC_LOGO_URL ?? '/segueit-logo.png',

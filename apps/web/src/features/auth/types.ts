@@ -9,6 +9,7 @@ export interface SessionUser {
   jobTitle: string | null;
   avatarUrl: string | null;
   role: string;
+  isRootAdmin: boolean;
   isActive: boolean;
   hourlyRate: number | null;
   lastLoginAt: string | null;
@@ -19,7 +20,6 @@ export interface SessionUser {
 
 export interface AuthConfig {
   appName: string;
-  allowPublicRegistration: boolean;
   passwordPolicy: {
     minLength: number;
     maxLength: number;
@@ -31,8 +31,3 @@ export interface LoginInput {
   password: string;
 }
 
-export interface RegisterInput extends LoginInput {
-  organizationName: string;
-  firstName: string;
-  lastName: string;
-}

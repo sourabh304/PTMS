@@ -120,7 +120,7 @@ function UserMenu() {
           <Avatar user={user} />
           <span className="hidden text-left sm:block">
             <span className="block text-sm font-bold leading-tight">{fullName(user)}</span>
-            <span className="block text-[11px] leading-tight text-muted">{humanize(user.role)}</span>
+            <span className="block text-[11px] leading-tight text-muted">{user.isRootAdmin ? 'Root admin' : humanize(user.role)}</span>
           </span>
         </button>
       )}

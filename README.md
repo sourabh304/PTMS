@@ -18,12 +18,19 @@ Requirements: **Node.js ≥ 20.11** and npm.
 
 ```bash
 npm run setup   # creates env files with random secrets, installs, creates & seeds the DB
-npm run dev     # API on http://localhost:4000, web on http://localhost:3000
+npm run dev     # syncs env + DB schema, then API on http://localhost:4000, web on http://localhost:3000
 ```
 
 Sign in with the administrator defined by `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
 in `apps/api/.env`. When `SEED_DEMO_DATA=true`, demo users share `SEED_DEMO_USER_PASSWORD`
 (e.g. `priya.sharma@<admin email domain>`). **Change these values before any real deployment.**
+
+### Workspaces and the root admin
+
+There is no public sign-up. New workspaces (organizations) can only be created by the
+**root admin** (`SEED_ROOT_ADMIN_EMAIL` / `SEED_ROOT_ADMIN_PASSWORD`, default `root@segueit.com`)
+from the **Workspaces** page, which creates the organization with its first owner account.
+Organization owners and admins cannot see that page, and cannot edit or deactivate the root admin.
 
 API documentation (Swagger) is served at `http://localhost:4000/api/docs` when `SWAGGER_ENABLED=true`.
 
@@ -96,7 +103,7 @@ apps/
 └─ web/                         Next.js App Router client
    └─ src/
       ├─ app/                   routes only (thin pages composing feature components)
-      │  ├─ (auth)/login, register
+      │  ├─ (auth)/login
       │  └─ (app)/dashboard, my-work, projects/[projectId]/{tasks,board,gantt,…}, timesheets, reports, settings, profile
       ├─ features/              auth, projects, tasks, gantt, milestones, issues, comments,
       │                         timesheets, dashboard, reports, activity, notifications,

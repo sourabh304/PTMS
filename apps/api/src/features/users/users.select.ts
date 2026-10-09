@@ -9,6 +9,7 @@ export const USER_PUBLIC_SELECT = {
   jobTitle: true,
   avatarUrl: true,
   role: true,
+  isRootAdmin: true,
   isActive: true,
   hourlyRate: true,
   lastLoginAt: true,

@@ -11,10 +11,13 @@ export const Permission = {
   TIMESHEETS_APPROVE: 'timesheets:approve',
   TIMESHEETS_VIEW_ALL: 'timesheets:view-all',
   REPORTS_VIEW: 'reports:view',
+  /** Platform level: create and list workspaces. Granted only to root admins, never by role. */
+  WORKSPACES_MANAGE: 'workspaces:manage',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
 
-const ALL_PERMISSIONS = Object.values(Permission);
+const ROOT_ONLY_PERMISSIONS: readonly Permission[] = [Permission.WORKSPACES_MANAGE];
+const ALL_PERMISSIONS = Object.values(Permission).filter((permission) => !ROOT_ONLY_PERMISSIONS.includes(permission));
 
 export const ROLE_PERMISSIONS: Record<OrgRole, readonly Permission[]> = {
   [OrgRole.OWNER]: ALL_PERMISSIONS,
@@ -35,3 +38,7 @@ export const permissionsForRole = (role: string): readonly Permission[] =>
 
 export const hasPermission = (role: string, permission: Permission): boolean =>
   permissionsForRole(role).includes(permission);
+
+/** Role permissions plus the platform permissions of a root admin. */
+export const permissionsForUser = (user: { role: string; isRootAdmin: boolean }): readonly Permission[] =>
+  user.isRootAdmin ? [...permissionsForRole(user.role), ...ROOT_ONLY_PERMISSIONS] : permissionsForRole(user.role);

@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { OrganizationsModule } from '../organizations/organizations.module';
 import { UsersModule } from '../users/users.module';
 import { AuthCookieService } from './auth-cookie.service';
 import { AuthController } from './auth.controller';
@@ -10,7 +9,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { TokenService } from './token.service';
 
 @Module({
-  imports: [PassportModule, JwtModule.register({}), UsersModule, OrganizationsModule],
+  imports: [PassportModule, JwtModule.register({}), UsersModule],
   controllers: [AuthController],
   providers: [AuthService, TokenService, AuthCookieService, JwtStrategy],
 })

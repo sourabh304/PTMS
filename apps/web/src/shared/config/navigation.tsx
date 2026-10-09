@@ -1,4 +1,4 @@
-import { BarChart3, CheckSquare, Clock, FolderKanban, LayoutDashboard, Settings, type LucideIcon } from 'lucide-react';
+import { BarChart3, Building2, CheckSquare, Clock, FolderKanban, LayoutDashboard, Settings, type LucideIcon } from 'lucide-react';
 import { Permission } from '@/shared/constants/domain';
 import { routes } from './routes';
 
@@ -19,5 +19,6 @@ export const MAIN_NAVIGATION: NavItem[] = [
 ];
 
 export const SECONDARY_NAVIGATION: NavItem[] = [
+  { label: 'Workspaces', href: routes.workspaces, icon: Building2, permission: Permission.WORKSPACES_MANAGE },
   { label: 'Settings', href: routes.settings, icon: Settings, permission: Permission.USERS_VIEW },
 ];
