@@ -1,7 +1,7 @@
 'use client';
 
 import { ListChecks, Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useCustomFields, useDeleteCustomField, useSetCustomValue } from '@/features/custom-fields/api';
 import { CustomFieldModal } from '@/features/custom-fields/components/custom-field-modal';
 import type { CustomField } from '@/features/custom-fields/types';
@@ -82,21 +82,28 @@ export function ProjectTable({ projectId }: { projectId: string }) {
     return ungrouped.length ? [...listed, { group: UNGROUPED, tasks: ungrouped }] : listed;
   }, [data, taskLists]);
 
-  const context: RowContext = {
-    statuses,
-    priorities,
-    members,
-    canEdit,
-    canManage,
-    layout,
-    customFields: fields,
-    onSetCustom: (task, field, value) => setCustom.mutate({ taskId: task.id, fieldId: field.id, value }),
-    onAddColumn: () => setEditingColumn('new'),
-    onEditColumn: setEditingColumn,
-    onDeleteColumn: setDeletingColumn,
-    onOpen: (task) => setTaskId(task.id),
-    onUpdate: (task, input, preview) => quickUpdate.mutate({ id: task.id, input, preview }),
-  };
+  // Latest handlers, read through a ref so `context` stays stable and rows only re-render when their data changes.
+  const handlers = useRef({ setCustom: setCustom.mutate, quickUpdate: quickUpdate.mutate, setTaskId });
+  handlers.current = { setCustom: setCustom.mutate, quickUpdate: quickUpdate.mutate, setTaskId };
+
+  const context = useMemo<RowContext>(
+    () => ({
+      statuses,
+      priorities,
+      members,
+      canEdit,
+      canManage,
+      layout,
+      customFields: fields,
+      onSetCustom: (task, field, value) => handlers.current.setCustom({ taskId: task.id, fieldId: field.id, value }),
+      onAddColumn: () => setEditingColumn('new'),
+      onEditColumn: setEditingColumn,
+      onDeleteColumn: setDeletingColumn,
+      onOpen: (task) => handlers.current.setTaskId(task.id),
+      onUpdate: (task, input, preview) => handlers.current.quickUpdate({ id: task.id, input, preview }),
+    }),
+    [statuses, priorities, members, canEdit, canManage, layout, fields],
+  );
 
   const addGroup = () =>
     saveGroup.mutate({ name: NEW_GROUP_NAME }, { onSuccess: (group) => setNewGroupId(group.id) });

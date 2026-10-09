@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { GitBranch, Maximize2, MessageSquare } from 'lucide-react';
 import { CustomCell } from '@/features/custom-fields/components/custom-cell';
 import { readCustomValue, type CustomField } from '@/features/custom-fields/types';
@@ -35,7 +36,8 @@ export interface RowContext {
 /** Cell wrapper: one grid column with the vertical separator of the table. */
 const cell = 'h-full min-w-0 border-r border-border';
 
-export function TaskRow({ task, color, context }: { task: Task; color: string; context: RowContext }) {
+/** Memoized: a row re-renders only when its task, colour or the shared table context changes. */
+export const TaskRow = memo(function TaskRow({ task, color, context }: { task: Task; color: string; context: RowContext }) {
   const { statuses, priorities, members, canEdit, onOpen, onUpdate, layout, customFields, onSetCustom } = context;
   const closed = task.status.category === StatusCategory.CLOSED;
   const estimate = task.estimatedHours ?? null;
@@ -164,4 +166,4 @@ export function TaskRow({ task, color, context }: { task: Task; color: string; c
       {layout.addColumn && <div aria-hidden />}
     </div>
   );
-}
+});

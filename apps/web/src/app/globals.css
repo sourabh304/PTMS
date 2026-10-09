@@ -211,15 +211,24 @@
   background-color: transparent;
   box-shadow: none;
 }
+/*
+ * The warm glow sits on its own fixed, composited layer behind the page. A
+ * `background-attachment: fixed` body would look the same but forces the browser
+ * to repaint the whole page (and every clay shadow) on each scroll frame.
+ */
 [data-style='clay'] body {
+  background: var(--background);
+}
+[data-style='clay']:not([data-mode='dark']) body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
     radial-gradient(1100px 560px at 100% -10%, rgb(255 214 165 / 0.35), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgb(232 170 96 / 0.12), transparent 60%),
-    var(--background);
-  background-attachment: fixed;
-}
-[data-style='clay'][data-mode='dark'] body {
-  background: var(--background);
+    radial-gradient(900px 500px at -10% 110%, rgb(232 170 96 / 0.12), transparent 60%);
+  will-change: transform;
 }
 
 @theme inline {
