@@ -24,9 +24,9 @@ npm run dev     # syncs env + DB schema, then API on http://localhost:4000, web 
 The seed creates two kinds of account (values from `apps/api/.env`):
 
 - **Root** (`ROOT_ACCOUNT` in `apps/api/prisma/seed-data.ts`) opens the **Platform console** at `/platform`
-  and is the only account that can create organizations, plans and subscriptions.
-- With `SEED_DEMO_DATA=true`, a demo organization is created too: its **Super Admin** and the shared demo-user
-  password are defined in `DEMO_ORGANIZATION` (e.g. `priya.sharma@segueit.com`).
+  and is the only account that can create organizations and appoint their project coordinators.
+- With `SEED_DEMO_DATA=true`, a demo organization is created too: its first **Project coordinator** and the shared
+  demo-user password are defined in `DEMO_ORGANIZATION` (e.g. `priya.sharma@segueit.com`).
 - Change these first-run passwords after signing in.
 
 **Change these values before any real deployment.**
@@ -35,14 +35,12 @@ The seed creates two kinds of account (values from `apps/api/.env`):
 
 | Account | Scope | Can do |
 | ------- | ----- | ------ |
-| **Root** | Whole platform, no organization | Manage every organization (create, rename, suspend, delete) and is the **only** role that can create, change and delete **plans** and **subscriptions**. Can open any organization's workspace with Super Admin rights. |
-| **Super Admin** | One organization | Everything in the organization, including managing other Super Admins. Each organization keeps at least one. |
-| **Admin** | One organization | Users, settings, workflows, all projects, timesheet approval, reports, view the plan. Cannot change Super Admins. |
-| **Employee** | One organization | Works on the projects they belong to. |
+| **Root** | Whole platform, no organization | Creates, renames, suspends and deletes organizations and is the **only** role that appoints (or changes) **project coordinators**. Can open any organization's workspace with every coordinator permission. |
+| **Project coordinator** | One organization | Creates projects and adds members to them, manages every project, creates and manages **member** accounts, schedules meetings, sees every member's details (People), approves time, reports and settings. |
+| **Member** | One organization | Sees only the projects they belong to and works on their items (tasks, issues, comments, time). |
 
-Inside a project, members additionally hold a project role (Manager / Member / Viewer).
-Plan limits (max users / projects) are enforced by the API; set `REQUIRE_ACTIVE_SUBSCRIPTION=true`
-to block adding users and projects for organizations without a current subscription.
+Roles from earlier versions are upgraded automatically by the seed (Super Admin/Admin → Project coordinator,
+Employee → Member).
 
 API documentation (Swagger) is served at `http://localhost:4000/api/docs` when `SWAGGER_ENABLED=true`.
 
@@ -63,7 +61,6 @@ Change settings with environment variables or a `.env` file next to `docker-comp
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
 | `SEED_DEMO_DATA` | `false` | `true` adds a demo organization with sample users and projects (`DEMO_ORGANIZATION` in seed-data.ts) |
-| `REQUIRE_ACTIVE_SUBSCRIPTION` | `false` | `true` blocks adding users/projects for organizations without a current plan |
 | `WEB_PORT` | `3000` | Port on your machine |
 | `COOKIE_SECURE` | `false` | Set `true` when served over HTTPS |
 | `APP_NAME`, `BRAND_COLOR` | SegueIT Projects, `#0b5cad` | Branding (rebuild after changing) |
@@ -93,7 +90,9 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Projects** – portfolio grid/table, status, owner, budget, timeline, color, archive/restore, members with project roles (Manager / Member / Viewer).
 - **Tasks** – groups, subtasks, assignees, priorities, estimates, progress, start/due dates, dependencies (with cycle detection), updates (comments), time logged.
 - **Kanban** – drag & drop across configurable statuses with persistent ordering.
-- **Calendar** – month view per project and in My work; items span start → due date, drag a day to reschedule, drag from the Unscheduled tray to plan.
+- **Calendar** – a global calendar (`/calendar`) plus month views per project and in My work; tasks span start → due date (or show on their due date only), drag a day to reschedule, drag from the Unscheduled tray to plan.
+- **Meetings** – coordinators and root paste a meeting link with its time, choose **Internal** or **Client** (each has its own colour) and who sees it (one project's members or the whole organization). Everyone who can see a meeting gets a notification on the morning of the meeting (`MEETING_DIGEST_HOUR`, organization time zone).
+- **People** – coordinators and root open any member to see their projects, open tasks and issues, time logged and recent activity.
 - **Workload** – estimated hours per person per week against capacity (working hours × 5), colour-coded with the items behind each cell.
 - **Custom columns** – per project: text, numbers, dropdown (coloured choices), checkbox, date, link, tags and rating; edited inline on the main table with group totals.
 - **Automations** – "when … then …" rules per project: when an item is created, its status or priority changes or someone is assigned, set status/priority, assign, move to a group, set a due date, or notify people. Recipes included; chains stop after 3 levels.
@@ -103,9 +102,9 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Timesheets** – log time against projects/tasks, billable flag, approval workflow, daily charts.
 - **Dashboards** – organization dashboard and per-project overview (status mix, priorities, workload, budget burn).
 - **Reports** – portfolio health (on track / at risk / off track) with CSV export, resource utilization vs capacity, time analysis, issue trends.
-- **Activity & notifications** – audit trail per project and in-app notifications: task/issue assignment, task and issue status changes, due date changes, new comments (creator, assignees and everyone in the thread), added to / removed from a project, time submitted for approval and reviewed, due today/tomorrow and overdue reminders (hourly, in the organization's timezone), and plan changes for organization admins.
-- **Administration** – users & roles (Super Admin, Admin, Employee), organization name and default brand color, timezone, working hours, fully configurable workflows, and a read-only view of the organization's plan and usage.
-- **Platform console (Root)** – overview with MRR, organizations (create with first Super Admin, suspend, delete), plan catalogue and subscriptions with enforced limits.
+- **Activity & notifications** – audit trail per project and in-app notifications: task/issue assignment, task and issue status changes, due date changes, new comments (creator, assignees and everyone in the thread), added to / removed from a project, time submitted for approval and reviewed, due today/tomorrow and overdue reminders (hourly, in the organization's timezone), and the morning notice for today's meetings.
+- **Administration** – users & roles (Project coordinator, Member), organization name and default brand color, timezone, working hours and fully configurable workflows.
+- **Platform console (Root)** – overview, organizations (create with their first project coordinator, add coordinators, suspend, delete).
 - **Appearance** – Claymorphic (cream, default) or Classic style, per-user light/dark/system theme, accent color, font (Figtree, Inter, Geist, IBM Plex Sans, Manrope), density, corner radius, light/dark sidebar, and a collapsible sidebar (Ctrl/⌘+B).
 - **Security** – httpOnly cookie auth, short-lived access tokens, rotating refresh tokens with reuse detection, bcrypt, Helmet, rate limiting, strict DTO validation, RBAC + project-level authorization, strict separation of platform (root) and tenant routes.
 
@@ -120,8 +119,7 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 | Group color palette | `apps/web/src/features/task-lists/group-colors.ts` (UI) and `apps/api/src/features/task-lists/task-list.colors.ts` (defaults for new groups) |
 | Ports, CORS, secrets, cookies, rate limits, pagination | `apps/api/.env` (validated with Zod at boot) |
 | Root account, demo organization, demo data | `apps/api/prisma/seed-data.ts`; `SEED_DEMO_DATA` in `apps/api/.env` |
-| Plan enforcement, default plan currency | `REQUIRE_ACTIVE_SUBSCRIPTION`, `DEFAULT_CURRENCY` in `apps/api/.env` |
-| Plans and subscriptions | Database — **Platform console** (root only) |
+| Hour of the morning meeting notice | `MEETING_DIGEST_HOUR` in `apps/api/.env` |
 | Statuses, priorities, severities | Database, per organization — **Settings → Workflow** |
 | Org name, default brand color, timezone, week start, working hours | Database — **Settings → Organization** |
 | Personal theme, accent, font, density, radius, sidebar | Browser storage — **Settings → Appearance** (options in `apps/web/src/shared/theme/theme.config.ts`) |
@@ -149,8 +147,8 @@ apps/
 │     ├─ common/                guards, decorators, filters, events, pagination, validation
 │     ├─ prisma/                PrismaService
 │     └─ features/
-│        ├─ auth/  users/  organizations/  platform/  plans/  subscriptions/  lookups/
-│        ├─ projects/  task-lists/  tasks/  milestones/  issues/  comments/
+│        ├─ auth/  users/  organizations/  platform/  lookups/
+│        ├─ projects/  task-lists/  tasks/  milestones/  issues/  comments/  meetings/
 │        ├─ timesheets/  activity/  notifications/
 │        └─ dashboard/  reports/  health/
 └─ web/                         Next.js App Router client
