@@ -38,7 +38,7 @@ export class CommentsService {
 
   async create(user: AuthenticatedUser, dto: CreateCommentDto) {
     const target = await this.resolveTarget(user, dto);
-    await this.access.assertCanView(user, target.projectId);
+    await this.assertWritable(user, target.projectId);
 
     const comment = await this.prisma.comment.create({
       data: { authorId: user.id, body: dto.body, taskId: dto.taskId ?? null, issueId: dto.issueId ?? null },
@@ -89,12 +89,27 @@ export class CommentsService {
     await this.prisma.comment.delete({ where: { id } });
   }
 
+  /**
+   * A comment the user can see, scoped by the project it belongs to (not by its author, since the
+   * root account writes comments without belonging to the organization). Archived projects are read-only.
+   */
   private async findOwned(user: AuthenticatedUser, id: string) {
+    const projectScope = { organizationId: user.organizationId };
     const comment = await this.prisma.comment.findFirst({
-      where: { id, author: { organizationId: user.organizationId } },
+      where: { id, OR: [{ task: { project: projectScope } }, { issue: { project: projectScope } }] },
+      include: { task: { select: { projectId: true } }, issue: { select: { projectId: true } } },
     });
-    if (!comment) throw new NotFoundException('Comment not found');
+    const projectId = comment?.task?.projectId ?? comment?.issue?.projectId;
+    if (!comment || !projectId || !(await this.access.resolve(user, projectId)).canView) {
+      throw new NotFoundException('Comment not found');
+    }
+    await this.assertWritable(user, projectId);
     return comment;
+  }
+
+  private async assertWritable(user: AuthenticatedUser, projectId: string): Promise<void> {
+    const { project } = await this.access.assertCanView(user, projectId);
+    if (project.isArchived) throw new BadRequestException('Archived projects are read-only');
   }
 
   private async resolveTarget(user: AuthenticatedUser, query: CommentQueryDto): Promise<CommentTarget> {

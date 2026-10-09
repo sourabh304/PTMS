@@ -4,7 +4,6 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { hasPermission, Permission } from '../../common/constants/permissions.constants';
@@ -22,7 +21,7 @@ import {
   UserQueryDto,
 } from './dto/user.dto';
 import { PasswordService } from './password.service';
-import { PublicUser, USER_PUBLIC_SELECT } from './users.select';
+import { PublicUser, USER_DIRECTORY_SELECT, USER_PUBLIC_SELECT } from './users.select';
 
 /** Open tasks / issues listed on a member's details page. */
 const DETAILS_LIST_SIZE = 50;
@@ -38,7 +37,8 @@ export class UsersService {
     private readonly pagination: PaginationService,
   ) {}
 
-  async findAll(organizationId: string, query: UserQueryDto): Promise<Paginated<PublicUser>> {
+  /** `fullView` (coordinators and root) includes pay rates and sign-in activity. */
+  async findAll(organizationId: string, query: UserQueryDto, fullView = true): Promise<Paginated<Partial<PublicUser>>> {
     const page = this.pagination.resolve(query.page, query.limit);
     const where: Prisma.UserWhereInput = {
       organizationId,
@@ -59,7 +59,7 @@ export class UsersService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.user.findMany({
         where,
-        select: USER_PUBLIC_SELECT,
+        select: fullView ? USER_PUBLIC_SELECT : USER_DIRECTORY_SELECT,
         orderBy: [{ firstName: query.sortOrder ?? 'asc' }, { lastName: 'asc' }],
         skip: page.skip,
         take: page.take,
@@ -71,6 +71,13 @@ export class UsersService {
 
   async findOne(organizationId: string, id: string): Promise<PublicUser> {
     const user = await this.prisma.user.findFirst({ where: { id, organizationId }, select: USER_PUBLIC_SELECT });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  /** One colleague as members may see them (see USER_DIRECTORY_SELECT). */
+  async findDirectoryEntry(organizationId: string, id: string) {
+    const user = await this.prisma.user.findFirst({ where: { id, organizationId }, select: USER_DIRECTORY_SELECT });
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
@@ -221,7 +228,8 @@ export class UsersService {
   async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     if (!(await this.passwords.verify(dto.currentPassword, user.passwordHash))) {
-      throw new UnauthorizedException('Current password is incorrect');
+      // Not 401: that status means "session expired" to clients, which would sign the user out.
+      throw new BadRequestException('Current password is incorrect');
     }
     if (dto.currentPassword === dto.newPassword) {
       throw new BadRequestException('New password must differ from the current one');

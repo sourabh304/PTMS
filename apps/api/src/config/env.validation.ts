@@ -38,6 +38,9 @@ export const envSchema = z.object({
   THROTTLE_TTL_MS: z.coerce.number().int().positive(),
   THROTTLE_LIMIT: z.coerce.number().int().positive(),
   AUTH_THROTTLE_LIMIT: z.coerce.number().int().positive(),
+  /** Failed sign-ins allowed per account before it is locked for LOGIN_LOCKOUT_MINUTES. */
+  LOGIN_MAX_FAILURES: z.coerce.number().int().positive().default(10),
+  LOGIN_LOCKOUT_MINUTES: z.coerce.number().int().positive().default(15),
 
   DEFAULT_PAGE_SIZE: z.coerce.number().int().positive(),
   MAX_PAGE_SIZE: z.coerce.number().int().positive(),

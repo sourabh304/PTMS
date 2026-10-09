@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PasswordService } from '../users/password.service';
 import { USER_PUBLIC_SELECT } from '../users/users.select';
 import { LoginDto } from './dto/auth.dto';
+import { LoginAttemptsService } from './login-attempts.service';
 import { ClientMeta, TokenPair, TokenService } from './token.service';
 
 const DAY_MS = 86_400_000;
@@ -19,6 +20,7 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly passwords: PasswordService,
     private readonly config: ConfigService<AppConfig, true>,
+    private readonly attempts: LoginAttemptsService,
   ) {}
 
   /** Public, non-sensitive settings the sign-in screens need. */
@@ -32,14 +34,18 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, meta: ClientMeta): Promise<TokenPair> {
+    const email = dto.email.toLowerCase();
+    this.attempts.assertAllowed(email);
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email.toLowerCase() },
+      where: { email },
       include: { organization: { select: { isActive: true } } },
     });
     const valid = user ? await this.passwords.verify(dto.password, user.passwordHash) : false;
     if (!user || !valid) {
+      this.attempts.recordFailure(email);
       throw new UnauthorizedException('Invalid email or password');
     }
+    this.attempts.reset(email);
     if (!user.isActive) {
       throw new ForbiddenException('Your account has been deactivated');
     }

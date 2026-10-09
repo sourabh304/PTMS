@@ -5,12 +5,18 @@ import type { Response } from 'express';
 const SCHEMA_MISSING = 'The database is not initialized. Run `npm run db:setup` and restart the server.';
 
 /** Translates well-known Prisma errors into meaningful HTTP responses. */
-@Catch(Prisma.PrismaClientKnownRequestError)
+@Catch(Prisma.PrismaClientKnownRequestError, Prisma.PrismaClientValidationError)
 export class PrismaExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(PrismaExceptionFilter.name);
 
-  catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
+  catch(exception: Prisma.PrismaClientKnownRequestError | Prisma.PrismaClientValidationError, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
+
+    // Input the DTOs let through but the database rejects (e.g. null for a required field).
+    if (exception instanceof Prisma.PrismaClientValidationError) {
+      response.status(HttpStatus.BAD_REQUEST).json({ statusCode: HttpStatus.BAD_REQUEST, message: 'Some values are missing or invalid', error: 'Bad Request' });
+      return;
+    }
 
     const mapping: Record<string, { status: number; message: string }> = {
       P2002: { status: HttpStatus.CONFLICT, message: this.uniqueMessage(exception) },

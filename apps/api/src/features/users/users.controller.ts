@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permission } from '../../common/constants/permissions.constants';
+import { hasPermission, Permission } from '../../common/constants/permissions.constants';
 import { AccountScope, ForAccounts } from '../../common/decorators/account-scope.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
@@ -23,7 +23,7 @@ export class UsersController {
   @Get()
   @RequirePermissions(Permission.USERS_VIEW)
   findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: UserQueryDto) {
-    return this.users.findAll(user.organizationId, query);
+    return this.users.findAll(user.organizationId, query, hasPermission(user.role, Permission.USERS_MANAGE));
   }
 
   @Patch('me')
@@ -42,7 +42,9 @@ export class UsersController {
   @Get(':id')
   @RequirePermissions(Permission.USERS_VIEW)
   findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.users.findOne(user.organizationId, id);
+    return hasPermission(user.role, Permission.USERS_MANAGE)
+      ? this.users.findOne(user.organizationId, id)
+      : this.users.findDirectoryEntry(user.organizationId, id);
   }
 
   /** Projects, open work, time and activity of one person (coordinators and root). */

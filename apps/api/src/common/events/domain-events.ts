@@ -51,6 +51,7 @@ export const NotificationLinks = {
   task: (projectId: string, taskId: string) => `/projects/${projectId}?taskId=${taskId}`,
   issue: (projectId: string, issueId: string) => `/projects/${projectId}/issues?issueId=${issueId}`,
   timesheet: () => `/timesheets`,
-  calendar: (date: Date) => `/calendar?date=${date.toISOString().slice(0, 10)}`,
+  /** `day` is a YYYY-MM-DD date in the organization's time zone. */
+  calendar: (day: string) => `/calendar?date=${day}`,
   projectTimesheet: (projectId: string) => `/projects/${projectId}/timesheets`,
 };

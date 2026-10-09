@@ -109,7 +109,7 @@ export class TimesheetsService {
 
   async update(user: AuthenticatedUser, id: string, dto: UpdateTimeEntryDto) {
     const entry = await this.findVisible(user, id);
-    this.assertCanModify(user, entry);
+    await this.assertCanModify(user, entry);
     await this.assertRelations(entry.projectId, dto);
     const updated = await this.prisma.timeEntry.update({
       where: { id },
@@ -123,7 +123,7 @@ export class TimesheetsService {
 
   async remove(user: AuthenticatedUser, id: string): Promise<void> {
     const entry = await this.findVisible(user, id);
-    this.assertCanModify(user, entry);
+    await this.assertCanModify(user, entry);
     await this.prisma.timeEntry.delete({ where: { id } });
   }
 
@@ -187,12 +187,14 @@ export class TimesheetsService {
     return entry;
   }
 
-  private assertCanModify(user: AuthenticatedUser, entry: TimeEntry): void {
+  private async assertCanModify(user: AuthenticatedUser, entry: TimeEntry): Promise<void> {
     if (isCoordinator(user.role)) return;
     if (entry.userId !== user.id) throw new ForbiddenException('You can only change your own time entries');
     if (entry.approvalStatus === ApprovalStatus.APPROVED) {
       throw new BadRequestException('Approved entries are locked');
     }
+    // Members change time only on projects they still work on, and never on archived ones.
+    await this.access.assertCanEdit(user, entry.projectId);
   }
 
   private async assertRelations(projectId: string, dto: Pick<UpdateTimeEntryDto, 'taskId' | 'issueId'>) {

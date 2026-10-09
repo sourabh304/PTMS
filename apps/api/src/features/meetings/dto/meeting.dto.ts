@@ -42,7 +42,8 @@ export class CreateMeetingDto {
 
   @ApiProperty({ description: 'Link to join (Zoom, Teams, Meet…)' })
   @TrimString()
-  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  // Intranet and self-hosted links (no public domain ending) are allowed too.
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true, require_tld: false, allow_underscores: true })
   @MaxLength(2000)
   link: string;
 

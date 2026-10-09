@@ -5,13 +5,14 @@ import { UsersModule } from '../users/users.module';
 import { AuthCookieService } from './auth-cookie.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { LoginAttemptsService } from './login-attempts.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { TokenService } from './token.service';
 
 @Module({
   imports: [PassportModule, JwtModule.register({}), UsersModule],
   controllers: [AuthController],
-  providers: [AuthService, TokenService, AuthCookieService, JwtStrategy],
+  providers: [AuthService, TokenService, AuthCookieService, JwtStrategy, LoginAttemptsService],
   exports: [AuthCookieService],
 })
 export class AuthModule {}

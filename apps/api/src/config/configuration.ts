@@ -49,6 +49,8 @@ const buildConfiguration = () => {
       ttlMs: env.THROTTLE_TTL_MS,
       limit: env.THROTTLE_LIMIT,
       authLimit: env.AUTH_THROTTLE_LIMIT,
+      loginMaxFailures: env.LOGIN_MAX_FAILURES,
+      loginLockoutMs: env.LOGIN_LOCKOUT_MINUTES * 60_000,
     },
     pagination: {
       defaultPageSize: env.DEFAULT_PAGE_SIZE,
