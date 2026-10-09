@@ -110,7 +110,7 @@ interface SegmentedProps<T extends string> {
 
 export function Segmented<T extends string>({ value, onChange, options, className, ...rest }: SegmentedProps<T>) {
   return (
-    <div role="tablist" aria-label={rest['aria-label']} className={cn('scrollbar-thin inline-flex max-w-full overflow-x-auto rounded-ui border border-border bg-surface-muted p-0.5', className)}>
+    <div role="tablist" aria-label={rest['aria-label']} className={cn('scrollbar-thin inline-flex min-w-0 max-w-full overflow-x-auto rounded-ui border border-border bg-surface-muted p-0.5', className)}>
       {options.map((option) => {
         const active = option.value === value;
         return (

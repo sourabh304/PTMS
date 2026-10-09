@@ -169,7 +169,7 @@ function UserFormModal({ user, onClose, isSelf }: { user: User | 'new' | null; o
   const create = useCreateUser();
   const update = useUpdateUser();
   const minPasswordLength = usePasswordMinLength();
-  const roleLocked = isSelf || !!existing?.isRootAdmin;
+  const roleLocked = isSelf;
   const form = useForm<UserValues>({ resolver: zodResolver(userSchema) });
   const { errors } = form.formState;
 

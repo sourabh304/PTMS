@@ -20,12 +20,9 @@ cd /app/apps/api
 # Create or update tables. Changes that would lose data stop the start-up instead.
 npx --no-install prisma db push --skip-generate
 
-# Creates the organization and admin on first start; skipped once the admin exists.
+# Creates the root account and default plans (plus demo data when SEED_DEMO_DATA=true).
+# Every step is idempotent, so restarts never duplicate anything.
 if [ "$SEED_ON_START" = "true" ]; then
-  if [ -z "$SEED_ADMIN_PASSWORD" ]; then
-    echo "SEED_ADMIN_PASSWORD is not set: choose the first administrator's password (see docker-compose.yml)." >&2
-    exit 1
-  fi
   npx --no-install prisma db seed
 fi
 

@@ -75,7 +75,7 @@ export function GanttChart({ projectId }: { projectId: string }) {
   const { data, isLoading, isError, error, refetch } = useGantt(projectId);
   const { data: project } = useProject(projectId);
   const { data: session } = useSession();
-  const weekStartsOn = session?.organization.weekStartsOn ?? 1;
+  const weekStartsOn = session?.organization?.weekStartsOn ?? 1;
   const canEdit = !!project?.access.canEdit && !project.isArchived;
   const update = useUpdateTask();
   const [zoom, setZoom] = useState<GanttZoom>('week');

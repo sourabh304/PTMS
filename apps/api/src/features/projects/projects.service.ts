@@ -302,6 +302,14 @@ export class ProjectsService {
       action: ActivityAction.LEFT,
       summary: `removed a member from the project`,
     });
+    this.events.notify({
+      recipientIds: [userId],
+      actorId: user.id,
+      type: NotificationType.PROJECT_REMOVED,
+      title: `You were removed from ${project.name}`,
+      body: `${fullName(user)} removed you from the project; your task assignments there were cleared`,
+      link: NotificationLinks.home(),
+    });
   }
 
   // ─── Private ─────────────────────────────────────────────────

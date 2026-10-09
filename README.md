@@ -54,18 +54,19 @@ Requirements: **Docker** with Docker Compose. No Node.js needed.
 docker compose up --build
 ```
 
-Open http://localhost:3000 and sign in as `admin@segueit.com` / `ChangeMe@123`.
+Open http://localhost:3000 and sign in with the root account from `apps/api/prisma/seed-data.ts`
+(`ROOT_ACCOUNT`), then create organizations from the Platform console. Change its password after signing in.
 Data is kept in the `api-data` volume; JWT secrets are generated on first start and stored there too.
 
 Change settings with environment variables or a `.env` file next to `docker-compose.yml`:
 
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@segueit.com` / `ChangeMe@123` | Root administrator, the only one who can create workspaces (created on first start only) |
-| `SEED_DEMO_DATA` | `false` | `true` adds sample users and projects on first start |
+| `SEED_DEMO_DATA` | `false` | `true` adds a demo organization with sample users and projects (`DEMO_ORGANIZATION` in seed-data.ts) |
+| `REQUIRE_ACTIVE_SUBSCRIPTION` | `false` | `true` blocks adding users/projects for organizations without a current plan |
 | `WEB_PORT` | `3000` | Port on your machine |
 | `COOKIE_SECURE` | `false` | Set `true` when served over HTTPS |
-| `APP_NAME`, `BRAND_COLOR` | SegueIT Projects, `#2563eb` | Branding (rebuild after changing) |
+| `APP_NAME`, `BRAND_COLOR` | SegueIT Projects, `#0b5cad` | Branding (rebuild after changing) |
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | generated | Provide your own to manage secrets yourself |
 
 The `Dockerfile` has two targets, `api` and `web`, if you want to build the images separately
@@ -98,7 +99,7 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Timesheets** – log time against projects/tasks, billable flag, approval workflow, daily charts.
 - **Dashboards** – organization dashboard and per-project overview (status mix, priorities, workload, budget burn).
 - **Reports** – portfolio health (on track / at risk / off track) with CSV export, resource utilization vs capacity, time analysis, issue trends.
-- **Activity & notifications** – audit trail per project and in-app notifications for assignments, comments, reviews.
+- **Activity & notifications** – audit trail per project and in-app notifications: task/issue assignment, task and issue status changes, due date changes, new comments (creator, assignees and everyone in the thread), added to / removed from a project, time submitted for approval and reviewed, due today/tomorrow and overdue reminders (hourly, in the organization's timezone), and plan changes for organization admins.
 - **Administration** – users & roles (Super Admin, Admin, Employee), organization name and default brand color, timezone, working hours, fully configurable workflows, and a read-only view of the organization's plan and usage.
 - **Platform console (Root)** – overview with MRR, organizations (create with first Super Admin, suspend, delete), plan catalogue and subscriptions with enforced limits.
 - **Appearance** – per-user light/dark/system theme, accent color, font (Figtree, Inter, Geist, IBM Plex Sans, Manrope), density, corner radius, light/dark sidebar, and a collapsible sidebar (Ctrl/⌘+B).
@@ -144,7 +145,7 @@ apps/
 │     ├─ common/                guards, decorators, filters, events, pagination, validation
 │     ├─ prisma/                PrismaService
 │     └─ features/
-│        ├─ auth/  users/  organizations/  workspaces/  lookups/
+│        ├─ auth/  users/  organizations/  platform/  plans/  subscriptions/  lookups/
 │        ├─ projects/  task-lists/  tasks/  milestones/  issues/  comments/
 │        ├─ timesheets/  activity/  notifications/
 │        └─ dashboard/  reports/  health/

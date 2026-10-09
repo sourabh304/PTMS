@@ -1,7 +1,10 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
-import { CURRENT_SUBSCRIPTION_STATUSES, SubscriptionStatus } from '../../common/constants/domain.constants';
+import { CURRENT_SUBSCRIPTION_STATUSES, NotificationType, SubscriptionStatus } from '../../common/constants/domain.constants';
+import { ORG_ADMIN_ROLES } from '../../common/constants/roles.constants';
+import { NotificationLinks } from '../../common/events/domain-events';
+import { EventPublisher } from '../../common/events/event-publisher.service';
 import { PaginationService } from '../../common/pagination/pagination.service';
 import { AppConfig } from '../../config/configuration';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -19,12 +22,15 @@ const SUBSCRIPTION_INCLUDE = {
 
 const isCurrentStatus = (status: string) => CURRENT_SUBSCRIPTION_STATUSES.includes(status as SubscriptionStatus);
 
+type SubscriptionWithPlan = Prisma.SubscriptionGetPayload<{ include: typeof SUBSCRIPTION_INCLUDE }>;
+
 @Injectable()
 export class SubscriptionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pagination: PaginationService,
     private readonly config: ConfigService<AppConfig, true>,
+    private readonly events: EventPublisher,
   ) {}
 
   /** Prisma filter for subscriptions that currently grant access. */
@@ -61,7 +67,7 @@ export class SubscriptionsService {
     return this.pagination.build(data, total, page);
   }
 
-  async create(dto: CreateSubscriptionDto) {
+  async create(dto: CreateSubscriptionDto, actorId: string) {
     const organization = await this.prisma.organization.findUnique({ where: { id: dto.organizationId } });
     if (!organization) throw new BadRequestException('Organization not found');
     await this.assertAssignablePlan(dto.planId);
@@ -70,7 +76,7 @@ export class SubscriptionsService {
     const startDate = dto.startDate ?? new Date();
     this.assertDateRange(startDate, dto.endDate);
 
-    return this.prisma.$transaction(async (tx) => {
+    const subscription = await this.prisma.$transaction(async (tx) => {
       if (isCurrentStatus(status)) await this.closeCurrent(tx, dto.organizationId);
       return tx.subscription.create({
         data: {
@@ -84,9 +90,11 @@ export class SubscriptionsService {
         include: SUBSCRIPTION_INCLUDE,
       });
     });
+    await this.notifyAdmins(subscription, actorId, `Your organization is now on the ${subscription.plan.name} plan`);
+    return subscription;
   }
 
-  async update(id: string, dto: UpdateSubscriptionDto) {
+  async update(id: string, dto: UpdateSubscriptionDto, actorId: string) {
     const existing = await this.prisma.subscription.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Subscription not found');
     if (dto.planId && dto.planId !== existing.planId) await this.assertAssignablePlan(dto.planId);
@@ -95,13 +103,32 @@ export class SubscriptionsService {
     const becomesCurrent = dto.status !== undefined && isCurrentStatus(dto.status) && !isCurrentStatus(existing.status);
     // Reactivating an ended subscription reopens it unless a new end date is given.
     const reopen = becomesCurrent && dto.endDate === undefined && !!existing.endDate && existing.endDate < new Date();
-    return this.prisma.$transaction(async (tx) => {
+    const subscription = await this.prisma.$transaction(async (tx) => {
       if (becomesCurrent) await this.closeCurrent(tx, existing.organizationId, id);
       return tx.subscription.update({
         where: { id },
         data: { ...dto, ...(reopen ? { endDate: null } : {}) },
         include: SUBSCRIPTION_INCLUDE,
       });
+    });
+    await this.notifyAdmins(subscription, actorId, `Your ${subscription.plan.name} subscription was updated`);
+    return subscription;
+  }
+
+  /** Tells the organization's admins that their plan changed (they see it in Settings → Organization). */
+  private async notifyAdmins(subscription: SubscriptionWithPlan, actorId: string, title: string): Promise<void> {
+    const admins = await this.prisma.user.findMany({
+      where: { organizationId: subscription.organizationId, isActive: true, role: { in: [...ORG_ADMIN_ROLES] } },
+      select: { id: true },
+    });
+    const ends = subscription.endDate ? ` until ${subscription.endDate.toISOString().slice(0, 10)}` : '';
+    this.events.notify({
+      recipientIds: admins.map((admin) => admin.id),
+      actorId,
+      type: NotificationType.SUBSCRIPTION_CHANGED,
+      title,
+      body: `Status: ${subscription.status.toLowerCase().replace('_', ' ')}${ends}`,
+      link: NotificationLinks.organizationSettings(),
     });
   }
 

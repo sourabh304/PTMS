@@ -9,8 +9,6 @@ export interface SessionUser {
   jobTitle: string | null;
   avatarUrl: string | null;
   role: string;
-  /** Platform administrator who can create and list workspaces. */
-  isRootAdmin: boolean;
   isActive: boolean;
   hourlyRate: number | null;
   lastLoginAt: string | null;

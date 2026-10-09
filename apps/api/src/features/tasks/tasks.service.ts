@@ -155,10 +155,15 @@ export class TasksService {
 
     if (data.statusId) {
       this.recordActivity(user, task, ActivityAction.STATUS_CHANGED, `moved ${this.ref(task)} to ${task.status.name}`);
+      this.notifyStatusChange(user, task);
     } else {
       this.recordActivity(user, task, ActivityAction.UPDATED, `updated task ${this.ref(task)} ${task.title}`);
     }
     this.notifyAssignees(user, task, addedAssignees);
+    if (dto.dueDate !== undefined && dto.dueDate?.getTime() !== existing.dueDate?.getTime()) {
+      // Newly added assignees already got the assignment notice with the new date.
+      this.notifyDueDateChange(user, task, addedAssignees);
+    }
     return flattenAssignees(task);
   }
 
@@ -173,6 +178,7 @@ export class TasksService {
     const task = await this.prisma.task.update({ where: { id }, data, include: TASK_LIST_INCLUDE });
     if (data.statusId) {
       this.recordActivity(user, task, ActivityAction.STATUS_CHANGED, `moved ${this.ref(task)} to ${task.status.name}`);
+      this.notifyStatusChange(user, task);
     }
     return flattenAssignees(task);
   }
@@ -396,6 +402,30 @@ export class TasksService {
     });
   }
 
+  /** The task's creator and assignees follow its progress. */
+  private notifyStatusChange(user: AuthenticatedUser, task: NotifiableTask & { createdById: string; status: { name: string } }): void {
+    this.events.notify({
+      recipientIds: [task.createdById, ...task.assignees.map((a) => a.user.id)],
+      actorId: user.id,
+      type: NotificationType.TASK_STATUS_CHANGED,
+      title: `${this.ref(task)} moved to ${task.status.name}`,
+      body: `${fullName(user)} changed the status of "${task.title}"`,
+      link: NotificationLinks.task(task.projectId, task.id),
+    });
+  }
+
+  private notifyDueDateChange(user: AuthenticatedUser, task: NotifiableTask & { dueDate: Date | null }, skipIds: string[]): void {
+    const due = task.dueDate ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(task.dueDate) : null;
+    this.events.notify({
+      recipientIds: task.assignees.map((a) => a.user.id).filter((id) => !skipIds.includes(id)),
+      actorId: user.id,
+      type: NotificationType.TASK_DUE_DATE_CHANGED,
+      title: due ? `${this.ref(task)} is now due ${due}` : `${this.ref(task)} no longer has a due date`,
+      body: `${fullName(user)} changed the due date of "${task.title}"`,
+      link: NotificationLinks.task(task.projectId, task.id),
+    });
+  }
+
   private notifyAssignees(
     user: AuthenticatedUser,
     task: Pick<Task, 'id' | 'projectId' | 'number' | 'title'> & { project: { key: string } },
@@ -411,6 +441,8 @@ export class TasksService {
     });
   }
 }
+
+type NotifiableTask = Pick<Task, 'id' | 'projectId' | 'number' | 'title'> & { project: { key: string }; assignees: { user: { id: string } }[] };
 
 /** Converts the join-table shape `{ assignees: [{ user }] }` into `{ assignees: [user] }`. */
 function flattenAssignees<T extends { assignees: { user: unknown }[] }>(task: T) {

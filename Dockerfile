@@ -33,9 +33,11 @@ ENV NODE_ENV=production \
     DATABASE_URL="file:/data/segueit.db" \
     JWT_ACCESS_EXPIRES_IN=15m \
     JWT_REFRESH_EXPIRES_IN=7d \
+    JWT_REFRESH_REMEMBER_EXPIRES_IN=30d \
     BCRYPT_SALT_ROUNDS=12 \
     ACCESS_COOKIE_NAME=sptms_at \
     REFRESH_COOKIE_NAME=sptms_rt \
+    ROOT_WORKSPACE_COOKIE_NAME=sptms_ws \
     COOKIE_SECURE=false \
     COOKIE_SAME_SITE=lax \
     THROTTLE_TTL_MS=60000 \
@@ -43,13 +45,11 @@ ENV NODE_ENV=production \
     AUTH_THROTTLE_LIMIT=20 \
     DEFAULT_PAGE_SIZE=20 \
     MAX_PAGE_SIZE=200 \
+    REQUIRE_ACTIVE_SUBSCRIPTION=false \
+    DEFAULT_CURRENCY=USD \
     SEED_ON_START=true \
-    SEED_ORG_NAME=SegueIT \
-    SEED_ADMIN_EMAIL=admin@segueit.com \
-    SEED_ADMIN_FIRST_NAME=System \
-    SEED_ADMIN_LAST_NAME=Administrator \
     SEED_DEMO_DATA=false
-# SEED_ADMIN_PASSWORD (and SEED_DEMO_USER_PASSWORD with demo data) must be supplied at run time.
+# The seed creates the root account and default plans (accounts are defined in prisma/seed-data.ts).
 # Prisma CLI and tsx stay installed: the entrypoint syncs the schema and runs the seed.
 COPY --from=api-build /app/package.json ./
 COPY --from=api-build /app/node_modules ./node_modules
@@ -75,7 +75,7 @@ ARG NEXT_PUBLIC_APP_NAME="SegueIT Projects"
 ARG NEXT_PUBLIC_APP_SHORT_NAME="SegueIT"
 ARG NEXT_PUBLIC_APP_TAGLINE="Plan, track and deliver every project with confidence."
 ARG NEXT_PUBLIC_COMPANY_NAME="SegueIT"
-ARG NEXT_PUBLIC_BRAND_COLOR="#2563eb"
+ARG NEXT_PUBLIC_BRAND_COLOR="#0b5cad"
 ARG NEXT_PUBLIC_API_BASE_PATH=/api
 ARG NEXT_PUBLIC_DEFAULT_PAGE_SIZE=20
 ARG NEXT_PUBLIC_BOARD_PAGE_SIZE=200

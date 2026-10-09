@@ -23,7 +23,8 @@ export function NotificationBell() {
 
   return (
     <Dropdown
-      className="w-[min(24rem,calc(100vw-2rem))] p-0"
+      // On phones the panel spans the screen under the header instead of hanging off the bell.
+      className="w-96 p-0 max-sm:fixed max-sm:inset-x-3 max-sm:top-14 max-sm:w-auto"
       trigger={({ toggle }) => (
         <button
           type="button"
@@ -61,7 +62,7 @@ function NotificationPanel({ onOpen, onMarkAll, hasUnread }: { onOpen: (n: Notif
         {isLoading ? (
           <Spinner />
         ) : !data?.data.length ? (
-          <EmptyState title="You're all caught up" description="New assignments and comments will show up here." />
+          <EmptyState title="You're all caught up" description="Assignments, status changes, comments and due date reminders show up here." />
         ) : (
           data.data.map((notification) => (
             <button

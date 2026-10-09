@@ -137,7 +137,7 @@ function Sidebar({ user, pathname, navigation, workspace, tenant, onClose, colla
     <div data-sidebar-panel className="flex h-full flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border px-4 collapsed:justify-center collapsed:px-0">
         <Link href={navigation[0].items[0].href} aria-label={`${appConfig.name} home`} className="min-w-0 text-sidebar-heading collapsed:hidden">
-          <BrandLogo layout="stacked" className="[&_img]:h-5" />
+          <BrandLogo className="flex-col items-start gap-1 [&_img]:h-5 [&>span]:text-[11px] [&>span]:uppercase [&>span]:tracking-wider [&>span]:opacity-70" />
         </Link>
         {onToggleCollapse && (
           <button

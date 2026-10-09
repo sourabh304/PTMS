@@ -15,6 +15,7 @@ import {
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSession } from '@/features/auth/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';

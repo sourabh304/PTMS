@@ -21,13 +21,13 @@ export class PlatformSubscriptionsController {
   }
 
   @Post()
-  create(@Body() dto: CreateSubscriptionDto) {
-    return this.subscriptions.create(dto);
+  create(@CurrentUser('id') actorId: string, @Body() dto: CreateSubscriptionDto) {
+    return this.subscriptions.create(dto, actorId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateSubscriptionDto) {
-    return this.subscriptions.update(id, dto);
+  update(@CurrentUser('id') actorId: string, @Param('id') id: string, @Body() dto: UpdateSubscriptionDto) {
+    return this.subscriptions.update(id, dto, actorId);
   }
 
   @Delete(':id')

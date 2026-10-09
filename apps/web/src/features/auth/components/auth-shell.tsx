@@ -22,7 +22,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
         <div aria-hidden className="pointer-events-none absolute -bottom-40 right-0 size-[24rem] rounded-full bg-brand opacity-[0.12] blur-[120px]" />
 
         <div className="relative">
-          <BrandLogo className="text-sidebar-heading [&_img]:h-8" />
+          <BrandLogo inverted className="[&_img]:h-8" />
         </div>
 
         <div className="relative my-auto max-w-xl py-6">

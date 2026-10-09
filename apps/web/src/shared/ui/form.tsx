@@ -101,6 +101,22 @@ export const Checkbox = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInp
 );
 Checkbox.displayName = 'Checkbox';
 
+/** Color swatch plus hex text box sharing one value. */
+export function ColorInput({ value, onChange, id }: { value: string; onChange: (value: string) => void; id?: string }) {
+  return (
+    <div className="flex gap-2">
+      <input
+        type="color"
+        aria-label="Pick a color"
+        className={cn(control, 'h-[var(--control-h)] w-14 shrink-0 cursor-pointer p-1')}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
 /** Inline alert for form-level messages. */
 export function FormAlert({ children, tone = 'danger' }: { children: ReactNode; tone?: 'danger' | 'success' }) {
   return (
