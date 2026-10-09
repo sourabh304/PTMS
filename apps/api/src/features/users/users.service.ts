@@ -7,11 +7,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { isSuperAdmin, OrgRole } from '../../common/constants/roles.constants';
+import { hasPermission, Permission } from '../../common/constants/permissions.constants';
+import { normalizeRole, OrgRole } from '../../common/constants/roles.constants';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { Paginated, PaginationService } from '../../common/pagination/pagination.service';
+import { StatusCategory } from '../../common/constants/domain.constants';
+import { addDays, startOfDayUtc, startOfWeekUtc } from '../../common/utils/date.util';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import {
   ChangePasswordDto,
   CreateUserDto,
@@ -22,13 +24,18 @@ import {
 import { PasswordService } from './password.service';
 import { PublicUser, USER_PUBLIC_SELECT } from './users.select';
 
+/** Open tasks / issues listed on a member's details page. */
+const DETAILS_LIST_SIZE = 50;
+const DETAILS_RECENT_SIZE = 15;
+/** Window for the "last 30 days" figures. */
+const DETAILS_WINDOW_DAYS = 30;
+
 @Injectable()
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly pagination: PaginationService,
-    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async findAll(organizationId: string, query: UserQueryDto): Promise<Paginated<PublicUser>> {
@@ -68,12 +75,106 @@ export class UsersService {
     return user;
   }
 
+  /** Everything a coordinator needs to know about one person: projects, open work, time and activity. */
+  async details(organizationId: string, id: string) {
+    const user = await this.findOne(organizationId, id);
+    const organization = await this.prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { weekStartsOn: true } });
+    const now = new Date();
+    const today = startOfDayUtc(now);
+    const weekStart = startOfWeekUtc(now, organization.weekStartsOn);
+    const monthAgo = addDays(today, -DETAILS_WINDOW_DAYS);
+    const openStatus: Prisma.LookupWhereInput = { OR: [{ category: null }, { category: { not: StatusCategory.CLOSED } }] };
+    const assigned: Prisma.TaskWhereInput = { assignees: { some: { userId: id } }, project: { organizationId, isArchived: false } };
+    const lookup = { select: { id: true, name: true, color: true, category: true } };
+
+    const [memberships, tasks, issues, completedTasks, weekTime, monthTime, recentTime, activity] = await Promise.all([
+      this.prisma.projectMember.findMany({
+        where: { userId: id, project: { organizationId } },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          createdAt: true,
+          project: { select: { id: true, name: true, key: true, color: true, isArchived: true, endDate: true, status: lookup } },
+        },
+      }),
+      this.prisma.task.findMany({
+        where: { ...assigned, status: openStatus },
+        orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
+        take: DETAILS_LIST_SIZE,
+        select: {
+          id: true,
+          number: true,
+          title: true,
+          dueDate: true,
+          progress: true,
+          estimatedHours: true,
+          status: lookup,
+          priority: lookup,
+          project: { select: { id: true, name: true, key: true, color: true } },
+        },
+      }),
+      this.prisma.issue.findMany({
+        where: { assigneeId: id, project: { organizationId, isArchived: false }, status: openStatus },
+        orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
+        take: DETAILS_LIST_SIZE,
+        select: {
+          id: true,
+          number: true,
+          title: true,
+          dueDate: true,
+          status: lookup,
+          severity: lookup,
+          project: { select: { id: true, name: true, key: true, color: true } },
+        },
+      }),
+      this.prisma.task.count({ where: { ...assigned, completedAt: { gte: monthAgo } } }),
+      this.prisma.timeEntry.aggregate({ where: { userId: id, date: { gte: weekStart } }, _sum: { minutes: true } }),
+      this.prisma.timeEntry.aggregate({ where: { userId: id, date: { gte: monthAgo } }, _sum: { minutes: true } }),
+      this.prisma.timeEntry.findMany({
+        where: { userId: id, project: { organizationId } },
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+        take: DETAILS_RECENT_SIZE,
+        select: { id: true, date: true, minutes: true, notes: true, approvalStatus: true, project: { select: { id: true, name: true, key: true, color: true } } },
+      }),
+      this.prisma.activity.findMany({
+        where: { actorId: id, organizationId },
+        orderBy: { createdAt: 'desc' },
+        take: DETAILS_RECENT_SIZE,
+        select: { id: true, summary: true, createdAt: true, project: { select: { id: true, name: true } } },
+      }),
+    ]);
+
+    const openTaskCounts = await this.prisma.task.groupBy({
+      by: ['projectId'],
+      where: { ...assigned, status: openStatus },
+      _count: { _all: true },
+    });
+    const openByProject = new Map(openTaskCounts.map((row) => [row.projectId, row._count._all]));
+
+    return {
+      user,
+      stats: {
+        projects: memberships.filter((m) => !m.project.isArchived).length,
+        openTasks: [...openByProject.values()].reduce((sum, count) => sum + count, 0),
+        overdueTasks: tasks.filter((task) => task.dueDate && task.dueDate < today).length,
+        completedTasks30d: completedTasks,
+        openIssues: issues.length,
+        minutesThisWeek: weekTime._sum.minutes ?? 0,
+        minutes30d: monthTime._sum.minutes ?? 0,
+      },
+      projects: memberships.map(({ project, createdAt }) => ({ ...project, joinedAt: createdAt, openTasks: openByProject.get(project.id) ?? 0 })),
+      tasks,
+      issues,
+      recentTime,
+      activity,
+    };
+  }
+
   async create(actor: AuthenticatedUser, dto: CreateUserDto): Promise<PublicUser> {
     const email = dto.email.toLowerCase();
     if (await this.prisma.user.findUnique({ where: { email } })) {
       throw new ConflictException('A user with this email already exists');
     }
-    await this.subscriptions.assertCapacity(actor.organizationId, 'users');
+    this.assertCanAssignRole(actor, dto.role);
 
     return this.prisma.user.create({
       data: {
@@ -96,16 +197,8 @@ export class UsersService {
     if (target.id === actor.id && (dto.role !== undefined || dto.isActive === false)) {
       throw new BadRequestException('You cannot change your own role or deactivate yourself');
     }
-    if (target.role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
-      throw new ForbiddenException('Only a super admin can modify another super admin');
-    }
+    this.assertCanManage(actor, target.role);
     if (dto.role) this.assertCanAssignRole(actor, dto.role);
-    if (target.role === OrgRole.SUPER_ADMIN && ((dto.role && dto.role !== OrgRole.SUPER_ADMIN) || dto.isActive === false)) {
-      await this.assertAnotherSuperAdminExists(actor.organizationId, target.id);
-    }
-    if (dto.isActive === true && !target.isActive) {
-      await this.subscriptions.assertCapacity(actor.organizationId, 'users');
-    }
 
     const user = await this.prisma.user.update({ where: { id }, data: dto, select: USER_PUBLIC_SELECT });
     if (dto.isActive === false) {
@@ -116,9 +209,7 @@ export class UsersService {
 
   async resetPassword(actor: AuthenticatedUser, id: string, password: string): Promise<void> {
     const target = await this.findOne(actor.organizationId, id);
-    if (target.role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
-      throw new ForbiddenException('Only a super admin can reset another super admin’s password');
-    }
+    this.assertCanManage(actor, target.role);
     await this.prisma.user.update({ where: { id }, data: { passwordHash: await this.passwords.hash(password) } });
     await this.revokeSessions(id);
   }
@@ -149,18 +240,16 @@ export class UsersService {
     });
   }
 
-  private assertCanAssignRole(actor: AuthenticatedUser, role: string): void {
-    if (role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
-      throw new ForbiddenException('Only a super admin can grant the super admin role');
+  /** Coordinators manage member accounts; only root may change a coordinator. */
+  private assertCanManage(actor: AuthenticatedUser, targetRole: string): void {
+    if (normalizeRole(targetRole) === OrgRole.PROJECT_COORDINATOR && !hasPermission(actor.role, Permission.COORDINATORS_MANAGE)) {
+      throw new ForbiddenException('Only the root account can change a project coordinator');
     }
   }
 
-  private async assertAnotherSuperAdminExists(organizationId: string, excludeId: string): Promise<void> {
-    const superAdmins = await this.prisma.user.count({
-      where: { organizationId, role: OrgRole.SUPER_ADMIN, isActive: true, id: { not: excludeId } },
-    });
-    if (superAdmins === 0) {
-      throw new BadRequestException('The organization must keep at least one active super admin');
+  private assertCanAssignRole(actor: AuthenticatedUser, role: string): void {
+    if (role === OrgRole.PROJECT_COORDINATOR && !hasPermission(actor.role, Permission.COORDINATORS_MANAGE)) {
+      throw new ForbiddenException('Only the root account can appoint a project coordinator');
     }
   }
 }

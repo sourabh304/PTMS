@@ -14,6 +14,8 @@ import { useProject, useToggleFavorite } from '../api';
 import type { ProjectDetail } from '../types';
 
 const icon = 'size-4';
+/** Views shown as tabs; the rest sit in the "More" menu. */
+const PRIMARY_VIEWS = 5;
 
 /** Views of a project, in tab order; the main table is the project's home. */
 function projectViews(id: string, canManage: boolean): TabItem[] {
@@ -22,10 +24,11 @@ function projectViews(id: string, canManage: boolean): TabItem[] {
     { href: routes.projectBoard(id), label: 'Kanban', icon: <KanbanSquare className={icon} /> },
     { href: routes.projectGantt(id), label: 'Gantt', icon: <BarChartHorizontal className={icon} /> },
     { href: routes.projectCalendar(id), label: 'Calendar', icon: <CalendarDays className={icon} /> },
-    { href: routes.projectWorkload(id), label: 'Workload', icon: <Users className={icon} /> },
-    { href: routes.projectOverview(id), label: 'Dashboard', icon: <LayoutDashboard className={icon} /> },
-    { href: routes.projectMilestones(id), label: 'Milestones', icon: <Flag className={icon} /> },
     { href: routes.projectIssues(id), label: 'Issues', icon: <Bug className={icon} /> },
+    // Shown under "More" to keep the tab bar short.
+    { href: routes.projectOverview(id), label: 'Dashboard', icon: <LayoutDashboard className={icon} /> },
+    { href: routes.projectWorkload(id), label: 'Workload', icon: <Users className={icon} /> },
+    { href: routes.projectMilestones(id), label: 'Milestones', icon: <Flag className={icon} /> },
     { href: routes.projectTimesheets(id), label: 'Timesheets', icon: <Clock className={icon} /> },
     { href: routes.projectAutomations(id), label: 'Automations', icon: <Zap className={icon} /> },
     { href: routes.projectActivity(id), label: 'Activity', icon: <Activity className={icon} /> },
@@ -67,12 +70,12 @@ export function ProjectWorkspace({ projectId, children }: { projectId: string; c
               href={routes.projectSettings(project.id)}
               className="inline-flex h-8 items-center gap-1.5 rounded-ui border border-border bg-surface px-3 text-sm font-medium shadow-ui-sm hover:bg-surface-hover"
             >
-              <UserPlus className="size-4" /> Invite
+              <UserPlus className="size-4" /> Members
             </Link>
           )}
         </div>
       </div>
-      <LinkTabs className="mt-4" items={projectViews(project.id, project.access.canManage)} />
+      <LinkTabs className="mt-4" items={projectViews(project.id, project.access.canManage)} maxVisible={PRIMARY_VIEWS} />
       <div className="pt-5">{children}</div>
     </div>
   );

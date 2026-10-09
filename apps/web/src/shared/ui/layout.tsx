@@ -1,11 +1,12 @@
 'use client';
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { Button } from './button';
+import { Dropdown } from './dropdown';
 
 interface PageHeaderProps {
   title: ReactNode;
@@ -46,29 +47,71 @@ export interface TabItem {
   exact?: boolean;
 }
 
-export function LinkTabs({ items, className }: { items: TabItem[]; className?: string }) {
+export function LinkTabs({ items, className, maxVisible }: { items: TabItem[]; className?: string; /** Tabs beyond this count move into a "More" menu. */ maxVisible?: number }) {
   const pathname = usePathname();
+  const isActive = (item: TabItem) => (item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const visible = maxVisible && items.length > maxVisible + 1 ? items.slice(0, maxVisible) : items;
+  const overflow = items.slice(visible.length);
+  const activeOverflow = overflow.find(isActive);
   return (
-    <nav className={cn('scrollbar-none flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border [scrollbar-width:none]', className)}>
-      {items.map((item) => {
-        const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              'relative inline-flex shrink-0 items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors [&_svg]:size-4',
-              active ? 'text-foreground' : 'text-muted hover:text-foreground',
-            )}
-          >
-            {item.icon}
-            {item.label}
-            <span className={cn('absolute inset-x-2 bottom-0 h-0.5 rounded-full transition-colors', active ? 'bg-brand' : 'bg-transparent')} />
-          </Link>
-        );
-      })}
-    </nav>
+    <div className={cn('flex items-center gap-1 border-b border-border', className)}>
+      <nav className="scrollbar-none flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
+        {visible.map((item) => (
+          <TabLink key={item.href} item={item} active={isActive(item)} />
+        ))}
+        {activeOverflow && <TabLink item={activeOverflow} active />}
+      </nav>
+      {overflow.length > 0 && (
+        <Dropdown
+          align="left"
+          trigger={({ open, toggle }) => (
+            <button
+              type="button"
+              onClick={toggle}
+              aria-expanded={open}
+              className="inline-flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:text-foreground"
+            >
+              More <ChevronDown className={cn('size-3.5 transition-transform', open && 'rotate-180')} />
+            </button>
+          )}
+        >
+          {(close) =>
+            overflow.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={close}
+                aria-current={isActive(item) ? 'page' : undefined}
+                className={cn(
+                  'flex w-full items-center gap-2.5 rounded-[calc(var(--radius)-2px)] px-2.5 py-2 text-sm transition-colors [&_svg]:size-4 [&_svg]:text-muted',
+                  isActive(item) ? 'bg-surface-muted text-foreground' : 'text-foreground-soft hover:bg-surface-muted hover:text-foreground',
+                )}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            ))
+          }
+        </Dropdown>
+      )}
+    </div>
+  );
+}
+
+function TabLink({ item, active }: { item: TabItem; active: boolean }) {
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'relative inline-flex shrink-0 items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors [&_svg]:size-4',
+        active ? 'text-foreground' : 'text-muted hover:text-foreground',
+      )}
+    >
+      {item.icon}
+      {item.label}
+      <span className={cn('absolute inset-x-2 bottom-0 h-0.5 rounded-full transition-colors', active ? 'bg-brand' : 'bg-transparent')} />
+    </Link>
   );
 }
 

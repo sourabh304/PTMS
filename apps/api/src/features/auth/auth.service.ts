@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { permissionsForRole } from '../../common/constants/permissions.constants';
+import { normalizeRole } from '../../common/constants/roles.constants';
 import { PASSWORD_POLICY } from '../../common/validation/password.policy';
 import { AppConfig } from '../../config/configuration';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -71,6 +72,6 @@ export class AuthService {
   async me(userId: string, organizationId: string | null) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: USER_PUBLIC_SELECT });
     const organization = organizationId ? await this.prisma.organization.findUnique({ where: { id: organizationId } }) : null;
-    return { ...user, organization, permissions: permissionsForRole(user.role) };
+    return { ...user, role: normalizeRole(user.role), organization, permissions: permissionsForRole(user.role) };
   }
 }

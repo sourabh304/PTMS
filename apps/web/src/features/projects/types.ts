@@ -1,4 +1,4 @@
-import type { ProjectHealth, ProjectRole, StatusCategory } from '@/shared/constants/domain';
+import type { ProjectHealth, StatusCategory } from '@/shared/constants/domain';
 import type { LookupCount, LookupRef, UserSummary } from '@/shared/types/api';
 
 export interface ProjectStats {
@@ -44,7 +44,7 @@ export interface ProjectSummary {
 }
 
 export interface ProjectDetail extends Project {
-  access: { role: ProjectRole | null; canEdit: boolean; canManage: boolean };
+  access: { role: string | null; canEdit: boolean; canManage: boolean };
   isFavorite: boolean;
 }
 
@@ -61,7 +61,7 @@ export interface ProjectMember {
   id: string;
   projectId: string;
   userId: string;
-  role: ProjectRole;
+  role: string;
   createdAt: string;
   user: UserSummary & { jobTitle: string | null; isActive: boolean };
 }
@@ -101,7 +101,7 @@ export interface ProjectDashboard {
   tasksByPriority: LookupCount[];
   issuesByStatus: LookupCount[];
   issuesBySeverity: LookupCount[];
-  workload: { user: UserSummary; role: ProjectRole; openTasks: number; overdueTasks: number }[];
+  workload: { user: UserSummary; role: string; openTasks: number; overdueTasks: number }[];
   milestones: {
     total: number;
     completed: number;

@@ -54,6 +54,16 @@ export function useCreateOrganization() {
   });
 }
 
+export function useAddCoordinator() {
+  const invalidate = useInvalidatePlatform();
+  return useMutation({
+    mutationFn: ({ organizationId, ...input }: { organizationId: string } & CreateOrganizationInput['coordinator']) =>
+      api.post<PlatformOrganizationDetail>(`/platform/organizations/${organizationId}/coordinators`, input),
+    meta: { successMessage: 'Coordinator added' },
+    onSuccess: invalidate,
+  });
+}
+
 export function useUpdatePlatformOrganization() {
   const invalidate = useInvalidatePlatform();
   return useMutation({
@@ -74,7 +84,7 @@ export function useDeletePlatformOrganization() {
 }
 
 /**
- * Root opens an organization's workspace and acts there with super admin authority.
+ * Root opens an organization's workspace and acts there with coordinator authority.
  * Every cached query belongs to the previous context, so the cache is reset.
  */
 export function useEnterWorkspace() {

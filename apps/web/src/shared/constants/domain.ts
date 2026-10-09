@@ -4,28 +4,43 @@
  */
 export const Permission = {
   PLATFORM_MANAGE: 'platform:manage',
+  COORDINATORS_MANAGE: 'coordinators:manage',
   ORG_MANAGE: 'org:manage',
   USERS_VIEW: 'users:view',
   USERS_MANAGE: 'users:manage',
   LOOKUPS_MANAGE: 'lookups:manage',
   PROJECTS_CREATE: 'projects:create',
   PROJECTS_VIEW_ALL: 'projects:view-all',
+  MEETINGS_MANAGE: 'meetings:manage',
   TIMESHEETS_APPROVE: 'timesheets:approve',
   TIMESHEETS_VIEW_ALL: 'timesheets:view-all',
   REPORTS_VIEW: 'reports:view',
-  SUBSCRIPTION_VIEW: 'subscription:view',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
 
-/** Platform-level account that manages every organization, plan and subscription. */
+/** Platform-level account: creates organizations and appoints their project coordinators. */
 export const PLATFORM_ROOT_ROLE = 'ROOT';
 
-export const ORG_ROLES = ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'] as const;
-export type OrgRole = (typeof ORG_ROLES)[number];
-export const ORG_ADMIN_ROLES: readonly string[] = ['SUPER_ADMIN', 'ADMIN'];
+export const OrgRole = {
+  PROJECT_COORDINATOR: 'PROJECT_COORDINATOR',
+  MEMBER: 'MEMBER',
+} as const;
+export type OrgRole = (typeof OrgRole)[keyof typeof OrgRole];
+export const ORG_ROLES = Object.values(OrgRole);
 
-export const PROJECT_ROLES = ['MANAGER', 'MEMBER', 'VIEWER'] as const;
-export type ProjectRole = (typeof PROJECT_ROLES)[number];
+/** Display names of the roles (including root, which acts as a coordinator inside a workspace). */
+export const ROLE_LABELS: Record<string, string> = {
+  [PLATFORM_ROOT_ROLE]: 'Root',
+  [OrgRole.PROJECT_COORDINATOR]: 'Project coordinator',
+  [OrgRole.MEMBER]: 'Member',
+};
+export const roleLabel = (role: string) => ROLE_LABELS[role] ?? role;
+
+export const MeetingType = {
+  INTERNAL: 'INTERNAL',
+  CLIENT: 'CLIENT',
+} as const;
+export type MeetingType = (typeof MeetingType)[keyof typeof MeetingType];
 
 export const LookupType = {
   PROJECT_STATUS: 'PROJECT_STATUS',
@@ -57,18 +72,3 @@ export const ProjectHealth = {
   COMPLETED: 'COMPLETED',
 } as const;
 export type ProjectHealth = (typeof ProjectHealth)[keyof typeof ProjectHealth];
-
-export const SubscriptionStatus = {
-  TRIAL: 'TRIAL',
-  ACTIVE: 'ACTIVE',
-  PAST_DUE: 'PAST_DUE',
-  CANCELED: 'CANCELED',
-  EXPIRED: 'EXPIRED',
-} as const;
-export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];
-
-export const BillingInterval = {
-  MONTHLY: 'MONTHLY',
-  YEARLY: 'YEARLY',
-} as const;
-export type BillingInterval = (typeof BillingInterval)[keyof typeof BillingInterval];

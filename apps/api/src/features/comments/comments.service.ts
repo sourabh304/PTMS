@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ActivityAction, EntityType, NotificationType } from '../../common/constants/domain.constants';
-import { isOrgAdmin } from '../../common/constants/roles.constants';
+import { isCoordinator } from '../../common/constants/roles.constants';
 import { NotificationLinks } from '../../common/events/domain-events';
 import { EventPublisher } from '../../common/events/event-publisher.service';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
@@ -83,7 +83,7 @@ export class CommentsService {
 
   async remove(user: AuthenticatedUser, id: string): Promise<void> {
     const comment = await this.findOwned(user, id);
-    if (comment.authorId !== user.id && !isOrgAdmin(user.role)) {
+    if (comment.authorId !== user.id && !isCoordinator(user.role)) {
       throw new ForbiddenException('You can only delete your own comments');
     }
     await this.prisma.comment.delete({ where: { id } });

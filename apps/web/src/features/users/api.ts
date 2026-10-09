@@ -5,12 +5,18 @@ import { authKeys } from '@/features/auth/api';
 import { appConfig } from '@/shared/config/env';
 import { api } from '@/shared/lib/api-client';
 import type { Paginated } from '@/shared/types/api';
-import type { CreateUserInput, UpdateProfileInput, UpdateUserInput, User, UserQuery } from './types';
+import type { CreateUserInput, UpdateProfileInput, UpdateUserInput, User, UserDetails, UserQuery } from './types';
 
 export const userKeys = {
   all: ['users'] as const,
   list: (query: UserQuery) => ['users', 'list', query] as const,
+  details: (id: string) => ['users', 'details', id] as const,
 };
+
+/** A person's projects, open work, time and activity (coordinators and root). */
+export function useUserDetails(id: string) {
+  return useQuery({ queryKey: userKeys.details(id), queryFn: () => api.get<UserDetails>(`/users/${id}/details`), enabled: !!id });
+}
 
 export function useUsers(query: UserQuery = {}) {
   return useQuery({

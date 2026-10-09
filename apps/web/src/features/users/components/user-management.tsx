@@ -1,7 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { KeyRound, Pencil, Plus, Search, UserCheck, UserX } from 'lucide-react';
+import { Eye, KeyRound, MoreHorizontal, Pencil, Plus, Search, UserCheck, UserX } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -9,14 +10,16 @@ import { usePasswordMinLength, useSession } from '@/features/auth/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { passwordSchema } from '@/features/auth/schemas';
 import { appConfig } from '@/shared/config/env';
-import { ORG_ADMIN_ROLES, ORG_ROLES, Permission, type OrgRole } from '@/shared/constants/domain';
+import { routes } from '@/shared/config/routes';
+import { ORG_ROLES, OrgRole, Permission, roleLabel } from '@/shared/constants/domain';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { errorMessage } from '@/shared/lib/api-client';
-import { formatDateTime, fullName, humanize } from '@/shared/lib/utils';
+import { formatDateTime, fullName } from '@/shared/lib/utils';
 import { Avatar } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardHeader } from '@/shared/ui/card';
+import { Dropdown, DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Field, Input, Select } from '@/shared/ui/form';
 import { Pagination } from '@/shared/ui/layout';
@@ -29,6 +32,9 @@ export function UserManagement() {
   const { can } = usePermissions();
   const { data: session } = useSession();
   const canManage = can(Permission.USERS_MANAGE);
+  const canManageCoordinators = can(Permission.COORDINATORS_MANAGE);
+  /** Coordinators manage member accounts; only root changes coordinators. */
+  const canEditUser = (user: User) => canManage && (canManageCoordinators || user.role !== OrgRole.PROJECT_COORDINATOR);
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
   const [status, setStatus] = useState('active');
@@ -52,7 +58,7 @@ export function UserManagement() {
     <Card>
       <CardHeader
         title="Users"
-        description="People in your organization and their access level."
+        description={canManageCoordinators ? 'People in this organization. Appoint project coordinators here.' : 'People in your organization. Only the root account can change project coordinators.'}
         actions={
           canManage && (
             <Button size="sm" onClick={() => setEditing('new')}>
@@ -70,7 +76,7 @@ export function UserManagement() {
           <option value="">All roles</option>
           {ORG_ROLES.map((r) => (
             <option key={r} value={r}>
-              {humanize(r)}
+              {roleLabel(r)}
             </option>
           ))}
         </Select>
@@ -94,7 +100,7 @@ export function UserManagement() {
                 <Th>Job title</Th>
                 <Th>Status</Th>
                 <Th>Last sign-in</Th>
-                {canManage && <Th className="w-32" />}
+                {canManage && <Th className="w-24" />}
               </tr>
             </thead>
             <tbody>
@@ -112,7 +118,7 @@ export function UserManagement() {
                     </div>
                   </Td>
                   <Td>
-                    <Badge tone={ORG_ADMIN_ROLES.includes(user.role) ? 'brand' : 'neutral'}>{humanize(user.role)}</Badge>
+                    <Badge tone={user.role === OrgRole.PROJECT_COORDINATOR ? 'brand' : 'neutral'}>{roleLabel(user.role)}</Badge>
                   </Td>
                   <Td className="text-muted">{user.jobTitle ?? '—'}</Td>
                   <Td>{user.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Deactivated</Badge>}</Td>
@@ -120,21 +126,36 @@ export function UserManagement() {
                   {canManage && (
                     <Td>
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" aria-label="Edit user" onClick={() => setEditing(user)}>
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" aria-label="Reset password" onClick={() => setResetting(user)}>
-                          <KeyRound className="size-4" />
-                        </Button>
-                        {user.id !== session?.id && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={user.isActive ? 'Deactivate' : 'Reactivate'}
-                            onClick={() => update.mutate({ id: user.id, isActive: !user.isActive })}
+                        <Link href={routes.person(user.id)} title="View details" aria-label="View details" className="inline-flex size-8 items-center justify-center rounded-ui text-foreground-soft hover:bg-surface-muted">
+                          <Eye className="size-4" />
+                        </Link>
+                        {canEditUser(user) && (
+                          <Dropdown
+                            trigger={({ toggle }) => (
+                              <Button variant="ghost" size="icon" aria-label="User actions" onClick={toggle}>
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            )}
                           >
-                            {user.isActive ? <UserX className="size-4 text-danger" /> : <UserCheck className="size-4 text-success" />}
-                          </Button>
+                            {(close) => (
+                              <>
+                                <DropdownItem onClick={() => { close(); setEditing(user); }}>
+                                  <Pencil /> Edit
+                                </DropdownItem>
+                                <DropdownItem onClick={() => { close(); setResetting(user); }}>
+                                  <KeyRound /> Reset password
+                                </DropdownItem>
+                                {user.id !== session?.id && (
+                                  <>
+                                    <DropdownSeparator />
+                                    <DropdownItem danger={user.isActive} onClick={() => { close(); update.mutate({ id: user.id, isActive: !user.isActive }); }}>
+                                      {user.isActive ? <UserX /> : <UserCheck />} {user.isActive ? 'Deactivate' : 'Reactivate'}
+                                    </DropdownItem>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </Dropdown>
                         )}
                       </div>
                     </Td>
@@ -146,7 +167,12 @@ export function UserManagement() {
           <Pagination page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} onPageChange={setPage} />
         </>
       )}
-      <UserFormModal user={editing} onClose={() => setEditing(null)} isSelf={editing !== 'new' && editing?.id === session?.id} />
+      <UserFormModal
+        user={editing}
+        onClose={() => setEditing(null)}
+        isSelf={editing !== 'new' && editing?.id === session?.id}
+        roles={canManageCoordinators ? ORG_ROLES : [OrgRole.MEMBER]}
+      />
       <ResetPasswordModal user={resetting} onClose={() => setResetting(null)} />
     </Card>
   );
@@ -157,19 +183,19 @@ const userSchema = z.object({
   firstName: z.string().trim().min(1, 'Required'),
   lastName: z.string().trim().min(1, 'Required'),
   jobTitle: z.string().optional(),
-  role: z.enum(ORG_ROLES),
+  role: z.enum([OrgRole.PROJECT_COORDINATOR, OrgRole.MEMBER]),
   hourlyRate: z.string().optional(),
   password: z.string().optional(),
 });
 type UserValues = z.infer<typeof userSchema>;
 
-function UserFormModal({ user, onClose, isSelf }: { user: User | 'new' | null; onClose: () => void; isSelf: boolean }) {
+function UserFormModal({ user, onClose, isSelf, roles }: { user: User | 'new' | null; onClose: () => void; isSelf: boolean; roles: readonly OrgRole[] }) {
   const isNew = user === 'new';
   const existing = user && user !== 'new' ? user : null;
   const create = useCreateUser();
   const update = useUpdateUser();
   const minPasswordLength = usePasswordMinLength();
-  const roleLocked = isSelf;
+  const roleLocked = isSelf || roles.length < 2;
   const form = useForm<UserValues>({ resolver: zodResolver(userSchema) });
   const { errors } = form.formState;
 
@@ -180,7 +206,7 @@ function UserFormModal({ user, onClose, isSelf }: { user: User | 'new' | null; o
       firstName: existing?.firstName ?? '',
       lastName: existing?.lastName ?? '',
       jobTitle: existing?.jobTitle ?? '',
-      role: existing?.role ?? 'EMPLOYEE',
+      role: (existing?.role as OrgRole | undefined) ?? OrgRole.MEMBER,
       hourlyRate: existing?.hourlyRate?.toString() ?? '',
       password: '',
     });
@@ -228,11 +254,20 @@ function UserFormModal({ user, onClose, isSelf }: { user: User | 'new' | null; o
         <Field label="Email" required error={errors.email?.message} className="sm:col-span-2">
           <Input type="email" disabled={!isNew} {...form.register('email')} />
         </Field>
-        <Field label="Role" hint={isSelf ? 'You cannot change your own role' : roleLocked ? 'The root administrator always stays an Admin' : 'Admin: manages people, projects and settings. Employee: works on the projects they are added to.'}>
+        <Field
+          label="Role"
+          hint={
+            isSelf
+              ? 'You cannot change your own role'
+              : roles.length < 2
+                ? 'Only the root account can appoint project coordinators'
+                : 'Coordinator: creates projects, adds members and schedules meetings. Member: sees and works on their own projects.'
+          }
+        >
           <Select disabled={roleLocked} {...form.register('role')}>
-            {ORG_ROLES.map((r) => (
+            {ORG_ROLES.filter((r) => roles.includes(r) || r === form.watch('role')).map((r) => (
               <option key={r} value={r}>
-                {humanize(r)}
+                {roleLabel(r)}
               </option>
             ))}
           </Select>

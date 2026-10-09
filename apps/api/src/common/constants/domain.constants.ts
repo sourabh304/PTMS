@@ -76,7 +76,8 @@ export const NotificationType = {
   COMMENT_ADDED: 'COMMENT_ADDED',
   PROJECT_ADDED: 'PROJECT_ADDED',
   PROJECT_REMOVED: 'PROJECT_REMOVED',
-  SUBSCRIPTION_CHANGED: 'SUBSCRIPTION_CHANGED',
+  MEETING_TODAY: 'MEETING_TODAY',
+  MEETING_SCHEDULED: 'MEETING_SCHEDULED',
   TIME_ENTRY_REVIEWED: 'TIME_ENTRY_REVIEWED',
   TIME_ENTRY_SUBMITTED: 'TIME_ENTRY_SUBMITTED',
   DUE_SOON: 'DUE_SOON',
@@ -84,25 +85,6 @@ export const NotificationType = {
   AUTOMATION: 'AUTOMATION',
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
-
-export const SubscriptionStatus = {
-  TRIAL: 'TRIAL',
-  ACTIVE: 'ACTIVE',
-  PAST_DUE: 'PAST_DUE',
-  CANCELED: 'CANCELED',
-  EXPIRED: 'EXPIRED',
-} as const;
-export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];
-export const SUBSCRIPTION_STATUSES = Object.values(SubscriptionStatus);
-/** Statuses that grant access to the plan (subject to the end date). */
-export const CURRENT_SUBSCRIPTION_STATUSES: readonly SubscriptionStatus[] = [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE];
-
-export const BillingInterval = {
-  MONTHLY: 'MONTHLY',
-  YEARLY: 'YEARLY',
-} as const;
-export type BillingInterval = (typeof BillingInterval)[keyof typeof BillingInterval];
-export const BILLING_INTERVALS = Object.values(BillingInterval);
 
 export const SortOrder = { ASC: 'asc', DESC: 'desc' } as const;
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder];

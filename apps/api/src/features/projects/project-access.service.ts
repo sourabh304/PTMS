@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, Project } from '@prisma/client';
 import { hasPermission, Permission } from '../../common/constants/permissions.constants';
-import { isOrgAdmin, PROJECT_EDITOR_ROLES, ProjectRole } from '../../common/constants/roles.constants';
+import { isCoordinator, ProjectRole } from '../../common/constants/roles.constants';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -36,9 +36,9 @@ export class ProjectAccessService {
       where: { projectId_userId: { projectId, userId: user.id } },
     });
     const memberRole = (membership?.role as ProjectRole | undefined) ?? null;
-    const admin = isOrgAdmin(user.role);
-    const canManage = admin || project.ownerId === user.id || memberRole === ProjectRole.MANAGER;
-    const canEdit = canManage || (memberRole !== null && PROJECT_EDITOR_ROLES.includes(memberRole));
+    // Coordinators (and root) manage every project; members work on the items of their own projects.
+    const canManage = isCoordinator(user.role);
+    const canEdit = canManage || memberRole !== null;
     const canView = canEdit || memberRole !== null || hasPermission(user.role, Permission.PROJECTS_VIEW_ALL);
 
     return { project, memberRole, canView, canEdit, canManage };
@@ -59,7 +59,7 @@ export class ProjectAccessService {
 
   async assertCanManage(user: AuthenticatedUser, projectId: string): Promise<ProjectAccess> {
     const access = await this.assertCanView(user, projectId);
-    if (!access.canManage) throw new ForbiddenException('Only project managers can perform this action');
+    if (!access.canManage) throw new ForbiddenException('Only a project coordinator can perform this action');
     return access;
   }
 

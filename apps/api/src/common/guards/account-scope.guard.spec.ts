@@ -6,7 +6,7 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { AccountScopeGuard } from './account-scope.guard';
 
 const root = { id: 'r', role: PlatformRole.ROOT, organizationId: null };
-const tenant = { id: 't', role: OrgRole.SUPER_ADMIN, organizationId: 'org-1' };
+const tenant = { id: 't', role: OrgRole.PROJECT_COORDINATOR, organizationId: 'org-1' };
 
 function run(user: object | undefined, metadata: { scope?: AccountScope; isPublic?: boolean }) {
   const reflector = {

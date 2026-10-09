@@ -1,6 +1,6 @@
 /**
- * Seeds the platform root account and the default plans and, when SEED_DEMO_DATA=true,
- * a demo organization with its super admin, subscription and realistic demo data.
+ * Seeds the platform root account and, when SEED_DEMO_DATA=true, a demo organization with its
+ * project coordinator and realistic demo data. Also upgrades roles stored by earlier versions.
  * Account details live in seed-data.ts. Each step is idempotent, so the script is safe to re-run.
  */
 import 'dotenv/config';
@@ -13,16 +13,15 @@ import {
   EntityType,
   LookupType,
   StatusCategory,
-  SubscriptionStatus,
 } from '../src/common/constants/domain.constants';
-import { OrgRole, PlatformRole, ProjectRole } from '../src/common/constants/roles.constants';
+import { LEGACY_ORG_ROLES, OrgRole, PlatformRole, ProjectRole } from '../src/common/constants/roles.constants';
 import { slugify } from '../src/common/utils/string.util';
 import { DEFAULT_LOOKUPS } from '../src/features/lookups/lookup.defaults';
 import { ORGANIZATION_DEFAULTS } from '../src/features/organizations/organization.defaults';
 import { nextGroupColor } from '../src/features/task-lists/task-list.colors';
 import { AutomationAction, AutomationTrigger } from '../src/features/automations/automation.constants';
 import { CustomFieldType } from '../src/features/custom-fields/custom-field.constants';
-import { DEFAULT_PLANS, DEMO_ORGANIZATION, DEMO_PROJECTS, DEMO_USERS, ROOT_ACCOUNT } from './seed-data';
+import { DEMO_MEETINGS, DEMO_ORGANIZATION, DEMO_PROJECTS, DEMO_USERS, ROOT_ACCOUNT } from './seed-data';
 
 const prisma = new PrismaClient();
 
@@ -38,7 +37,7 @@ const dayOffset = (days: number) => new Date(today.getTime() + days * DAY);
 
 const saltRounds = () => Number(requireEnv('BCRYPT_SALT_ROUNDS'));
 
-/** The platform root account: manages every organization, plan and subscription. */
+/** The platform root account: creates organizations and appoints their project coordinators. */
 async function seedRoot(): Promise<void> {
   const email = ROOT_ACCOUNT.email.toLowerCase();
   if (await prisma.user.findFirst({ where: { role: PlatformRole.ROOT } })) {
@@ -62,36 +61,14 @@ async function seedRoot(): Promise<void> {
   console.log(`✔ Created root account ${email} (change its password after the first sign-in)`);
 }
 
-async function seedPlans(): Promise<void> {
-  if (await prisma.plan.count()) {
-    console.log('✔ Plans already exist');
-    return;
-  }
-  const currency = requireEnv('DEFAULT_CURRENCY');
-  await prisma.plan.createMany({ data: DEFAULT_PLANS.map((plan) => ({ ...plan, currency })) });
-  console.log(`✔ Created ${DEFAULT_PLANS.length} plans`);
-}
-
-/** Gives the demo organization a subscription when it has none. */
-async function seedSubscription(organizationId: string): Promise<void> {
-  if (await prisma.subscription.count({ where: { organizationId } })) return;
-  const code = DEMO_ORGANIZATION.planCode;
-  const plan = await prisma.plan.findUnique({ where: { code } });
-  if (!plan) throw new Error(`Demo plan code ${code} does not match any plan`);
-  await prisma.subscription.create({
-    data: { organizationId, planId: plan.id, status: SubscriptionStatus.ACTIVE, startDate: today, notes: 'Created by seed' },
-  });
-  console.log(`✔ Subscribed the organization to the ${plan.name} plan`);
-}
-
-/** Creates the demo organization, its super admin and demo data; returns the organization id. */
+/** Creates the demo organization, its coordinator and demo data; returns the organization id. */
 async function seedDemoOrganization(): Promise<string> {
-  const { name: orgName, superAdmin } = DEMO_ORGANIZATION;
-  const adminEmail = superAdmin.email.toLowerCase();
+  const { name: orgName, coordinator } = DEMO_ORGANIZATION;
+  const adminEmail = coordinator.email.toLowerCase();
 
   const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (existing?.organizationId) {
-    console.log(`✔ Super admin ${adminEmail} already exists`);
+    console.log(`✔ Project coordinator ${adminEmail} already exists`);
     return existing.organizationId;
   }
 
@@ -112,14 +89,14 @@ async function seedDemoOrganization(): Promise<string> {
     data: {
       organizationId: organization.id,
       email: adminEmail,
-      passwordHash: await bcrypt.hash(superAdmin.password, saltRounds()),
-      firstName: superAdmin.firstName,
-      lastName: superAdmin.lastName,
-      jobTitle: superAdmin.jobTitle,
-      role: OrgRole.SUPER_ADMIN,
+      passwordHash: await bcrypt.hash(coordinator.password, saltRounds()),
+      firstName: coordinator.firstName,
+      lastName: coordinator.lastName,
+      jobTitle: coordinator.jobTitle,
+      role: OrgRole.PROJECT_COORDINATOR,
     },
   });
-  console.log(`✔ Created organization "${orgName}" and super admin ${adminEmail}`);
+  console.log(`✔ Created organization "${orgName}" and project coordinator ${adminEmail}`);
 
   // ─── Demo users ─────────────────────────────────────────────
   const domain = adminEmail.split('@')[1];
@@ -171,11 +148,8 @@ async function seedDemoOrganization(): Promise<string> {
         budgetHours: spec.budgetHours,
         members: {
           create: [
-            ...(memberHandles.includes('admin') ? [] : [{ userId: admin.id, role: ProjectRole.MANAGER }]),
-            ...memberHandles.map((handle) => ({
-              userId: byHandle(handle).id,
-              role: handle === spec.owner ? ProjectRole.MANAGER : ProjectRole.MEMBER,
-            })),
+            ...(memberHandles.includes('admin') ? [] : [{ userId: admin.id, role: ProjectRole.MEMBER }]),
+            ...memberHandles.map((handle) => ({ userId: byHandle(handle).id, role: ProjectRole.MEMBER })),
           ],
         },
       },
@@ -363,6 +337,43 @@ async function seedBoardExtras(
   });
 }
 
+/** Adds the demo meetings when the demo organization has none yet. */
+async function seedDemoMeetings(organizationId: string): Promise<void> {
+  if (await prisma.meeting.count({ where: { organizationId } })) return;
+  const coordinator = await prisma.user.findUniqueOrThrow({ where: { email: DEMO_ORGANIZATION.coordinator.email.toLowerCase() } });
+  const projects = await prisma.project.findMany({ where: { organizationId }, select: { id: true, key: true } });
+  await prisma.meeting.createMany({
+    data: DEMO_MEETINGS.flatMap((meeting) => {
+      const projectId = meeting.project ? projects.find((p) => p.key === meeting.project)?.id : null;
+      if (projectId === undefined) return [];
+      const [hours, minutes] = meeting.start.split(':').map(Number);
+      const startsAt = new Date(dayOffset(meeting.dayOffset).getTime() + (hours * 60 + minutes) * 60_000);
+      return [{
+        organizationId,
+        projectId,
+        title: meeting.title,
+        description: 'description' in meeting ? meeting.description : null,
+        type: meeting.type,
+        link: meeting.link,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + meeting.minutes * 60_000),
+        createdById: coordinator.id,
+      }];
+    }),
+  });
+  console.log(`✔ Added ${DEMO_MEETINGS.length} demo meetings`);
+}
+
+/** Maps roles stored by earlier versions (super admin, admin, employee, project manager/viewer) to today's roles. */
+async function upgradeLegacyRoles(): Promise<void> {
+  let changed = 0;
+  for (const [legacy, role] of Object.entries(LEGACY_ORG_ROLES)) {
+    changed += (await prisma.user.updateMany({ where: { role: legacy }, data: { role } })).count;
+  }
+  changed += (await prisma.projectMember.updateMany({ where: { role: { not: ProjectRole.MEMBER } }, data: { role: ProjectRole.MEMBER } })).count;
+  if (changed) console.log(`✔ Upgraded ${changed} legacy role assignments`);
+}
+
 /** Gives groups created before group colors existed a color from the palette. */
 async function backfillGroupColors(): Promise<void> {
   const uncolored = await prisma.taskList.findMany({ where: { color: null }, select: { id: true, position: true } });
@@ -374,9 +385,9 @@ async function backfillGroupColors(): Promise<void> {
 
 async function main() {
   await seedRoot();
-  await seedPlans();
+  await upgradeLegacyRoles();
   if (['true', '1', 'yes'].includes((process.env.SEED_DEMO_DATA ?? 'false').toLowerCase())) {
-    await seedSubscription(await seedDemoOrganization());
+    await seedDemoMeetings(await seedDemoOrganization());
   }
   await backfillGroupColors();
 }

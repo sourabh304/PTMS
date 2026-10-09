@@ -1,22 +1,23 @@
 'use client';
 
-import { Archive, ArchiveRestore, Pencil, Trash2, UserPlus } from 'lucide-react';
+import { Archive, ArchiveRestore, MoreHorizontal, Pencil, Trash2, UserPlus, X } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { useActiveUsers } from '@/features/users/api';
 import { UserMultiSelect } from '@/features/users/components/user-multi-select';
 import { routes } from '@/shared/config/routes';
-import { PROJECT_ROLES, type ProjectRole } from '@/shared/constants/domain';
-import { formatDate, fullName, humanize } from '@/shared/lib/utils';
+import { formatDate, fullName } from '@/shared/lib/utils';
 import { Avatar } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { Card, CardBody, CardHeader } from '@/shared/ui/card';
+import { CardBody } from '@/shared/ui/card';
+import { CollapsibleCard } from '@/shared/ui/collapsible';
+import { Dropdown, DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { Spinner } from '@/shared/ui/feedback';
-import { Field, Input, Select } from '@/shared/ui/form';
+import { Field, Input } from '@/shared/ui/form';
 import { ConfirmDialog, Modal } from '@/shared/ui/modal';
-import { Table, Td, Th, Tr } from '@/shared/ui/table';
-import { useAddMembers, useDeleteProject, useProject, useProjectMembers, useRemoveMember, useUpdateMember, useUpdateProject } from '../api';
+import { useAddMembers, useDeleteProject, useProject, useProjectMembers, useRemoveMember, useUpdateProject } from '../api';
 import { ProjectFormModal } from './project-form-modal';
 
 export function ProjectSettings({ projectId }: { projectId: string }) {
@@ -25,7 +26,6 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
   const { data: members, isLoading } = useProjectMembers(projectId);
   const updateProject = useUpdateProject(projectId);
   const deleteProject = useDeleteProject();
-  const updateMember = useUpdateMember(projectId);
   const removeMember = useRemoveMember(projectId);
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -35,16 +35,49 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
   if (!project) return <Spinner />;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader
-          title="Project details"
-          actions={
+    <div className="space-y-4">
+      <CollapsibleCard
+        title="Project details"
+        storageKey="project-settings.details"
+        actions={
+          <>
             <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
               <Pencil className="size-3.5" /> Edit
             </Button>
-          }
-        />
+            <Dropdown
+              trigger={({ toggle }) => (
+                <Button variant="ghost" size="icon" aria-label="More project actions" onClick={toggle}>
+                  <MoreHorizontal />
+                </Button>
+              )}
+            >
+              {(close) => (
+                <>
+                  <DropdownItem
+                    onClick={() => {
+                      close();
+                      updateProject.mutate({ isArchived: !project.isArchived });
+                    }}
+                  >
+                    {project.isArchived ? <ArchiveRestore /> : <Archive />}
+                    {project.isArchived ? 'Restore project' : 'Archive project'}
+                  </DropdownItem>
+                  <DropdownSeparator />
+                  <DropdownItem
+                    danger
+                    onClick={() => {
+                      close();
+                      setDeleting(true);
+                    }}
+                  >
+                    <Trash2 /> Delete project
+                  </DropdownItem>
+                </>
+              )}
+            </Dropdown>
+          </>
+        }
+      >
         <CardBody>
           <dl className="grid gap-4 text-sm sm:grid-cols-3">
             <Detail label="Key" value={project.key} />
@@ -53,93 +86,60 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
             <Detail label="Start" value={formatDate(project.startDate)} />
             <Detail label="End" value={formatDate(project.endDate)} />
             <Detail label="Created" value={formatDate(project.createdAt)} />
-            <div className="sm:col-span-3">
-              <Detail label="Description" value={project.description || '—'} />
-            </div>
+            {project.description && (
+              <div className="sm:col-span-3">
+                <Detail label="Description" value={project.description} />
+              </div>
+            )}
           </dl>
         </CardBody>
-      </Card>
+      </CollapsibleCard>
 
-      <Card>
-        <CardHeader
-          title="Members"
-          description="Managers can edit the project; members can work on tasks; viewers have read-only access."
-          actions={
-            <Button size="sm" onClick={() => setAdding(true)}>
-              <UserPlus className="size-3.5" /> Add members
-            </Button>
-          }
-        />
+      <CollapsibleCard
+        title="Members"
+        meta={members ? `${members.length}` : undefined}
+        description="Members see this project and work on its items. Coordinators manage it."
+        storageKey="project-settings.members"
+        actions={
+          <Button size="sm" onClick={() => setAdding(true)}>
+            <UserPlus className="size-3.5" /> Add members
+          </Button>
+        }
+      >
         {isLoading ? (
           <Spinner />
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>Member</Th>
-                <Th>Role</Th>
-                <Th>Joined</Th>
-                <Th className="w-16" />
-              </tr>
-            </thead>
-            <tbody>
-              {members?.map((member) => {
-                const isOwner = member.userId === project.ownerId;
-                return (
-                  <Tr key={member.id}>
-                    <Td>
-                      <div className="flex items-center gap-3">
-                        <Avatar user={member.user} />
-                        <div>
-                          <p className="font-medium">
-                            {fullName(member.user)} {isOwner && <Badge tone="brand">Owner</Badge>}
-                          </p>
-                          <p className="text-xs text-muted">{member.user.jobTitle ?? member.user.email}</p>
-                        </div>
-                      </div>
-                    </Td>
-                    <Td>
-                      <Select
-                        className="w-36"
-                        value={member.role}
-                        disabled={isOwner}
-                        onChange={(event) => updateMember.mutate({ userId: member.userId, role: event.target.value as ProjectRole })}
-                      >
-                        {PROJECT_ROLES.map((role) => (
-                          <option key={role} value={role}>
-                            {humanize(role)}
-                          </option>
-                        ))}
-                      </Select>
-                    </Td>
-                    <Td className="text-muted">{formatDate(member.createdAt)}</Td>
-                    <Td>
-                      {!isOwner && (
-                        <Button variant="ghost" size="icon" aria-label="Remove member" onClick={() => removeMember.mutate(member.userId)}>
-                          <Trash2 className="size-4 text-danger" />
-                        </Button>
-                      )}
-                    </Td>
-                  </Tr>
-                );
-              })}
-            </tbody>
-          </Table>
+          <ul className="grid sm:grid-cols-2">
+            {members?.map((member) => {
+              const isOwner = member.userId === project.ownerId;
+              return (
+                <li key={member.id} className="group flex items-center gap-3 border-b border-border px-[var(--card-p)] py-2.5 sm:odd:border-r">
+                  <Avatar user={member.user} />
+                  <Link href={routes.person(member.userId)} className="min-w-0 flex-1">
+                    <p className="flex items-center gap-2 truncate text-sm font-medium hover:underline">
+                      {fullName(member.user)} {isOwner && <Badge tone="brand">Owner</Badge>}
+                    </p>
+                    <p className="truncate text-xs text-muted">
+                      {member.user.jobTitle ?? member.user.email} · joined {formatDate(member.createdAt)}
+                    </p>
+                  </Link>
+                  {!isOwner && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Remove ${fullName(member.user)}`}
+                      className="opacity-60 group-hover:opacity-100"
+                      onClick={() => removeMember.mutate(member.userId)}
+                    >
+                      <X className="size-4 text-danger" />
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         )}
-      </Card>
-
-      <Card className="border-danger/30">
-        <CardHeader title="Danger zone" />
-        <CardBody className="flex flex-wrap gap-3">
-          <Button variant="secondary" loading={updateProject.isPending} onClick={() => updateProject.mutate({ isArchived: !project.isArchived })}>
-            {project.isArchived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-            {project.isArchived ? 'Restore project' : 'Archive project'}
-          </Button>
-          <Button variant="danger" onClick={() => setDeleting(true)}>
-            <Trash2 className="size-4" /> Delete project
-          </Button>
-        </CardBody>
-      </Card>
+      </CollapsibleCard>
 
       <ProjectFormModal open={editing} onClose={() => setEditing(false)} project={project} />
       <AddMembersModal projectId={projectId} open={adding} onClose={() => setAdding(false)} existingIds={members?.map((m) => m.userId) ?? []} />
@@ -176,7 +176,6 @@ function AddMembersModal({ projectId, open, onClose, existingIds }: { projectId:
   const { data: users } = useActiveUsers();
   const addMembers = useAddMembers(projectId);
   const [selected, setSelected] = useState<string[]>([]);
-  const [role, setRole] = useState<ProjectRole>(PROJECT_ROLES[1]);
   const candidates = useMemo(() => (users?.data ?? []).filter((u) => !existingIds.includes(u.id)), [users, existingIds]);
 
   const close = () => {
@@ -194,26 +193,15 @@ function AddMembersModal({ projectId, open, onClose, existingIds }: { projectId:
           <Button variant="secondary" onClick={close}>
             Cancel
           </Button>
-          <Button disabled={!selected.length} loading={addMembers.isPending} onClick={() => addMembers.mutate({ userIds: selected, role }, { onSuccess: close })}>
+          <Button disabled={!selected.length} loading={addMembers.isPending} onClick={() => addMembers.mutate({ userIds: selected }, { onSuccess: close })}>
             Add {selected.length || ''}
           </Button>
         </>
       }
     >
-      <div className="space-y-4">
-        <Field label="People">
-          <UserMultiSelect options={candidates} value={selected} onChange={setSelected} placeholder="Choose people to add" />
-        </Field>
-        <Field label="Role">
-          <Select value={role} onChange={(e) => setRole(e.target.value as ProjectRole)}>
-            {PROJECT_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {humanize(r)}
-              </option>
-            ))}
-          </Select>
-        </Field>
-      </div>
+      <Field label="People" hint="They will see this project and can work on its items.">
+        <UserMultiSelect options={candidates} value={selected} onChange={setSelected} placeholder="Choose people to add" />
+      </Field>
     </Modal>
   );
 }

@@ -15,7 +15,6 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
-import { PROJECT_ROLES, ProjectRole } from '../../../common/constants/roles.constants';
 import { STATUS_CATEGORIES, StatusCategory } from '../../../common/constants/domain.constants';
 import { NullableString, ToBoolean, TrimString } from '../../../common/transformers/query.transformers';
 import { OptionalDate } from '../../../common/validation/date.decorators';
@@ -125,14 +124,4 @@ export class AddMembersDto {
   @ArrayUnique()
   @IsString({ each: true })
   userIds: string[];
-
-  @ApiProperty({ enum: PROJECT_ROLES })
-  @IsIn(PROJECT_ROLES)
-  role: ProjectRole;
-}
-
-export class UpdateMemberDto {
-  @ApiProperty({ enum: PROJECT_ROLES })
-  @IsIn(PROJECT_ROLES)
-  role: ProjectRole;
 }

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { CurrentPlanCard } from '@/features/subscriptions/components/current-plan-card';
 import { appConfig } from '@/shared/config/env';
 import { Permission } from '@/shared/constants/domain';
 import { Button } from '@/shared/ui/button';
@@ -55,7 +54,6 @@ export function OrganizationSettings() {
 
   return (
     <div className="space-y-6">
-      {can(Permission.SUBSCRIPTION_VIEW) && <CurrentPlanCard />}
       <Card>
         <CardHeader title="Organization" description="Workspace name, default brand color and working time used in reports and timesheets." />
         <CardBody>

@@ -45,6 +45,13 @@ export class UsersController {
     return this.users.findOne(user.organizationId, id);
   }
 
+  /** Projects, open work, time and activity of one person (coordinators and root). */
+  @Get(':id/details')
+  @RequirePermissions(Permission.USERS_MANAGE)
+  details(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.users.details(user.organizationId, id);
+  }
+
   @Post()
   @RequirePermissions(Permission.USERS_MANAGE)
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateUserDto) {

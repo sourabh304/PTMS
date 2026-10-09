@@ -6,7 +6,8 @@ import { useAuthConfig, useLogout, useSession } from '@/features/auth/api';
 import { passwordSchema } from '@/features/auth/schemas';
 import { routes } from '@/shared/config/routes';
 import { errorMessage } from '@/shared/lib/api-client';
-import { formatDateTime, humanize } from '@/shared/lib/utils';
+import { roleLabel } from '@/shared/constants/domain';
+import { formatDateTime } from '@/shared/lib/utils';
 import { Avatar } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -39,7 +40,7 @@ export function ProfileView() {
             </p>
             <p className="text-sm text-muted">{user.email}</p>
             <Badge tone="brand" className="mt-2">
-              {humanize(user.role)}
+              {roleLabel(user.role)}
             </Badge>
             <p className="mt-4 text-xs text-muted">Member since {formatDateTime(user.createdAt)}</p>
           </CardBody>

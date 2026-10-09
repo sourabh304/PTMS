@@ -1,9 +1,7 @@
 'use client';
 
-import { Building2, CreditCard, LogIn, Pause, Play, Plus, Search, Trash2 } from 'lucide-react';
+import { Building2, LogIn, MoreHorizontal, Pause, Play, Plus, Search, Trash2, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { SubscriptionFormModal } from '@/features/subscriptions/components/subscription-form-modal';
-import { SubscriptionStatusBadge } from '@/features/subscriptions/components/subscription-status-badge';
 import { appConfig } from '@/shared/config/env';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { useQueryParam } from '@/shared/hooks/use-query-param';
@@ -14,11 +12,13 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
+import { Dropdown, DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { Field, FormAlert, Input } from '@/shared/ui/form';
-import { PageHeader, Pagination, ProgressBar, Segmented, Toolbar } from '@/shared/ui/layout';
+import { PageHeader, Pagination, Segmented, Toolbar } from '@/shared/ui/layout';
 import { ConfirmDialog, Drawer, Modal } from '@/shared/ui/modal';
 import { Table, Td, Th, Tr } from '@/shared/ui/table';
 import {
+  useAddCoordinator,
   useCreateOrganization,
   useDeletePlatformOrganization,
   useEnterWorkspace,
@@ -51,7 +51,7 @@ export function OrganizationsView() {
     <>
       <PageHeader
         title="Organizations"
-        description="Every tenant on the platform, their plan and their usage."
+        description="Every organization on the platform and its project coordinators."
         actions={
           <Button onClick={() => setCreating(true)}>
             <Plus /> New organization
@@ -87,7 +87,6 @@ export function OrganizationsView() {
               <thead>
                 <tr>
                   <Th>Organization</Th>
-                  <Th>Plan</Th>
                   <Th className="text-right">Users</Th>
                   <Th className="text-right">Projects</Th>
                   <Th>Status</Th>
@@ -96,40 +95,21 @@ export function OrganizationsView() {
                 </tr>
               </thead>
               <tbody>
-                {data.data.map((org) => {
-                  const plan = org.currentSubscription?.plan;
-                  return (
+                {data.data.map((org) => (
                     <Tr key={org.id} className="cursor-pointer" onClick={() => setOrgId(org.id)}>
                       <Td>
                         <p className="font-medium text-foreground">{org.name}</p>
                         <p className="font-mono text-xs text-muted">{org.slug}</p>
                       </Td>
-                      <Td>
-                        {plan ? (
-                          <span className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">{plan.name}</span>
-                            <SubscriptionStatusBadge status={org.currentSubscription!.status} />
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted">No plan</span>
-                        )}
-                      </Td>
-                      <Td className="text-right tabular-nums">
-                        {org._count.users}
-                        {plan?.maxUsers ? <span className="text-muted"> / {plan.maxUsers}</span> : null}
-                      </Td>
-                      <Td className="text-right tabular-nums">
-                        {org._count.projects}
-                        {plan?.maxProjects ? <span className="text-muted"> / {plan.maxProjects}</span> : null}
-                      </Td>
+                      <Td className="text-right tabular-nums">{org._count.users}</Td>
+                      <Td className="text-right tabular-nums">{org._count.projects}</Td>
                       <Td>{org.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Suspended</Badge>}</Td>
                       <Td className="whitespace-nowrap text-muted">{formatDate(org.createdAt)}</Td>
                       <Td onClick={(event) => event.stopPropagation()}>
                         <OpenWorkspaceButton organizationId={org.id} size="sm" variant="secondary" />
                       </Td>
                     </Tr>
-                  );
-                })}
+                ))}
               </tbody>
             </Table>
             <Pagination page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} limit={data.meta.limit} itemLabel="organizations" onPageChange={setPage} />
@@ -158,19 +138,45 @@ function OrganizationDetails({ org, onDeleted }: { org: PlatformOrganizationDeta
   const update = useUpdatePlatformOrganization();
   const remove = useDeletePlatformOrganization();
   const [name, setName] = useState(org.name);
-  const [assigning, setAssigning] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [confirm, setConfirm] = useState<'suspend' | 'delete' | null>(null);
   const [slugConfirm, setSlugConfirm] = useState('');
-  const plan = org.currentSubscription?.plan;
 
   return (
     <div className="space-y-6">
       <section className="flex flex-col gap-3 rounded-ui-lg border border-brand/30 bg-brand-soft/40 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-foreground">Manage this workspace</p>
-          <p className="text-xs text-muted">Open the organization with super admin rights: users, settings, projects and reports.</p>
+          <p className="text-xs text-muted">Open the organization with coordinator rights: people, projects, meetings and reports.</p>
         </div>
         <OpenWorkspaceButton organizationId={org.id} />
+      </section>
+
+      <section>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Project coordinators</h3>
+          <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
+            <UserPlus /> Add coordinator
+          </Button>
+        </div>
+        {org.coordinators.length ? (
+          <ul className="divide-y divide-border rounded-ui-lg border border-border">
+            {org.coordinators.map((u) => (
+              <li key={u.id} className="flex items-center gap-3 px-3 py-2.5">
+                <Avatar user={u} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{fullName(u)}</span>
+                  <span className="block truncate text-xs text-muted">{u.email}</span>
+                </span>
+                {!u.isActive && <Badge tone="danger">Inactive</Badge>}
+                <span className="hidden text-xs text-muted sm:block">Last sign-in {formatDateTime(u.lastLoginAt)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="rounded-ui-lg border border-dashed border-border p-4 text-sm text-muted">No coordinator yet. Add one so someone can run this organization.</p>
+        )}
+        <p className="mt-2 text-xs text-muted">To promote an existing member, open the workspace and change their role under Settings → Users.</p>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
@@ -182,80 +188,42 @@ function OrganizationDetails({ org, onDeleted }: { org: PlatformOrganizationDeta
         </Button>
       </section>
 
-      <section className="rounded-ui-lg border border-border p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold">Subscription</h3>
-          <Button size="sm" onClick={() => setAssigning(true)}>
-            <CreditCard /> {plan ? 'Change plan' : 'Assign plan'}
-          </Button>
-        </div>
-        {plan ? (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-base font-semibold text-foreground">{plan.name}</span>
-              <SubscriptionStatusBadge status={org.currentSubscription!.status} />
-              <span className="text-xs text-muted">
-                since {formatDate(org.currentSubscription!.startDate)}
-                {org.currentSubscription!.endDate && ` · until ${formatDate(org.currentSubscription!.endDate)}`}
-              </span>
-            </div>
-            <Usage label="Active users" used={org.usage.users} limit={plan.maxUsers} />
-            <Usage label="Active projects" used={org.usage.projects} limit={plan.maxProjects} />
-          </div>
-        ) : (
-          <p className="text-sm text-muted">No current plan. Limits are not enforced unless REQUIRE_ACTIVE_SUBSCRIPTION is enabled.</p>
-        )}
+      <section className="flex items-center justify-between gap-2 border-t border-border pt-4">
+        <p className="text-xs text-muted">Created {formatDate(org.createdAt)} · {org._count.users} people · {org._count.projects} projects</p>
+        <Dropdown
+          trigger={({ toggle }) => (
+            <Button variant="ghost" size="icon" aria-label="More actions" onClick={toggle}>
+              <MoreHorizontal />
+            </Button>
+          )}
+        >
+          {(close) => (
+            <>
+              {org.isActive ? (
+                <DropdownItem onClick={() => { close(); setConfirm('suspend'); }}>
+                  <Pause /> Suspend organization
+                </DropdownItem>
+              ) : (
+                <DropdownItem onClick={() => { close(); update.mutate({ id: org.id, isActive: true }); }}>
+                  <Play /> Reactivate organization
+                </DropdownItem>
+              )}
+              <DropdownSeparator />
+              <DropdownItem danger onClick={() => { close(); setConfirm('delete'); }}>
+                <Trash2 /> Delete organization
+              </DropdownItem>
+            </>
+          )}
+        </Dropdown>
       </section>
 
-      <section>
-        <h3 className="mb-2 text-sm font-semibold">Super admins</h3>
-        <ul className="divide-y divide-border rounded-ui-lg border border-border">
-          {org.superAdmins.map((u) => (
-            <li key={u.id} className="flex items-center gap-3 px-3 py-2.5">
-              <Avatar user={u} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{fullName(u)}</span>
-                <span className="block truncate text-xs text-muted">{u.email}</span>
-              </span>
-              <span className="hidden text-xs text-muted sm:block">Last sign-in {formatDateTime(u.lastLoginAt)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {org.subscriptions.length > 0 && (
-        <section>
-          <h3 className="mb-2 text-sm font-semibold">Subscription history</h3>
-          <ul className="divide-y divide-border rounded-ui-lg border border-border text-sm">
-            {org.subscriptions.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
-                <span className="font-medium">{s.plan.name}</span>
-                <span className="text-xs text-muted">
-                  {formatDate(s.startDate)} – {s.endDate ? formatDate(s.endDate) : 'open'}
-                </span>
-                <SubscriptionStatusBadge status={s.status} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="flex flex-wrap gap-2 border-t border-border pt-4">
-        {org.isActive ? (
-          <Button variant="secondary" onClick={() => setConfirm('suspend')}>
-            <Pause /> Suspend organization
-          </Button>
-        ) : (
-          <Button variant="secondary" loading={update.isPending} onClick={() => update.mutate({ id: org.id, isActive: true })}>
-            <Play /> Reactivate organization
-          </Button>
-        )}
-        <Button variant="danger-ghost" onClick={() => setConfirm('delete')}>
-          <Trash2 /> Delete organization
-        </Button>
-      </section>
-
-      <SubscriptionFormModal open={assigning} onClose={() => setAssigning(false)} organizationId={org.id} />
+      <PersonModal
+        open={adding}
+        onClose={() => setAdding(false)}
+        title="Add project coordinator"
+        description={`Creates a coordinator account in ${org.name}.`}
+        organizationId={org.id}
+      />
       <ConfirmDialog
         open={confirm === 'suspend'}
         onClose={() => setConfirm(null)}
@@ -269,7 +237,7 @@ function OrganizationDetails({ org, onDeleted }: { org: PlatformOrganizationDeta
         open={confirm === 'delete'}
         onClose={() => setConfirm(null)}
         title="Delete organization"
-        message={`This permanently deletes ${org.name} with all of its users, projects, tasks, issues, timesheets and subscriptions.`}
+        message={`This permanently deletes ${org.name} with all of its users, projects, tasks, issues, meetings and timesheets.`}
         confirmLabel="Delete forever"
         loading={remove.isPending}
         onConfirm={() => slugConfirm === org.slug && remove.mutate(org.id, { onSuccess: onDeleted })}
@@ -288,21 +256,6 @@ function OpenWorkspaceButton({ organizationId, size = 'md', variant = 'primary' 
     <Button size={size} variant={variant} loading={enter.isPending} onClick={() => enter.mutate(organizationId)}>
       {!enter.isPending && <LogIn />} Open workspace
     </Button>
-  );
-}
-
-function Usage({ label, used, limit }: { label: string; used: number; limit: number | null }) {
-  const percent = limit ? (used / limit) * 100 : 0;
-  return (
-    <div>
-      <div className="mb-1.5 flex justify-between text-xs">
-        <span className="text-muted">{label}</span>
-        <span className="font-medium tabular-nums">
-          {used} / {limit ?? 'Unlimited'}
-        </span>
-      </div>
-      <ProgressBar value={limit ? percent : 0} color={percent >= 100 ? 'var(--danger)' : percent >= 80 ? 'var(--warning)' : undefined} />
-    </div>
   );
 }
 
@@ -329,7 +282,7 @@ function CreateOrganizationModal({ open, onClose, onCreated }: { open: boolean; 
     create.mutate(
       {
         name: values.name.trim(),
-        superAdmin: { firstName: values.firstName.trim(), lastName: values.lastName.trim(), email: values.email.trim(), password: values.password },
+        coordinator: { firstName: values.firstName.trim(), lastName: values.lastName.trim(), email: values.email.trim(), password: values.password },
       },
       {
         onSuccess: (org) => {
@@ -345,7 +298,7 @@ function CreateOrganizationModal({ open, onClose, onCreated }: { open: boolean; 
       open={open}
       onClose={onClose}
       title="New organization"
-      description="Creates the workspace with its default workflow and its first Super Admin."
+      description="Creates the workspace with its default workflow and its first project coordinator."
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -366,9 +319,74 @@ function CreateOrganizationModal({ open, onClose, onCreated }: { open: boolean; 
         <Field label="Organization name" required className="sm:col-span-2">
           <Input autoFocus value={values.name} onChange={set('name')} />
         </Field>
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted sm:col-span-2">Super admin</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted sm:col-span-2">Project coordinator</p>
         <Field label="First name" required>
           <Input value={values.firstName} onChange={set('firstName')} />
+        </Field>
+        <Field label="Last name" required>
+          <Input value={values.lastName} onChange={set('lastName')} />
+        </Field>
+        <Field label="Email" required className="sm:col-span-2">
+          <Input type="email" value={values.email} onChange={set('email')} />
+        </Field>
+        <Field label="Initial password" required hint="Upper and lower case letters and a number; share it securely." className="sm:col-span-2">
+          <Input type="password" autoComplete="new-password" value={values.password} onChange={set('password')} />
+        </Field>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── Add coordinator ────────────────────────────────────────────
+
+const EMPTY_PERSON = { firstName: '', lastName: '', email: '', password: '' };
+
+function PersonModal({ open, onClose, title, description, organizationId }: { open: boolean; onClose: () => void; title: string; description: string; organizationId: string }) {
+  const add = useAddCoordinator();
+  const [values, setValues] = useState(EMPTY_PERSON);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setValues(EMPTY_PERSON);
+      setError('');
+    }
+  }, [open]);
+
+  const set = (key: keyof typeof EMPTY_PERSON) => (event: { target: { value: string } }) => setValues((v) => ({ ...v, [key]: event.target.value }));
+  const submit = () => {
+    if (Object.values(values).some((v) => !v.trim())) return setError('All fields are required');
+    add.mutate(
+      { organizationId, firstName: values.firstName.trim(), lastName: values.lastName.trim(), email: values.email.trim(), password: values.password },
+      { onSuccess: onClose },
+    );
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title}
+      description={description}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={submit} loading={add.isPending}>
+            Add coordinator
+          </Button>
+        </>
+      }
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        {error && (
+          <div className="sm:col-span-2">
+            <FormAlert>{error}</FormAlert>
+          </div>
+        )}
+        <Field label="First name" required>
+          <Input autoFocus value={values.firstName} onChange={set('firstName')} />
         </Field>
         <Field label="Last name" required>
           <Input value={values.lastName} onChange={set('lastName')} />

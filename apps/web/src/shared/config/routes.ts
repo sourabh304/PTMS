@@ -19,6 +19,9 @@ export const routes = {
   projectTimesheets: (id: string) => `/projects/${id}/timesheets`,
   projectActivity: (id: string) => `/projects/${id}/activity`,
   projectSettings: (id: string) => `/projects/${id}/settings`,
+  calendar: '/calendar',
+  people: '/people',
+  person: (id: string) => `/people/${id}`,
   timesheets: '/timesheets',
   reports: '/reports',
   settings: '/settings',
@@ -29,8 +32,6 @@ export const routes = {
   profile: '/profile',
   platform: '/platform',
   platformOrganizations: '/platform/organizations',
-  platformPlans: '/platform/plans',
-  platformSubscriptions: '/platform/subscriptions',
   platformProfile: '/platform/profile',
   platformAppearance: '/platform/appearance',
 } as const;

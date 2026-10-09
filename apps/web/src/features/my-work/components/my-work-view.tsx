@@ -63,7 +63,7 @@ export function MyWorkView() {
       </div>
 
       {tab === 'tasks' && <TasksByDate search={debounced} showDone={showDone} onOpen={(task) => setTaskId(task.id)} />}
-      {tab === 'calendar' && <TaskCalendar query={{ mine: true, search: debounced || undefined }} canEdit showProject />}
+      {tab === 'calendar' && <TaskCalendar query={{ mine: true, search: debounced || undefined }} canEdit showProject meetings={{}} storageKey="calendar.mine" />}
       {tab === 'issues' && <MyIssues search={debounced} showDone={showDone} onOpen={setIssueId} />}
 
       {/* The calendar renders its own task drawer. */}

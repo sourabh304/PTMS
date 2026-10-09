@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { Prisma, TimeEntry } from '@prisma/client';
 import { ActivityAction, ApprovalStatus, EntityType, NotificationType } from '../../common/constants/domain.constants';
 import { hasPermission, Permission } from '../../common/constants/permissions.constants';
-import { isOrgAdmin, OrgRole, ProjectRole } from '../../common/constants/roles.constants';
+import { isCoordinator, OrgRole } from '../../common/constants/roles.constants';
 import { NotificationLinks } from '../../common/events/domain-events';
 import { EventPublisher } from '../../common/events/event-publisher.service';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
@@ -133,7 +133,7 @@ export class TimesheetsService {
     if (!hasPermission(user.role, Permission.TIMESHEETS_APPROVE) && !access.canManage) {
       throw new ForbiddenException('You cannot review time entries for this project');
     }
-    if (entry.userId === user.id && !isOrgAdmin(user.role)) {
+    if (entry.userId === user.id && !isCoordinator(user.role)) {
       throw new ForbiddenException('You cannot review your own time entries');
     }
 
@@ -163,20 +163,11 @@ export class TimesheetsService {
   // ─── Private ─────────────────────────────────────────────────
 
   /**
-   * Users see their own time; approvers see the organization; project managers see
-   * the time logged against projects they manage.
+   * Members see their own time; coordinators see the whole organization.
    */
   private buildWhere(user: AuthenticatedUser, query: TimeSummaryQueryDto): Prisma.TimeEntryWhereInput {
     const and: Prisma.TimeEntryWhereInput[] = [{ project: { organizationId: user.organizationId } }];
-    if (!hasPermission(user.role, Permission.TIMESHEETS_VIEW_ALL)) {
-      and.push({
-        OR: [
-          { userId: user.id },
-          { project: { members: { some: { userId: user.id, role: ProjectRole.MANAGER } } } },
-          { project: { ownerId: user.id } },
-        ],
-      });
-    }
+    if (!hasPermission(user.role, Permission.TIMESHEETS_VIEW_ALL)) and.push({ userId: user.id });
     if (query.mine) and.push({ userId: user.id });
     if (query.userId) and.push({ userId: query.userId });
     if (query.projectId) and.push({ projectId: query.projectId });
@@ -197,7 +188,7 @@ export class TimesheetsService {
   }
 
   private assertCanModify(user: AuthenticatedUser, entry: TimeEntry): void {
-    if (isOrgAdmin(user.role)) return;
+    if (isCoordinator(user.role)) return;
     if (entry.userId !== user.id) throw new ForbiddenException('You can only change your own time entries');
     if (entry.approvalStatus === ApprovalStatus.APPROVED) {
       throw new BadRequestException('Approved entries are locked');
@@ -213,17 +204,13 @@ export class TimesheetsService {
     }
   }
 
-  /** Tells everyone who can approve this entry (admins, the project owner and managers) that it is waiting. */
+  /** Tells everyone who can approve this entry (the organization's project coordinators) that it is waiting. */
   private async requestApproval(actor: AuthenticatedUser, entry: TimeEntryWithRelations): Promise<void> {
     const approvers = await this.prisma.user.findMany({
       where: {
         organizationId: actor.organizationId,
         isActive: true,
-        OR: [
-          { role: OrgRole.ADMIN },
-          { ownedProjects: { some: { id: entry.projectId } } },
-          { memberships: { some: { projectId: entry.projectId, role: ProjectRole.MANAGER } } },
-        ],
+        role: OrgRole.PROJECT_COORDINATOR,
       },
       select: { id: true },
     });

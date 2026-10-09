@@ -15,7 +15,7 @@ export class PlatformOrganizationQueryDto extends PaginationQueryDto {
   status?: OrganizationStatusFilter;
 }
 
-export class InitialSuperAdminDto {
+export class InitialCoordinatorDto {
   @ApiProperty()
   @TrimString()
   @IsString()
@@ -49,10 +49,10 @@ export class CreatePlatformOrganizationDto {
   @MaxLength(120)
   name: string;
 
-  @ApiProperty({ type: InitialSuperAdminDto, description: 'First Super Admin of the new organization' })
+  @ApiProperty({ type: InitialCoordinatorDto, description: 'First project coordinator of the new organization' })
   @ValidateNested()
-  @Type(() => InitialSuperAdminDto)
-  superAdmin: InitialSuperAdminDto;
+  @Type(() => InitialCoordinatorDto)
+  coordinator: InitialCoordinatorDto;
 }
 
 export class UpdatePlatformOrganizationDto {

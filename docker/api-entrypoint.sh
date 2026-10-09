@@ -17,10 +17,12 @@ fi
 
 cd /app/apps/api
 
-# Create or update tables. Changes that would lose data stop the start-up instead.
+# Drop tables that were removed from the data model, then create or update tables.
+# Any other change that would lose data stops the start-up instead.
+npx --no-install prisma db execute --file prisma/drop-removed-tables.sql --schema prisma/schema.prisma
 npx --no-install prisma db push --skip-generate
 
-# Creates the root account and default plans (plus demo data when SEED_DEMO_DATA=true).
+# Creates the root account (plus demo data when SEED_DEMO_DATA=true).
 # Every step is idempotent, so restarts never duplicate anything.
 if [ "$SEED_ON_START" = "true" ]; then
   npx --no-install prisma db seed

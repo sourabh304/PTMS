@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import type { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { isRoot } from '../../../common/constants/roles.constants';
+import { isRoot, normalizeRole } from '../../../common/constants/roles.constants';
 import { JwtAccessPayload, Principal } from '../../../common/interfaces/authenticated-user.interface';
 import { AppConfig } from '../../../config/configuration';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -51,6 +51,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException();
     }
     const { isActive: _isActive, organization: _organization, ...principal } = user;
+    principal.role = normalizeRole(user.role);
     if (isRoot(user.role)) {
       // The workspace cookie is honoured only for root, which may open any organization anyway.
       principal.organizationId = await this.rootWorkspace(request.cookies?.[this.workspaceCookie]);

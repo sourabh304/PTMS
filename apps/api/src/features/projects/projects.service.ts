@@ -9,7 +9,6 @@ import { PaginationService } from '../../common/pagination/pagination.service';
 import { fullName } from '../../common/utils/string.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupsService } from '../lookups/lookups.service';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { USER_SUMMARY_SELECT } from '../users/users.select';
 import { AddMembersDto, CreateProjectDto, ProjectQueryDto, UpdateProjectDto } from './dto/project.dto';
 import { ProjectAccessService } from './project-access.service';
@@ -35,7 +34,6 @@ export class ProjectsService {
     private readonly lookups: LookupsService,
     private readonly pagination: PaginationService,
     private readonly events: EventPublisher,
-    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async findAll(user: AuthenticatedUser, query: ProjectQueryDto) {
@@ -127,7 +125,6 @@ export class ProjectsService {
 
   async create(user: AuthenticatedUser, dto: CreateProjectDto) {
     this.assertDateRange(dto.startDate, dto.endDate);
-    await this.subscriptions.assertCapacity(user.organizationId, 'projects');
     const statusId = dto.statusId
       ? (await this.lookups.assertValid(user.organizationId, dto.statusId, LookupType.PROJECT_STATUS)).id
       : await this.lookups.getDefaultId(user.organizationId, LookupType.PROJECT_STATUS);
@@ -139,7 +136,7 @@ export class ProjectsService {
     await this.assertOrgUsers(user.organizationId, [ownerId, ...(dto.memberIds ?? [])]);
 
     const memberIds = (dto.memberIds ?? []).filter((id) => id !== ownerId && id !== user.id);
-    const managerIds = [...new Set(actingAsRoot ? [ownerId] : [ownerId, user.id])];
+    const leadIds = [...new Set(actingAsRoot ? [ownerId] : [ownerId, user.id])];
 
     const project = await this.prisma.project.create({
       data: {
@@ -155,8 +152,7 @@ export class ProjectsService {
         budgetHours: dto.budgetHours ?? null,
         members: {
           create: [
-            ...managerIds.map((userId) => ({ userId, role: ProjectRole.MANAGER })),
-            ...memberIds.map((userId) => ({ userId, role: ProjectRole.MEMBER })),
+            ...[...leadIds, ...memberIds].map((userId) => ({ userId, role: ProjectRole.MEMBER })),
           ],
         },
       },
@@ -173,7 +169,7 @@ export class ProjectsService {
       summary: `created project ${project.name}`,
     });
     this.events.notify({
-      recipientIds: [...managerIds, ...memberIds],
+      recipientIds: [...leadIds, ...memberIds],
       actorId: user.id,
       type: NotificationType.PROJECT_ADDED,
       title: `You were added to ${project.name}`,
@@ -196,8 +192,8 @@ export class ProjectsService {
       if (dto.ownerId && dto.ownerId !== project.ownerId) {
         await tx.projectMember.upsert({
           where: { projectId_userId: { projectId: id, userId: dto.ownerId } },
-          create: { projectId: id, userId: dto.ownerId, role: ProjectRole.MANAGER },
-          update: { role: ProjectRole.MANAGER },
+          create: { projectId: id, userId: dto.ownerId, role: ProjectRole.MEMBER },
+          update: {},
         });
       }
       return tx.project.update({ where: { id }, data: dto, include: PROJECT_INCLUDE });
@@ -248,7 +244,7 @@ export class ProjectsService {
     const newIds = dto.userIds.filter((id) => !existingIds.has(id));
     if (newIds.length) {
       await this.prisma.projectMember.createMany({
-        data: newIds.map((userId) => ({ projectId, userId, role: dto.role })),
+        data: newIds.map((userId) => ({ projectId, userId, role: ProjectRole.MEMBER })),
       });
       this.events.activity({
         organizationId: user.organizationId,
@@ -269,18 +265,6 @@ export class ProjectsService {
       });
     }
     return this.members(user, projectId);
-  }
-
-  async updateMember(user: AuthenticatedUser, projectId: string, userId: string, role: ProjectRole) {
-    const { project } = await this.access.assertCanManage(user, projectId);
-    if (userId === project.ownerId && role !== ProjectRole.MANAGER) {
-      throw new BadRequestException('The project owner must remain a manager');
-    }
-    await this.findMembership(projectId, userId);
-    return this.prisma.projectMember.update({
-      where: { projectId_userId: { projectId, userId } },
-      data: { role },
-    });
   }
 
   async removeMember(user: AuthenticatedUser, projectId: string, userId: string): Promise<void> {

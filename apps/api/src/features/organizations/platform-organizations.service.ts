@@ -3,18 +3,15 @@ import { Prisma } from '@prisma/client';
 import { OrgRole } from '../../common/constants/roles.constants';
 import { PaginationService } from '../../common/pagination/pagination.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { PasswordService } from '../users/password.service';
 import { USER_SUMMARY_SELECT } from '../users/users.select';
 import {
   CreatePlatformOrganizationDto,
+  InitialCoordinatorDto,
   PlatformOrganizationQueryDto,
   UpdatePlatformOrganizationDto,
 } from './dto/platform-organization.dto';
 import { OrganizationsService } from './organizations.service';
-
-/** Number of past subscriptions returned with an organization's details. */
-const SUBSCRIPTION_HISTORY_SIZE = 10;
 
 /** Root-only administration of every organization on the platform. */
 @Injectable()
@@ -22,7 +19,6 @@ export class PlatformOrganizationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly organizations: OrganizationsService,
-    private readonly subscriptions: SubscriptionsService,
     private readonly passwords: PasswordService,
     private readonly pagination: PaginationService,
   ) {}
@@ -30,12 +26,6 @@ export class PlatformOrganizationsService {
   private include() {
     return {
       _count: { select: { users: true, projects: true } },
-      subscriptions: {
-        where: this.subscriptions.currentWhere(),
-        include: { plan: true },
-        orderBy: { startDate: 'desc' },
-        take: 1,
-      },
     } satisfies Prisma.OrganizationInclude;
   }
 
@@ -45,7 +35,7 @@ export class PlatformOrganizationsService {
       ...(query.status ? { isActive: query.status === 'active' } : {}),
       ...(query.search ? { OR: [{ name: { contains: query.search } }, { slug: { contains: query.search.toLowerCase() } }] } : {}),
     };
-    const [rows, total] = await this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.organization.findMany({
         where,
         include: this.include(),
@@ -55,7 +45,6 @@ export class PlatformOrganizationsService {
       }),
       this.prisma.organization.count({ where }),
     ]);
-    const data = rows.map(({ subscriptions, ...organization }) => ({ ...organization, currentSubscription: subscriptions[0] ?? null }));
     return this.pagination.build(data, total, page);
   }
 
@@ -64,23 +53,21 @@ export class PlatformOrganizationsService {
       where: { id },
       include: {
         _count: { select: { users: true, projects: true } },
-        users: { where: { role: OrgRole.SUPER_ADMIN }, select: { ...USER_SUMMARY_SELECT, isActive: true, lastLoginAt: true } },
-        subscriptions: { include: { plan: true }, orderBy: { startDate: 'desc' }, take: SUBSCRIPTION_HISTORY_SIZE },
+        users: { where: { role: OrgRole.PROJECT_COORDINATOR }, select: { ...USER_SUMMARY_SELECT, isActive: true, lastLoginAt: true } },
       },
     });
     if (!organization) throw new NotFoundException('Organization not found');
-    const [current, usage] = await Promise.all([this.subscriptions.findCurrent(id), this.subscriptions.usage(id)]);
-    const { users: superAdmins, ...rest } = organization;
-    return { ...rest, superAdmins, currentSubscription: current, usage };
+    const { users: coordinators, ...rest } = organization;
+    return { ...rest, coordinators };
   }
 
-  /** Creates an organization together with its first Super Admin. */
+  /** Creates an organization together with its first project coordinator. */
   async create(dto: CreatePlatformOrganizationDto) {
-    const email = dto.superAdmin.email.toLowerCase();
+    const email = dto.coordinator.email.toLowerCase();
     if (await this.prisma.user.findUnique({ where: { email } })) {
       throw new ConflictException('A user with this email already exists');
     }
-    const passwordHash = await this.passwords.hash(dto.superAdmin.password);
+    const passwordHash = await this.passwords.hash(dto.coordinator.password);
     const organization = await this.prisma.$transaction(async (tx) => {
       const created = await this.organizations.provision(tx, dto.name);
       await tx.user.create({
@@ -88,14 +75,34 @@ export class PlatformOrganizationsService {
           organizationId: created.id,
           email,
           passwordHash,
-          firstName: dto.superAdmin.firstName,
-          lastName: dto.superAdmin.lastName,
-          role: OrgRole.SUPER_ADMIN,
+          firstName: dto.coordinator.firstName,
+          lastName: dto.coordinator.lastName,
+          role: OrgRole.PROJECT_COORDINATOR,
         },
       });
       return created;
     });
     return this.findOne(organization.id);
+  }
+
+  /** Appoints another project coordinator by creating their account in the organization. */
+  async addCoordinator(id: string, dto: InitialCoordinatorDto) {
+    await this.assertExists(id);
+    const email = dto.email.toLowerCase();
+    if (await this.prisma.user.findUnique({ where: { email } })) {
+      throw new ConflictException('A user with this email already exists');
+    }
+    await this.prisma.user.create({
+      data: {
+        organizationId: id,
+        email,
+        passwordHash: await this.passwords.hash(dto.password),
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        role: OrgRole.PROJECT_COORDINATOR,
+      },
+    });
+    return this.findOne(id);
   }
 
   async update(id: string, dto: UpdatePlatformOrganizationDto) {

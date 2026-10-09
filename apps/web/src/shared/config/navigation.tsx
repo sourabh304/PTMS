@@ -1,4 +1,4 @@
-import { BarChart3, Building2, CalendarCheck, Clock, CreditCard, House, LayoutDashboard, Package, Settings, type LucideIcon } from 'lucide-react';
+import { BarChart3, Building2, CalendarCheck, CalendarDays, Clock, House, LayoutDashboard, Settings, Users, type LucideIcon } from 'lucide-react';
 import { Permission } from '@/shared/constants/domain';
 import { routes } from './routes';
 
@@ -24,6 +24,8 @@ export const NAVIGATION: NavSection[] = [
     items: [
       { label: 'Home', href: routes.home, icon: House },
       { label: 'My work', href: routes.myWork, icon: CalendarCheck, badge: 'myOpenTasks' },
+      { label: 'Calendar', href: routes.calendar, icon: CalendarDays },
+      { label: 'People', href: routes.people, icon: Users, permission: Permission.USERS_MANAGE },
       { label: 'Timesheets', href: routes.timesheets, icon: Clock },
       { label: 'Reports', href: routes.reports, icon: BarChart3, permission: Permission.REPORTS_VIEW },
     ],
@@ -40,8 +42,6 @@ export const PLATFORM_NAVIGATION: NavSection[] = [
     items: [
       { label: 'Overview', href: routes.platform, icon: LayoutDashboard },
       { label: 'Organizations', href: routes.platformOrganizations, icon: Building2 },
-      { label: 'Plans', href: routes.platformPlans, icon: Package },
-      { label: 'Subscriptions', href: routes.platformSubscriptions, icon: CreditCard },
     ],
   },
 ];

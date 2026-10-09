@@ -5,6 +5,7 @@ import { PlatformOnly } from '../../common/decorators/account-scope.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import {
   CreatePlatformOrganizationDto,
+  InitialCoordinatorDto,
   PlatformOrganizationQueryDto,
   UpdatePlatformOrganizationDto,
 } from './dto/platform-organization.dto';
@@ -30,6 +31,11 @@ export class PlatformOrganizationsController {
   @Post()
   create(@Body() dto: CreatePlatformOrganizationDto) {
     return this.organizations.create(dto);
+  }
+
+  @Post(':id/coordinators')
+  addCoordinator(@Param('id') id: string, @Body() dto: InitialCoordinatorDto) {
+    return this.organizations.addCoordinator(id, dto);
   }
 
   @Patch(':id')

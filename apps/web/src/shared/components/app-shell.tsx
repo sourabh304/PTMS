@@ -14,9 +14,9 @@ import { GlobalSearch } from '@/features/search/components/global-search';
 import { appConfig } from '@/shared/config/env';
 import { FOOTER_NAVIGATION, NAVIGATION, PLATFORM_NAVIGATION, type NavItem, type NavSection } from '@/shared/config/navigation';
 import { routes } from '@/shared/config/routes';
-import { PLATFORM_ROOT_ROLE } from '@/shared/constants/domain';
+import { PLATFORM_ROOT_ROLE, roleLabel } from '@/shared/constants/domain';
 import { useSystemStatus } from '@/shared/hooks/use-system-status';
-import { cn, fullName, humanize } from '@/shared/lib/utils';
+import { cn, fullName } from '@/shared/lib/utils';
 import { ThemeToggle } from '@/shared/theme/theme-toggle';
 import { useNavCollapsed } from '@/shared/theme/use-nav-collapsed';
 import { Avatar } from '@/shared/ui/avatar';
@@ -45,7 +45,7 @@ function workspaceOf(user: SessionUser, variant: ShellVariant): WorkspaceInfo {
   }
   return {
     name: user.organization.name,
-    subtitle: isRootUser(user) ? 'Opened with root access' : `${humanize(user.role)} workspace`,
+    subtitle: isRootUser(user) ? 'Opened with root access' : `${roleLabel(user.role)} workspace`,
     href: routes.settings,
   };
 }
@@ -274,7 +274,7 @@ function RootWorkspaceBanner({ organizationName }: { organizationName: string })
       <span className="flex min-w-0 items-center gap-2">
         <ShieldCheck className="size-4 shrink-0" />
         <span className="truncate">
-          Root access · You are managing <strong className="font-semibold">{organizationName}</strong> with super admin rights.
+          Root access · You are managing <strong className="font-semibold">{organizationName}</strong> with project coordinator rights.
         </span>
       </span>
       <button
@@ -314,7 +314,7 @@ function UserMenu({ user, variant }: { user: SessionUser; variant: ShellVariant 
           <Avatar user={user} />
           <span className="hidden text-left sm:block">
             <span className="block max-w-40 truncate text-sm font-medium leading-tight">{fullName(user)}</span>
-            <span className="block text-[11px] leading-tight text-muted">{humanize(user.role)}</span>
+            <span className="block text-[11px] leading-tight text-muted">{roleLabel(user.role)}</span>
           </span>
           <ChevronsUpDown className="hidden size-3.5 text-muted sm:block" />
         </button>
