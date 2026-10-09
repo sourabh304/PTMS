@@ -1,22 +1,9 @@
 'use client';
 
-import {
-  AlertTriangle,
-  CalendarDays,
-  ChevronRight,
-  Download,
-  FolderKanban,
-  LayoutGrid,
-  List,
-  Plus,
-  Search,
-  Target,
-  TimerReset,
-  Zap,
-} from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronRight, Download, FolderKanban, LayoutGrid, List, Loader2, MoreHorizontal, Plus, Search, TimerReset } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from '@/features/auth/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { appConfig } from '@/shared/config/env';
@@ -30,6 +17,7 @@ import { Avatar, AvatarGroup } from '@/shared/ui/avatar';
 import { Badge, ColorBadge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
+import { Dropdown, DropdownItem } from '@/shared/ui/dropdown';
 import { EmptyState, ErrorState, Skeleton } from '@/shared/ui/feedback';
 import { Input, Select } from '@/shared/ui/form';
 import { Pagination, ProgressBar, Segmented } from '@/shared/ui/layout';
@@ -106,6 +94,9 @@ export function ProjectList() {
   const { data: summary } = useProjectSummary();
   const { data, isLoading, isError, error, refetch } = useProjects(query);
 
+  const exporter = useProjectExport(query);
+  const showCreateCard = canCreate && scope !== 'archived';
+
   return (
     <>
       {/* Header */}
@@ -116,84 +107,68 @@ export function ProjectList() {
         <span>/</span>
         <span className="text-brand">{scope === 'all' ? 'All projects' : scopeConfig.label}</span>
       </nav>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Projects</h1>
-            {summary && <span className="rounded-md bg-surface-muted px-2 py-0.5 text-xs font-medium text-muted ring-1 ring-inset ring-border">{summary.total} total</span>}
-          </div>
-          <p className="mt-1 text-sm text-muted">Live progress, health and ownership for every initiative you can access.</p>
+      <div className="mb-5 flex items-start justify-between gap-3 sm:items-end">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Projects</h1>
+          <SummaryLine summary={summary} onShowActive={() => setScope('active')} />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ExportButton query={query} />
+        <div className="flex shrink-0 items-center gap-2">
           {canCreate && (
-            <Button onClick={() => setCreating(true)}>
-              <Plus /> New project
+            <Button onClick={() => setCreating(true)} aria-label="New project">
+              <Plus /> <span className="hidden sm:inline">New project</span>
             </Button>
           )}
-        </div>
-      </div>
-
-      {/* KPI tiles */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <KpiTile label="Total projects" value={summary?.total} icon={<FolderKanban />} hint={summary && `across ${summary.members} members`} />
-        <KpiTile label="Active" value={summary?.byCategory.IN_PROGRESS} icon={<Zap />} hint="In execution" hintTone="success" />
-        <KpiTile label="In planning" value={summary?.byCategory.OPEN} icon={<Target />} hint="Not started yet" hintTone="brand" />
-        <KpiTile
-          label="Overdue alerts"
-          value={summary?.projectsWithOverdue}
-          icon={<AlertTriangle />}
-          hint={summary && (summary.overdueTasks ? `${summary.overdueTasks} overdue tasks` : 'Nothing overdue')}
-          tone={summary?.projectsWithOverdue ? 'danger' : 'default'}
-        />
-      </div>
-
-      {/* Filter bar */}
-      <Card className="mb-4 flex flex-col gap-3 p-2.5 lg:flex-row lg:items-center">
-        <div className="relative w-full lg:max-w-64">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-          <Input placeholder="Filter by name or key…" aria-label="Filter projects" className="border-transparent bg-surface-muted/60 pl-9 shadow-none" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <div role="tablist" aria-label="Project status" className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none]">
-          {SCOPES.map((s) => {
-            const active = s.value === scope;
-            const count = summary ? s.count(summary) : undefined;
-            return (
-              <button
-                key={s.value}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setScope(s.value)}
-                className={cn(
-                  'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-ui px-3 text-xs font-medium transition-colors',
-                  active ? 'bg-foreground text-background' : 'text-foreground-soft hover:bg-surface-muted',
-                )}
+          <Dropdown
+            trigger={({ open, toggle }) => (
+              <Button variant="secondary" size="icon" className="h-[var(--control-h)] w-[var(--control-h)]" aria-label="More actions" aria-expanded={open} onClick={toggle}>
+                {exporter.busy ? <Loader2 className="animate-spin" /> : <MoreHorizontal />}
+              </Button>
+            )}
+          >
+            {(close) => (
+              <DropdownItem
+                onClick={() => {
+                  close();
+                  void exporter.run();
+                }}
               >
-                {s.label}
-                {count !== undefined && <span className={cn('tabular-nums', active ? 'opacity-70' : 'text-muted')}>({count})</span>}
-              </button>
-            );
-          })}
+                <Download /> Export CSV
+              </DropdownItem>
+            )}
+          </Dropdown>
         </div>
-        <div className="flex items-center gap-2 lg:ml-auto">
-          <label className="hidden text-xs text-muted sm:block" htmlFor="project-sort">
-            Sort:
-          </label>
-          <Select id="project-sort" className="h-8 w-auto min-w-36 text-xs" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+      </div>
+
+      {/* Filter bar: search, status, sort and view in one compact row */}
+      <Card className="mb-4 flex flex-col gap-2 p-2 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:max-w-72">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+          <Input placeholder="Filter by name or key…" aria-label="Filter projects" className="h-8 border-transparent bg-surface-muted/60 pl-9 text-sm shadow-none" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <Select aria-label="Project status" className="h-8 w-auto min-w-0 flex-1 text-xs sm:min-w-36 sm:flex-none" value={scope} onChange={(e) => setScope(e.target.value as Scope)}>
+            {SCOPES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.value === 'all' ? 'All' : s.label}
+                {summary ? ` (${s.count(summary)})` : ''}
+              </option>
+            ))}
+          </Select>
+          <Select aria-label="Sort projects" className="h-8 w-auto min-w-0 flex-1 text-xs sm:min-w-36 sm:flex-none" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
             {SORTS.map((s) => (
               <option key={s.value} value={s.value}>
-                {s.label}
+                Sort: {s.label}
               </option>
             ))}
           </Select>
           <Segmented<View>
             aria-label="View"
+            className="shrink-0"
             value={view}
             onChange={setView}
             options={[
-              { value: 'grid', label: <><LayoutGrid /> Grid</> },
-              { value: 'list', label: <><List /> List</> },
+              { value: 'grid', label: <span className="inline-flex items-center gap-1.5" title="Grid view"><LayoutGrid /><span className="sr-only">Grid</span></span> },
+              { value: 'list', label: <span className="inline-flex items-center gap-1.5" title="List view"><List /><span className="sr-only">List</span></span> },
             ]}
           />
         </div>
@@ -206,23 +181,22 @@ export function ProjectList() {
         <Card>
           <ErrorState message={errorMessage(error)} onRetry={refetch} />
         </Card>
-      ) : !data?.data.length && !(canCreate && scope !== 'archived' && !debouncedSearch) ? (
+      ) : !data?.data.length && !(showCreateCard && !debouncedSearch) ? (
         <Card>
-          <EmptyState icon={<FolderKanban />} title="No projects match" description="Try another status tab or clear the filter." />
+          <EmptyState icon={<FolderKanban />} title="No projects match" description="Try another status or clear the filter." />
         </Card>
       ) : view === 'grid' ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data?.data.map((project) => <ProjectCard key={project.id} project={project} />)}
-          {canCreate && scope !== 'archived' && <CreateProjectCard onClick={() => setCreating(true)} />}
+          {showCreateCard && <CreateProjectCard onClick={() => setCreating(true)} />}
         </div>
       ) : (
         <ProjectTable projects={data?.data ?? []} />
       )}
 
-      {data && (
+      {data && data.meta.totalPages > 1 && (
         <Card className="mt-4">
           <Pagination
-            alwaysShow
             className="border-t-0"
             page={data.meta.page}
             totalPages={data.meta.totalPages}
@@ -241,41 +215,30 @@ export function ProjectList() {
 
 // ─── Pieces ─────────────────────────────────────────────────────
 
-const HINT_TONES = { default: 'text-muted', success: 'text-success', brand: 'text-brand', danger: 'text-danger' } as const;
-
-interface KpiTileProps {
-  label: string;
-  value?: number;
-  icon: ReactNode;
-  hint?: ReactNode;
-  hintTone?: keyof typeof HINT_TONES;
-  tone?: 'default' | 'danger';
-}
-
-function KpiTile({ label, value, icon, hint, hintTone = 'default', tone = 'default' }: KpiTileProps) {
-  const danger = tone === 'danger';
+/** One line of portfolio numbers in place of a row of KPI tiles. */
+function SummaryLine({ summary, onShowActive }: { summary?: ProjectSummary; onShowActive: () => void }) {
+  if (!summary) return <Skeleton className="mt-2 h-4 w-72" />;
   return (
-    <div className={cn('flex items-start justify-between gap-3 rounded-ui-lg border bg-surface p-[var(--card-p)] shadow-ui-sm', danger ? 'border-danger/30 bg-danger-soft/40' : 'border-border')}>
-      <div className="min-w-0">
-        <p className={cn('font-mono text-[11px] font-medium uppercase tracking-wide', danger ? 'text-danger' : 'text-muted')}>{label}</p>
-        <div className="mt-2 flex flex-wrap items-baseline gap-x-2">
-          {value === undefined ? (
-            <Skeleton className="h-7 w-10" />
-          ) : (
-            <span className={cn('text-2xl font-semibold tabular-nums tracking-tight', danger ? 'text-danger' : 'text-foreground')}>{value}</span>
-          )}
-          {hint && <span className={cn('text-xs', danger ? 'text-danger' : HINT_TONES[hintTone])}>{hint}</span>}
-        </div>
-      </div>
-      <span
-        className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-ui [&_svg]:size-4',
-          danger ? 'bg-danger-soft text-danger' : 'border border-border bg-surface-muted text-muted',
-        )}
-      >
-        {icon}
+    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+      <span>
+        <span className="font-semibold tabular-nums text-foreground">{summary.total}</span> projects · {summary.members} members
       </span>
-    </div>
+      <span className="hidden text-border-strong sm:inline">|</span>
+      <button type="button" onClick={onShowActive} className="hover:text-foreground">
+        <span className="font-semibold tabular-nums text-success">{summary.byCategory.IN_PROGRESS}</span> active
+      </button>
+      <span>
+        <span className="font-semibold tabular-nums text-brand">{summary.byCategory.OPEN}</span> in planning
+      </span>
+      {summary.projectsWithOverdue > 0 ? (
+        <span className="inline-flex items-center gap-1 rounded-md bg-danger-soft px-1.5 py-0.5 text-xs font-medium text-danger ring-1 ring-inset ring-danger/20">
+          <AlertTriangle className="size-3" /> {summary.overdueTasks} overdue {summary.overdueTasks === 1 ? 'task' : 'tasks'} in {summary.projectsWithOverdue}{' '}
+          {summary.projectsWithOverdue === 1 ? 'project' : 'projects'}
+        </span>
+      ) : (
+        <span className="text-xs">Nothing overdue</span>
+      )}
+    </p>
   );
 }
 
@@ -295,13 +258,13 @@ function ProjectCard({ project }: { project: Project }) {
         {project.isArchived && <Badge tone="warning">Archived</Badge>}
       </div>
 
-      <Link href={routes.project(project.id)} className="mt-3 block after:absolute after:inset-0 after:rounded-ui-lg">
+      <Link href={routes.project(project.id)} className="mt-2.5 block after:absolute after:inset-0 after:rounded-ui-lg">
         <h3 className="truncate text-[15px] font-semibold text-foreground group-hover:text-brand">{project.name}</h3>
       </Link>
-      <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted">{project.description || 'No description provided.'}</p>
+      <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted" title={project.description || undefined}>{project.description || 'No description provided.'}</p>
 
-      <div className="mt-4 rounded-ui border border-border bg-surface-muted/50 px-3 py-2.5">
-        <div className="mb-2 flex items-center justify-between text-xs">
+      <div className="mt-3">
+        <div className="mb-1.5 flex items-center justify-between text-xs">
           <span className="text-muted">
             {project.stats.completedTasks} of {project.stats.totalTasks} tasks complete
           </span>
@@ -310,7 +273,7 @@ function ProjectCard({ project }: { project: Project }) {
         <ProgressBar value={project.stats.progress} color={project.stats.progress >= 75 ? 'var(--success)' : undefined} />
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3.5 text-xs text-muted">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs text-muted">
         <span className="flex items-center gap-2">
           <AvatarGroup users={members} max={3} />
           <span>{project._count.members} {project._count.members === 1 ? 'member' : 'members'}</span>
@@ -340,15 +303,15 @@ function CreateProjectCard({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-ui-lg border border-dashed border-border-strong bg-surface/40 p-6 text-center transition-colors hover:border-brand hover:bg-brand-soft/30"
+      title="Set up task lists, milestones, a timeline and your team in a few steps."
+      className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-ui-lg border border-dashed border-border-strong bg-surface/40 p-5 text-center transition-colors hover:border-brand hover:bg-brand-soft/30"
     >
-      <span className="flex size-11 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-ui-sm">
-        <Plus className="size-5" />
+      <span className="flex size-9 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-ui-sm">
+        <Plus className="size-4" />
       </span>
       <span className="text-sm font-semibold text-foreground">Create new project</span>
-      <span className="max-w-60 text-xs text-muted">Set up task lists, milestones, a timeline and your team in a few steps.</span>
-      <span className="mt-1 inline-flex items-center gap-1.5 rounded-ui border border-border bg-surface px-2.5 py-1 text-xs text-muted">
-        Press <kbd className="rounded border border-border bg-surface-muted px-1.5 font-mono text-[10px] uppercase">{CREATE_SHORTCUT}</kbd> to start
+      <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+        or press <kbd className="rounded border border-border bg-surface-muted px-1.5 font-mono text-[10px] uppercase">{CREATE_SHORTCUT}</kbd>
       </span>
     </button>
   );
@@ -437,7 +400,7 @@ function ProjectTable({ projects }: { projects: Project[] }) {
 }
 
 /** Exports every project matching the current filters (not just the visible page). */
-function ExportButton({ query }: { query: ProjectQuery }) {
+function useProjectExport(query: ProjectQuery) {
   const [busy, setBusy] = useState(false);
   const exportQuery = useMemo(() => ({ ...query, page: 1, limit: appConfig.boardPageSize }), [query]);
 
@@ -461,9 +424,5 @@ function ExportButton({ query }: { query: ProjectQuery }) {
     }
   };
 
-  return (
-    <Button variant="secondary" onClick={run} loading={busy}>
-      {!busy && <Download />} Export CSV
-    </Button>
-  );
+  return { busy, run };
 }

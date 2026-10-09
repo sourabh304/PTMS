@@ -1,7 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useSession } from '@/features/auth/api';
@@ -10,7 +11,7 @@ import { useActiveUsers } from '@/features/users/api';
 import { UserMultiSelect } from '@/features/users/components/user-multi-select';
 import { appConfig } from '@/shared/config/env';
 import { LookupType, PLATFORM_ROOT_ROLE } from '@/shared/constants/domain';
-import { compact, fullName, toInputDate } from '@/shared/lib/utils';
+import { cn, compact, fullName, toInputDate } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Field, Input, Select, Textarea } from '@/shared/ui/form';
 import { Modal } from '@/shared/ui/modal';
@@ -68,9 +69,13 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: Props) {
 
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { memberIds: [] } });
   const { errors } = form.formState;
+  // Dates, budget and color are optional: folded away when creating, shown when editing or invalid.
+  const [showMore, setShowMore] = useState(false);
+  const moreVisible = showMore || isEdit || !!errors.endDate;
 
   useEffect(() => {
     if (!open) return;
+    setShowMore(false);
     form.reset({
       name: project?.name ?? '',
       key: project?.key ?? '',
@@ -157,7 +162,7 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: Props) {
         <Field label="Status" className="sm:col-span-2">
           <LookupSelect type={LookupType.PROJECT_STATUS} emptyLabel={isEdit ? undefined : 'Default'} {...form.register('statusId')} />
         </Field>
-        <Field label="Owner" required={ownerRequired} error={form.formState.errors.ownerId?.message} className="sm:col-span-3">
+        <Field label="Owner" required={ownerRequired} error={form.formState.errors.ownerId?.message} className="sm:col-span-4">
           <Select {...form.register('ownerId')}>
             {!isEdit && <option value="">{ownerRequired ? 'Select owner' : 'Me'}</option>}
             {users?.data.map((user) => (
@@ -167,18 +172,33 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: Props) {
             ))}
           </Select>
         </Field>
-        <Field label="Color" className="sm:col-span-1">
-          <Input type="color" className="p-1" {...form.register('color')} />
-        </Field>
-        <Field label="Start date" className="sm:col-span-2">
-          <Input type="date" {...form.register('startDate')} />
-        </Field>
-        <Field label="End date" error={errors.endDate?.message} className="sm:col-span-2">
-          <Input type="date" {...form.register('endDate')} />
-        </Field>
-        <Field label="Budget (hours)" className="sm:col-span-2">
-          <Input type="number" min={0} step="0.5" {...form.register('budgetHours')} />
-        </Field>
+        {!isEdit && (
+          <button
+            type="button"
+            onClick={() => setShowMore((value) => !value)}
+            aria-expanded={moreVisible}
+            className="inline-flex items-center gap-1.5 justify-self-start text-xs font-medium text-muted hover:text-foreground sm:col-span-6"
+          >
+            <ChevronDown className={cn('size-3.5 transition-transform', !moreVisible && '-rotate-90')} />
+            {moreVisible ? 'Hide' : 'Add'} dates, budget and color
+          </button>
+        )}
+        {moreVisible && (
+          <>
+            <Field label="Start date" className="sm:col-span-2">
+              <Input type="date" {...form.register('startDate')} />
+            </Field>
+            <Field label="End date" error={errors.endDate?.message} className="sm:col-span-2">
+              <Input type="date" {...form.register('endDate')} />
+            </Field>
+            <Field label="Budget (hours)" className="sm:col-span-1">
+              <Input type="number" min={0} step="0.5" {...form.register('budgetHours')} />
+            </Field>
+            <Field label="Color" className="sm:col-span-1">
+              <Input type="color" className="p-1" {...form.register('color')} />
+            </Field>
+          </>
+        )}
         {!isEdit && (
           <Field label="Team members" className="sm:col-span-6" hint="You and the owner are added as project managers automatically.">
             <Controller
