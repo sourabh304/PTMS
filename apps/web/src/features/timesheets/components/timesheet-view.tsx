@@ -1,7 +1,7 @@
 'use client';
 
 import { addDays, differenceInCalendarDays, endOfMonth, endOfWeek, format, isValid, startOfMonth, startOfWeek, subMonths, subWeeks } from 'date-fns';
-import { Check, Clock, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, Clock, Pencil, Plus, Receipt, Trash2, Wallet, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useSession } from '@/features/auth/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -14,11 +14,16 @@ import { formatDate, formatMinutes, fullName, humanize, minutesToHours } from '@
 import { Avatar } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { Card, CardBody, CardHeader } from '@/shared/ui/card';
+import { FilterPopover } from '@/shared/components/filter-popover';
+import { KpiStrip } from '@/shared/components/kpi-strip';
+import { RowMenu } from '@/shared/components/row-menu';
+import { Card } from '@/shared/ui/card';
 import { ColumnChart } from '@/shared/ui/charts';
+import { CollapsibleCard } from '@/shared/ui/collapsible';
+import { DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
-import { Input, Select } from '@/shared/ui/form';
-import { Pagination, Segmented, StatCard } from '@/shared/ui/layout';
+import { Field, Input, Select } from '@/shared/ui/form';
+import { Pagination } from '@/shared/ui/layout';
 import { ConfirmDialog } from '@/shared/ui/modal';
 import { Table, Td, Th, Tr } from '@/shared/ui/table';
 import { useDeleteTimeEntry, useReviewTimeEntry, useTimeEntries, useTimeSummary } from '../api';
@@ -26,6 +31,14 @@ import type { TimeEntry } from '../types';
 import { TimeEntryModal } from './time-entry-modal';
 
 type RangePreset = 'this-week' | 'last-week' | 'this-month' | 'last-month' | 'custom';
+
+const RANGE_OPTIONS: { value: RangePreset; label: string }[] = [
+  { value: 'this-week', label: 'This week' },
+  { value: 'last-week', label: 'Last week' },
+  { value: 'this-month', label: 'This month' },
+  { value: 'last-month', label: 'Last month' },
+  { value: 'custom', label: 'Custom range' },
+];
 
 const APPROVAL_TONE = {
   [ApprovalStatus.PENDING]: 'warning',
@@ -109,73 +122,99 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <Segmented<RangePreset>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Select
+            aria-label="Period"
+            className="w-40"
             value={preset}
-            onChange={(value) => {
-              setPreset(value);
+            onChange={(e) => {
+              setPreset(e.target.value as RangePreset);
               setPage(1);
             }}
-            options={[
-              { value: 'this-week', label: 'This week' },
-              { value: 'last-week', label: 'Last week' },
-              { value: 'this-month', label: 'This month' },
-              { value: 'last-month', label: 'Last month' },
-              { value: 'custom', label: 'Custom' },
-            ]}
-          />
-          {preset === 'custom' && (
-            <div className="flex items-center gap-2">
-              <Input type="date" className="w-40" value={custom.from} onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))} />
-              <span className="text-muted">→</span>
-              <Input type="date" className="w-40" value={custom.to} onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))} />
-            </div>
-          )}
-          {canSeeOthers && (
-            <Select className="w-44" value={userId} onChange={(e) => setUserId(e.target.value)}>
-              <option value="">Everyone</option>
-              {users?.data.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {fullName(u)}
-                </option>
-              ))}
-            </Select>
-          )}
-          <Select className="w-40" value={approvalStatus} onChange={(e) => setApprovalStatus(e.target.value)}>
-            <option value="">Any approval</option>
-            {Object.values(ApprovalStatus).map((s) => (
-              <option key={s} value={s}>
-                {humanize(s)}
+          >
+            {RANGE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </Select>
+          {preset === 'custom' && (
+            <div className="flex items-center gap-2">
+              <Input aria-label="From" type="date" className="w-40" value={custom.from} onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))} />
+              <span className="text-muted">→</span>
+              <Input aria-label="To" type="date" className="w-40" value={custom.to} onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))} />
+            </div>
+          )}
+          <FilterPopover
+            summary={[canSeeOthers && userId ? fullName(users?.data.find((u) => u.id === userId)) : null, approvalStatus ? humanize(approvalStatus) : null].filter(Boolean).join(' · ') || undefined}
+            activeCount={(canSeeOthers && userId ? 1 : 0) + (approvalStatus ? 1 : 0)}
+            onReset={() => {
+              setUserId('');
+              setApprovalStatus('');
+              setPage(1);
+            }}
+          >
+            {canSeeOthers && (
+              <Field label="Person">
+                <Select
+                  value={userId}
+                  onChange={(e) => {
+                    setUserId(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">Everyone</option>
+                  {users?.data.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {fullName(u)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+            <Field label="Approval">
+              <Select
+                value={approvalStatus}
+                onChange={(e) => {
+                  setApprovalStatus(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">Any approval</option>
+                {Object.values(ApprovalStatus).map((s) => (
+                  <option key={s} value={s}>
+                    {humanize(s)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </FilterPopover>
         </div>
         <Button onClick={() => setEditing('new')} disabled={!!project && (!project.access.canEdit || project.isArchived)}>
           <Plus className="size-4" /> Log time
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Total logged" value={formatMinutes(summary?.totalMinutes)} icon={<Clock className="size-5" />} hint={`${summary?.entries ?? 0} entries`} />
-        <StatCard label="Billable" value={formatMinutes(summary?.billableMinutes)} icon={<Check className="size-5" />} tone="success" />
-        <StatCard
-          label="Non-billable"
-          value={formatMinutes((summary?.totalMinutes ?? 0) - (summary?.billableMinutes ?? 0))}
-          icon={<X className="size-5" />}
-          tone="warning"
-        />
-      </div>
+      <KpiStrip
+        items={[
+          { label: 'Total logged', value: formatMinutes(summary?.totalMinutes), icon: <Clock />, hint: `${summary?.entries ?? 0} entries` },
+          { label: 'Billable', value: formatMinutes(summary?.billableMinutes), icon: <Receipt />, tone: 'success' },
+          { label: 'Non-billable', value: formatMinutes((summary?.totalMinutes ?? 0) - (summary?.billableMinutes ?? 0)), icon: <Wallet />, tone: 'warning' },
+        ]}
+      />
 
-      <Card>
-        <CardHeader title="Hours per day" description={`${formatDate(range.from)} → ${formatDate(range.to)}`} />
-        <CardBody>
-          {summary?.totalMinutes ? (
-            <ColumnChart data={chartData} xKey="day" series={[{ key: 'hours', label: 'Hours', color: 'var(--brand)' }]} height={220} />
-          ) : (
-            <EmptyState icon={<Clock className="h-6 w-6" />} title="No time logged in this period" description="Use “Log time” to record the hours you worked." className="py-8" />
-          )}
-        </CardBody>
-      </Card>
+      <CollapsibleCard
+        storageKey={projectId ? 'timesheets.project.chart' : 'timesheets.chart'}
+        title="Hours per day"
+        meta={`${formatDate(range.from)} → ${formatDate(range.to)}`}
+        bodyClassName="p-[var(--card-p)]"
+      >
+        {summary?.totalMinutes ? (
+          <ColumnChart data={chartData} xKey="day" series={[{ key: 'hours', label: 'Hours', color: 'var(--brand)' }]} height={200} />
+        ) : (
+          <EmptyState icon={<Clock className="h-6 w-6" />} title="No time logged in this period" description="Use “Log time” to record the hours you worked." className="py-8" />
+        )}
+      </CollapsibleCard>
 
       <Card>
         {isLoading ? (
@@ -196,7 +235,7 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
                   <Th>Notes</Th>
                   <Th className="text-right">Duration</Th>
                   <Th>Status</Th>
-                  <Th className="w-28" />
+                  <Th className="w-12" />
                 </tr>
               </thead>
               <tbody>
@@ -209,11 +248,13 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
                       </span>
                     </Td>
                     {!projectId && <Td className="whitespace-nowrap">{entry.project.name}</Td>}
-                    <Td className="max-w-56 truncate text-sm">
-                      {entry.task ? `${entry.project.key}-${entry.task.number} ${entry.task.title}` : entry.issue ? `${entry.project.key}-BUG-${entry.issue.number} ${entry.issue.title}` : <span className="text-muted">General</span>}
+                    <Td className="text-sm">
+                      <span className="block max-w-52 truncate">
+                        {entry.task ? `${entry.project.key}-${entry.task.number} ${entry.task.title}` : entry.issue ? `${entry.project.key}-BUG-${entry.issue.number} ${entry.issue.title}` : <span className="text-muted">General</span>}
+                      </span>
                     </Td>
-                    <Td className="max-w-64 truncate text-sm text-muted" title={entry.notes ?? ''}>
-                      {entry.notes ?? '—'}
+                    <Td className="text-sm text-muted" title={entry.notes ?? ''}>
+                      <span className="block max-w-48 truncate">{entry.notes ?? '—'}</span>
                     </Td>
                     <Td className="whitespace-nowrap text-right font-medium">
                       {formatMinutes(entry.minutes)}
@@ -222,29 +263,15 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
                     <Td>
                       <Badge tone={APPROVAL_TONE[entry.approvalStatus]}>{humanize(entry.approvalStatus)}</Badge>
                     </Td>
-                    <Td>
-                      <div className="flex justify-end gap-1">
-                        {canApprove && entry.userId !== session?.id && entry.approvalStatus !== ApprovalStatus.APPROVED && (
-                          <Button variant="ghost" size="icon" aria-label="Approve" onClick={() => review.mutate({ id: entry.id, status: ApprovalStatus.APPROVED })}>
-                            <Check className="size-4 text-success" />
-                          </Button>
-                        )}
-                        {canApprove && entry.userId !== session?.id && entry.approvalStatus !== ApprovalStatus.REJECTED && (
-                          <Button variant="ghost" size="icon" aria-label="Reject" onClick={() => review.mutate({ id: entry.id, status: ApprovalStatus.REJECTED })}>
-                            <X className="size-4 text-danger" />
-                          </Button>
-                        )}
-                        {editable(entry) && (
-                          <>
-                            <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(entry)}>
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => setDeleting(entry)}>
-                              <Trash2 className="size-4 text-danger" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                    <Td className="text-right">
+                      <EntryActions
+                        canReview={canApprove && entry.userId !== session?.id}
+                        status={entry.approvalStatus}
+                        editable={editable(entry)}
+                        onReview={(status) => review.mutate({ id: entry.id, status })}
+                        onEdit={() => setEditing(entry)}
+                        onDelete={() => setDeleting(entry)}
+                      />
                     </Td>
                   </Tr>
                 ))}
@@ -265,5 +292,56 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
         onConfirm={() => deleting && remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })}
       />
     </div>
+  );
+}
+
+interface EntryActionsProps {
+  canReview: boolean;
+  status: ApprovalStatus;
+  editable: boolean;
+  onReview: (status: ApprovalStatus) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+/** Row "⋯" menu: approve/reject for reviewers, edit/delete for the owner. */
+function EntryActions({ canReview, status, editable, onReview, onEdit, onDelete }: EntryActionsProps) {
+  const canApprove = canReview && status !== ApprovalStatus.APPROVED;
+  const canReject = canReview && status !== ApprovalStatus.REJECTED;
+  if (!canApprove && !canReject && !editable) return null;
+  return (
+    <RowMenu label="Entry actions">
+      {(close) => {
+        const run = (action: () => void) => () => {
+          close();
+          action();
+        };
+        return (
+          <>
+            {canApprove && (
+              <DropdownItem onClick={run(() => onReview(ApprovalStatus.APPROVED))}>
+                <Check className="!text-success" /> Approve
+              </DropdownItem>
+            )}
+            {canReject && (
+              <DropdownItem onClick={run(() => onReview(ApprovalStatus.REJECTED))}>
+                <X /> Reject
+              </DropdownItem>
+            )}
+            {(canApprove || canReject) && editable && <DropdownSeparator />}
+            {editable && (
+              <>
+                <DropdownItem onClick={run(onEdit)}>
+                  <Pencil /> Edit
+                </DropdownItem>
+                <DropdownItem danger onClick={run(onDelete)}>
+                  <Trash2 /> Delete
+                </DropdownItem>
+              </>
+            )}
+          </>
+        );
+      }}
+    </RowMenu>
   );
 }

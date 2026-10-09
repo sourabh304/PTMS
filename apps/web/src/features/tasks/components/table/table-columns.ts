@@ -11,6 +11,8 @@ export const TABLE_COLUMNS = [
   { id: 'progress', label: 'Progress', width: 120 },
 ] as const;
 
+export type ColumnId = (typeof TABLE_COLUMNS)[number]['id'];
+
 /** Width of the task (first) column; it absorbs any extra space. */
 const TASK_COLUMN_MIN = 260;
 /** Colored group strip at the start of every row. */
@@ -23,17 +25,21 @@ export const ADD_COLUMN_WIDTH = 44;
 export interface TableLayout {
   grid: string;
   minWidth: number;
+  /** Built-in columns that are shown, in display order. */
+  columns: (typeof TABLE_COLUMNS)[number][];
   customCount: number;
   /** Whether the trailing "+ add column" cell is shown. */
   addColumn: boolean;
 }
 
-/** Grid of the built-in columns followed by the project's custom columns. */
-export function tableLayout(customCount = 0, addColumn = false): TableLayout {
-  const widths = [...TABLE_COLUMNS.map((c) => c.width), ...Array<number>(customCount).fill(CUSTOM_COLUMN_WIDTH), ...(addColumn ? [ADD_COLUMN_WIDTH] : [])];
+/** Grid of the visible built-in columns followed by the project's visible custom columns. */
+export function tableLayout(customCount = 0, addColumn = false, hidden: readonly string[] = []): TableLayout {
+  const columns = TABLE_COLUMNS.filter((column) => !hidden.includes(column.id));
+  const widths = [...columns.map((c) => c.width), ...Array<number>(customCount).fill(CUSTOM_COLUMN_WIDTH), ...(addColumn ? [ADD_COLUMN_WIDTH] : [])];
   return {
     grid: `${GROUP_STRIP_WIDTH}px minmax(${TASK_COLUMN_MIN}px, 1fr) ${widths.map((w) => `${w}px`).join(' ')}`,
     minWidth: GROUP_STRIP_WIDTH + TASK_COLUMN_MIN + widths.reduce((sum, w) => sum + w, 0),
+    columns,
     customCount,
     addColumn,
   };

@@ -7,7 +7,9 @@ import { LookupType, Permission, StatusCategory } from '@/shared/constants/domai
 import { humanize } from '@/shared/lib/utils';
 import { Badge, ColorBadge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
+import { RowMenu } from '@/shared/components/row-menu';
 import { Card, CardHeader } from '@/shared/ui/card';
+import { DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { Spinner } from '@/shared/ui/feedback';
 import { Checkbox, ColorInput, Field, Input, Select } from '@/shared/ui/form';
 import { Segmented } from '@/shared/ui/layout';
@@ -45,10 +47,19 @@ export function WorkflowSettings() {
   return (
     <div className="space-y-4">
       <Segmented<LookupType>
+        className="hidden sm:inline-flex"
         value={type}
         onChange={setType}
         options={(Object.keys(TYPE_LABELS) as LookupType[]).map((value) => ({ value, label: TYPE_LABELS[value].title }))}
       />
+      {/* Phones: a dropdown instead of five side-scrolling segments. */}
+      <Select aria-label="List" className="sm:hidden" value={type} onChange={(e) => setType(e.target.value as LookupType)}>
+        {(Object.keys(TYPE_LABELS) as LookupType[]).map((value) => (
+          <option key={value} value={value}>
+            {TYPE_LABELS[value].title}
+          </option>
+        ))}
+      </Select>
       <Card>
         <CardHeader
           title={TYPE_LABELS[type].title}
@@ -75,19 +86,37 @@ export function WorkflowSettings() {
                   </Badge>
                 )}
                 {canManage && (
-                  <div className="ml-auto flex gap-1">
-                    <Button variant="ghost" size="icon" aria-label="Move up" disabled={index === 0} onClick={() => move(index, -1)}>
-                      <ArrowUp className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" aria-label="Move down" disabled={index === lookups.length - 1} onClick={() => move(index, 1)}>
-                      <ArrowDown className="size-4" />
-                    </Button>
+                  <div className="ml-auto flex items-center gap-1">
                     <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(lookup)}>
                       <Pencil className="size-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" aria-label="Delete" disabled={lookups.length <= 1} onClick={() => setDeleting(lookup)}>
-                      <Trash2 className="size-4 text-danger" />
-                    </Button>
+                    <RowMenu label={`${lookup.name} actions`}>
+                      {(close) => (
+                        <>
+                          {index > 0 && (
+                            <DropdownItem onClick={() => { close(); move(index, -1); }}>
+                              <ArrowUp /> Move up
+                            </DropdownItem>
+                          )}
+                          {index < lookups.length - 1 && (
+                            <DropdownItem onClick={() => { close(); move(index, 1); }}>
+                              <ArrowDown /> Move down
+                            </DropdownItem>
+                          )}
+                          <DropdownItem onClick={() => { close(); setEditing(lookup); }}>
+                            <Pencil /> Edit
+                          </DropdownItem>
+                          {lookups.length > 1 && (
+                            <>
+                              <DropdownSeparator />
+                              <DropdownItem danger onClick={() => { close(); setDeleting(lookup); }}>
+                                <Trash2 /> Delete
+                              </DropdownItem>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </RowMenu>
                   </div>
                 )}
               </li>

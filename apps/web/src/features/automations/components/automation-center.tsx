@@ -1,6 +1,6 @@
 'use client';
 
-import { Pencil, Plus, Trash2, Zap } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, Pencil, Plus, Trash2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLookups } from '@/features/lookups/api';
 import { useProject, useProjectMembers } from '@/features/projects/api';
@@ -10,6 +10,7 @@ import { errorMessage } from '@/shared/lib/api-client';
 import { cn, fullName, timeAgo } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card, CardHeader } from '@/shared/ui/card';
+import { Dropdown, DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Field, Input, Select } from '@/shared/ui/form';
 import { ConfirmDialog, Modal } from '@/shared/ui/modal';
@@ -121,7 +122,7 @@ export function AutomationCenter({ projectId }: { projectId: string }) {
   if (isError || !data) return <ErrorState message={errorMessage(error)} onRetry={refetch} />;
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="space-y-5">
       <Card>
         <CardHeader
           icon={<Zap />}
@@ -129,22 +130,70 @@ export function AutomationCenter({ projectId }: { projectId: string }) {
           description="Rules that run on this project's items so routine updates happen by themselves."
           actions={
             canManage && (
-              <Button size="sm" onClick={() => setEditing({})}>
-                <Plus /> New automation
-              </Button>
+              <Dropdown
+                className="w-80"
+                trigger={({ open, toggle }) => (
+                  <Button size="sm" onClick={toggle} aria-expanded={open}>
+                    <Plus /> New automation <ChevronDown className={cn('transition-transform', open && 'rotate-180')} />
+                  </Button>
+                )}
+              >
+                {(close) => (
+                  <>
+                    <DropdownItem
+                      onClick={() => {
+                        close();
+                        setEditing({});
+                      }}
+                    >
+                      <Plus /> Blank automation
+                    </DropdownItem>
+                    <DropdownSeparator />
+                    <p className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">Start from a recipe</p>
+                    {RECIPES.map((recipe) => (
+                      <DropdownItem
+                        key={recipe.title}
+                        onClick={() => {
+                          close();
+                          startRecipe(recipe);
+                        }}
+                      >
+                        <Zap className="!text-brand" /> {recipe.title}
+                      </DropdownItem>
+                    ))}
+                  </>
+                )}
+              </Dropdown>
             )
           }
         />
         {data.length === 0 ? (
-          <EmptyState
-            icon={<Zap className="size-6" />}
-            title="No automations yet"
-            description={canManage ? 'Start from a recipe or build your own rule.' : 'Project managers can add automations here.'}
-          />
+          <>
+            <EmptyState
+              icon={<Zap className="size-6" />}
+              title="No automations yet"
+              description={canManage ? 'Start from a recipe or build your own rule.' : 'Project managers can add automations here.'}
+            />
+            {canManage && (
+              <div className="mx-auto grid max-w-3xl gap-2 px-[var(--card-p)] pb-[var(--card-p)] sm:grid-cols-2">
+                {RECIPES.map((recipe) => (
+                  <button
+                    key={recipe.title}
+                    type="button"
+                    onClick={() => startRecipe(recipe)}
+                    className="flex w-full items-start gap-2.5 rounded-ui border border-border bg-surface px-3 py-2.5 text-left text-sm shadow-ui-sm transition hover:border-brand hover:bg-brand-soft"
+                  >
+                    <Zap className="mt-0.5 size-4 shrink-0 text-brand" />
+                    {recipe.title}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         ) : (
           <ul className="divide-y divide-border">
             {data.map((automation) => (
-              <li key={automation.id} className={cn('flex flex-col gap-3 px-[var(--card-p)] py-4 sm:flex-row sm:items-center', !automation.isActive && 'opacity-60')}>
+              <li key={automation.id} className={cn('flex items-start gap-3 px-[var(--card-p)] py-3.5 sm:items-center', !automation.isActive && 'opacity-60')}>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{automation.name}</p>
                   <Sentence rule={automation} options={options} />
@@ -161,14 +210,36 @@ export function AutomationCenter({ projectId }: { projectId: string }) {
                     onChange={(isActive) => toggle.mutate({ id: automation.id, isActive })}
                   />
                   {canManage && (
-                    <>
-                      <Button variant="ghost" size="icon" aria-label="Edit automation" onClick={() => setEditing(automation)}>
-                        <Pencil />
-                      </Button>
-                      <Button variant="ghost" size="icon" aria-label="Delete automation" onClick={() => setDeleting(automation)}>
-                        <Trash2 className="text-danger" />
-                      </Button>
-                    </>
+                    <Dropdown
+                      trigger={({ open, toggle: toggleMenu }) => (
+                        <Button variant="ghost" size="icon" aria-label="Automation actions" aria-expanded={open} onClick={toggleMenu}>
+                          <MoreHorizontal />
+                        </Button>
+                      )}
+                    >
+                      {(close) => (
+                        <>
+                          <DropdownItem
+                            onClick={() => {
+                              close();
+                              setEditing(automation);
+                            }}
+                          >
+                            <Pencil /> Edit automation
+                          </DropdownItem>
+                          <DropdownSeparator />
+                          <DropdownItem
+                            danger
+                            onClick={() => {
+                              close();
+                              setDeleting(automation);
+                            }}
+                          >
+                            <Trash2 /> Delete automation
+                          </DropdownItem>
+                        </>
+                      )}
+                    </Dropdown>
                   )}
                 </div>
               </li>
@@ -176,25 +247,6 @@ export function AutomationCenter({ projectId }: { projectId: string }) {
           </ul>
         )}
       </Card>
-
-      {canManage && (
-        <Card>
-          <CardHeader title="Recipes" description="Popular rules to start from." />
-          <div className="space-y-2 p-3">
-            {RECIPES.map((recipe) => (
-              <button
-                key={recipe.title}
-                type="button"
-                onClick={() => startRecipe(recipe)}
-                className="flex w-full items-start gap-2.5 rounded-ui border border-border bg-surface px-3 py-2.5 text-left text-sm shadow-ui-sm transition hover:border-brand hover:bg-brand-soft"
-              >
-                <Zap className="mt-0.5 size-4 shrink-0 text-brand" />
-                {recipe.title}
-              </button>
-            ))}
-          </div>
-        </Card>
-      )}
 
       <AutomationModal projectId={projectId} draft={editing} options={options} onClose={() => setEditing(null)} />
       <ConfirmDialog

@@ -11,6 +11,7 @@ import { Avatar } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
+import { Disclosure } from '@/shared/ui/collapsible';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { Field, FormAlert, Input } from '@/shared/ui/form';
@@ -106,7 +107,9 @@ export function OrganizationsView() {
                       <Td>{org.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Suspended</Badge>}</Td>
                       <Td className="whitespace-nowrap text-muted">{formatDate(org.createdAt)}</Td>
                       <Td onClick={(event) => event.stopPropagation()}>
-                        <OpenWorkspaceButton organizationId={org.id} size="sm" variant="secondary" />
+                        <div className="flex justify-end">
+                          <OpenWorkspaceButton organizationId={org.id} size="sm" variant="ghost" />
+                        </div>
                       </Td>
                     </Tr>
                 ))}
@@ -179,14 +182,16 @@ function OrganizationDetails({ org, onDeleted }: { org: PlatformOrganizationDeta
         <p className="mt-2 text-xs text-muted">To promote an existing member, open the workspace and change their role under Settings → Users.</p>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <Field label="Organization name">
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
-        </Field>
-        <Button variant="secondary" disabled={!name.trim() || name === org.name} loading={update.isPending} onClick={() => update.mutate({ id: org.id, name: name.trim() })}>
-          Rename
-        </Button>
-      </section>
+      <Disclosure label="Rename organization">
+        <section className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <Field label="Organization name">
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <Button variant="secondary" disabled={!name.trim() || name === org.name} loading={update.isPending} onClick={() => update.mutate({ id: org.id, name: name.trim() })}>
+            Rename
+          </Button>
+        </section>
+      </Disclosure>
 
       <section className="flex items-center justify-between gap-2 border-t border-border pt-4">
         <p className="text-xs text-muted">Created {formatDate(org.createdAt)} · {org._count.users} people · {org._count.projects} projects</p>
@@ -250,7 +255,7 @@ function OrganizationDetails({ org, onDeleted }: { org: PlatformOrganizationDeta
   );
 }
 
-function OpenWorkspaceButton({ organizationId, size = 'md', variant = 'primary' }: { organizationId: string; size?: 'sm' | 'md'; variant?: 'primary' | 'secondary' }) {
+function OpenWorkspaceButton({ organizationId, size = 'md', variant = 'primary' }: { organizationId: string; size?: 'sm' | 'md'; variant?: 'primary' | 'secondary' | 'ghost' }) {
   const enter = useEnterWorkspace();
   return (
     <Button size={size} variant={variant} loading={enter.isPending} onClick={() => enter.mutate(organizationId)}>

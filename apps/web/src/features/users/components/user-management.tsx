@@ -1,14 +1,16 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, KeyRound, MoreHorizontal, Pencil, Plus, Search, UserCheck, UserX } from 'lucide-react';
-import Link from 'next/link';
+import { Eye, KeyRound, Pencil, Plus, Search, UserCheck, UserX } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { usePasswordMinLength, useSession } from '@/features/auth/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { passwordSchema } from '@/features/auth/schemas';
+import { FilterPopover } from '@/shared/components/filter-popover';
+import { RowMenu } from '@/shared/components/row-menu';
 import { appConfig } from '@/shared/config/env';
 import { routes } from '@/shared/config/routes';
 import { ORG_ROLES, OrgRole, Permission, roleLabel } from '@/shared/constants/domain';
@@ -19,7 +21,7 @@ import { Avatar } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardHeader } from '@/shared/ui/card';
-import { Dropdown, DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
+import { DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Field, Input, Select } from '@/shared/ui/form';
 import { Pagination } from '@/shared/ui/layout';
@@ -27,6 +29,8 @@ import { Modal } from '@/shared/ui/modal';
 import { Table, Td, Th, Tr } from '@/shared/ui/table';
 import { useCreateUser, useResetPassword, useUpdateUser, useUsers } from '../api';
 import type { User } from '../types';
+
+const STATUS_LABELS: Record<string, string> = { active: 'Active', inactive: 'Deactivated', all: 'All statuses' };
 
 export function UserManagement() {
   const { can } = usePermissions();
@@ -43,6 +47,7 @@ export function UserManagement() {
   const [resetting, setResetting] = useState<User | null>(null);
   const debounced = useDebounce(search);
   const update = useUpdateUser();
+  const router = useRouter();
 
   useEffect(() => setPage(1), [debounced, role, status]);
 
@@ -67,24 +72,39 @@ export function UserManagement() {
           )
         }
       />
-      <div className="flex flex-wrap gap-3 border-b border-border px-5 py-3">
+      <div className="flex flex-wrap gap-2 border-b border-border px-[var(--card-p)] py-3">
         <div className="relative w-full max-w-xs">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <Input className="pl-9" placeholder="Search people" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <Select className="w-40" value={role} onChange={(e) => setRole(e.target.value)}>
-          <option value="">All roles</option>
-          {ORG_ROLES.map((r) => (
-            <option key={r} value={r}>
-              {roleLabel(r)}
-            </option>
-          ))}
-        </Select>
-        <Select className="w-36" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="active">Active</option>
-          <option value="inactive">Deactivated</option>
-          <option value="all">All</option>
-        </Select>
+        <FilterPopover
+          summary={[role ? roleLabel(role as OrgRole) : 'All roles', STATUS_LABELS[status]].join(' · ')}
+          activeCount={(role ? 1 : 0) + (status !== 'active' ? 1 : 0)}
+          onReset={() => {
+            setRole('');
+            setStatus('active');
+          }}
+        >
+          <Field label="Role">
+            <Select value={role} onChange={(e) => setRole(e.target.value)}>
+              <option value="">All roles</option>
+              {ORG_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {roleLabel(r)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Status">
+            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </FilterPopover>
       </div>
       {isLoading ? (
         <Spinner />
@@ -100,7 +120,7 @@ export function UserManagement() {
                 <Th>Job title</Th>
                 <Th>Status</Th>
                 <Th>Last sign-in</Th>
-                {canManage && <Th className="w-24" />}
+                {canManage && <Th className="w-12" />}
               </tr>
             </thead>
             <tbody>
@@ -125,38 +145,34 @@ export function UserManagement() {
                   <Td className="whitespace-nowrap text-muted">{formatDateTime(user.lastLoginAt)}</Td>
                   {canManage && (
                     <Td>
-                      <div className="flex justify-end gap-1">
-                        <Link href={routes.person(user.id)} title="View details" aria-label="View details" className="inline-flex size-8 items-center justify-center rounded-ui text-foreground-soft hover:bg-surface-muted">
-                          <Eye className="size-4" />
-                        </Link>
-                        {canEditUser(user) && (
-                          <Dropdown
-                            trigger={({ toggle }) => (
-                              <Button variant="ghost" size="icon" aria-label="User actions" onClick={toggle}>
-                                <MoreHorizontal className="size-4" />
-                              </Button>
-                            )}
-                          >
-                            {(close) => (
-                              <>
-                                <DropdownItem onClick={() => { close(); setEditing(user); }}>
-                                  <Pencil /> Edit
-                                </DropdownItem>
-                                <DropdownItem onClick={() => { close(); setResetting(user); }}>
-                                  <KeyRound /> Reset password
-                                </DropdownItem>
-                                {user.id !== session?.id && (
-                                  <>
-                                    <DropdownSeparator />
-                                    <DropdownItem danger={user.isActive} onClick={() => { close(); update.mutate({ id: user.id, isActive: !user.isActive }); }}>
-                                      {user.isActive ? <UserX /> : <UserCheck />} {user.isActive ? 'Deactivate' : 'Reactivate'}
-                                    </DropdownItem>
-                                  </>
-                                )}
-                              </>
-                            )}
-                          </Dropdown>
-                        )}
+                      <div className="flex justify-end">
+                        <RowMenu label="User actions">
+                          {(close) => (
+                            <>
+                              <DropdownItem onClick={() => { close(); router.push(routes.person(user.id)); }}>
+                                <Eye /> View details
+                              </DropdownItem>
+                              {canEditUser(user) && (
+                                <>
+                                  <DropdownItem onClick={() => { close(); setEditing(user); }}>
+                                    <Pencil /> Edit
+                                  </DropdownItem>
+                                  <DropdownItem onClick={() => { close(); setResetting(user); }}>
+                                    <KeyRound /> Reset password
+                                  </DropdownItem>
+                                  {user.id !== session?.id && (
+                                    <>
+                                      <DropdownSeparator />
+                                      <DropdownItem danger={user.isActive} onClick={() => { close(); update.mutate({ id: user.id, isActive: !user.isActive }); }}>
+                                        {user.isActive ? <UserX /> : <UserCheck />} {user.isActive ? 'Deactivate' : 'Reactivate'}
+                                      </DropdownItem>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </RowMenu>
                       </div>
                     </Td>
                   )}

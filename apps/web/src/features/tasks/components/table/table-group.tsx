@@ -8,9 +8,9 @@ import { DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { InlineEdit } from '@/shared/ui/inline-edit';
 import { Popover } from '@/shared/ui/popover';
 import type { Task } from '../../types';
-import { GroupSummary } from './group-summary';
+import { groupTotals, GroupSummary } from './group-summary';
 import type { CustomField } from '@/features/custom-fields/types';
-import { GROUP_STRIP_WIDTH, TABLE_COLUMNS, type TableLayout } from './table-columns';
+import { GROUP_STRIP_WIDTH, type TableLayout } from './table-columns';
 import { TaskRow, type RowContext } from './task-row';
 
 export interface GroupModel {
@@ -31,22 +31,26 @@ interface TableGroupProps {
   onRename?: (name: string) => void;
   onRecolor?: (color: string) => void;
   onDelete?: () => void;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+  /** Show the totals row under the tasks. */
+  showSummary: boolean;
 }
 
 /** One colored group of the project table: header, column titles, rows, quick add and summary. */
-export function TableGroup({ group, tasks, context, autoEditName, onAddTask, onRename, onRecolor, onDelete }: TableGroupProps) {
-  const [collapsed, setCollapsed] = useState(false);
+export function TableGroup({ group, tasks, context, autoEditName, onAddTask, onRename, onRecolor, onDelete, collapsed, onToggleCollapsed, showSummary }: TableGroupProps) {
   // Bumping the key remounts the name editor directly in edit mode.
   const [renameKey, setRenameKey] = useState(0);
   const editable = context.canEdit && group.id !== null;
   const countLabel = `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`;
+  const totals = groupTotals(tasks);
 
   return (
-    <section aria-label={group.name} className="mb-8">
-      <header className="sticky left-0 mb-1.5 flex max-w-full items-center gap-1.5">
+    <section aria-label={group.name} className={collapsed ? 'mb-3' : 'mb-7'}>
+      <header className="group/header sticky left-0 mb-1.5 flex max-w-full items-center gap-1.5">
         <button
           type="button"
-          onClick={() => setCollapsed((value) => !value)}
+          onClick={onToggleCollapsed}
           aria-expanded={!collapsed}
           aria-label={collapsed ? `Expand ${group.name}` : `Collapse ${group.name}`}
           className="flex size-7 items-center justify-center rounded-ui hover:bg-surface-muted"
@@ -67,33 +71,27 @@ export function TableGroup({ group, tasks, context, autoEditName, onAddTask, onR
         >
           <span style={{ color: group.color }}>{group.name}</span>
         </InlineEdit>
-        <span className="whitespace-nowrap text-xs text-muted">{countLabel}</span>
+        <span className="whitespace-nowrap text-xs text-muted">
+          {countLabel}
+          {tasks.length > 0 && (
+            <span className="hidden sm:inline">
+              {totals.estimate ? ` · ${totals.estimate}h` : ''} · {totals.progress}% done
+            </span>
+          )}
+        </span>
         {editable && (
           <GroupMenu color={group.color} onStartRename={onRename && (() => setRenameKey((key) => key + 1))} onRecolor={onRecolor} onDelete={onDelete} />
         )}
       </header>
 
-      {collapsed ? (
-        <button
-          type="button"
-          onClick={() => setCollapsed(false)}
-          className="flex h-10 w-full items-center gap-3 overflow-hidden rounded-ui border border-border bg-surface pr-4 text-left text-sm"
-          style={{ minWidth: Math.min(context.layout.minWidth, 480) }}
-        >
-          <span className="h-full shrink-0" style={{ width: GROUP_STRIP_WIDTH, backgroundColor: group.color }} />
-          <span className="font-medium" style={{ color: group.color }}>
-            {group.name}
-          </span>
-          <span className="text-xs text-muted">{countLabel}</span>
-        </button>
-      ) : (
+      {!collapsed && (
         <div role="table" aria-label={`${group.name} tasks`} className="overflow-hidden rounded-ui border-l-0">
           <ColumnHeader color={group.color} context={context} />
           {tasks.map((task) => (
             <TaskRow key={task.id} task={task} color={group.color} context={context} />
           ))}
           {context.canEdit && <AddTaskRow color={group.color} layout={context.layout} onAdd={onAddTask} />}
-          <GroupSummary tasks={tasks} layout={context.layout} customFields={context.customFields} />
+          {showSummary && <GroupSummary tasks={tasks} layout={context.layout} customFields={context.customFields} />}
         </div>
       )}
     </section>
@@ -112,7 +110,7 @@ function ColumnHeader({ color, context }: { color: string; context: RowContext }
       <span role="columnheader" className="sticky z-[1] flex items-center border-r border-border bg-surface pl-3.5" style={{ left: GROUP_STRIP_WIDTH }}>
         Task
       </span>
-      {TABLE_COLUMNS.map((column) => (
+      {layout.columns.map((column) => (
         <span key={column.id} role="columnheader" className="flex items-center justify-center border-r border-border last:border-r-0">
           {column.label}
         </span>
@@ -226,7 +224,7 @@ function GroupMenu({ color, onStartRename, onRecolor, onDelete }: GroupMenuProps
   return (
     <Popover
       className="w-56 p-1"
-      trigger={({ ref, toggle }) => (
+      trigger={({ ref, open, toggle }) => (
         <button
           ref={ref}
           type="button"
@@ -235,7 +233,10 @@ function GroupMenu({ color, onStartRename, onRecolor, onDelete }: GroupMenuProps
             toggle();
           }}
           aria-label="Group actions"
-          className="flex size-7 items-center justify-center rounded-ui text-muted hover:bg-surface-muted hover:text-foreground"
+          className={cn(
+            'flex size-7 items-center justify-center rounded-ui text-muted hover:bg-surface-muted hover:text-foreground focus-visible:opacity-100 group-hover/header:opacity-100',
+            !open && 'sm:opacity-0',
+          )}
         >
           <MoreHorizontal className="size-4" />
         </button>

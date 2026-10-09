@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChartHorizontal, Diamond } from 'lucide-react';
+import { BarChartHorizontal, Diamond, Info } from 'lucide-react';
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useSession } from '@/features/auth/api';
 import { useProject } from '@/features/projects/api';
@@ -158,8 +158,12 @@ export function GanttChart({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">
-          {canEdit ? 'Drag bars to reschedule, drag the right edge to change the due date. Click a bar for details.' : 'Timeline of tasks and milestones.'}
+        <p
+          className="inline-flex items-center gap-1.5 text-xs text-muted"
+          title={canEdit ? 'Drag bars to reschedule, drag the right edge to change the due date. Click a bar for details.' : undefined}
+        >
+          <Info className="size-3.5 shrink-0" />
+          {canEdit ? 'Drag bars to reschedule · drag the right edge to change the due date' : 'Timeline of tasks and milestones'}
         </p>
         <Segmented<GanttZoom>
           value={zoom}

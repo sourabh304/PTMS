@@ -1,6 +1,6 @@
 'use client';
 
-import { Bug, Plus, Search } from 'lucide-react';
+import { Bug, ListFilter, Plus, Search, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { LookupSelect } from '@/features/lookups/components/lookup-select';
@@ -10,13 +10,14 @@ import { LookupType } from '@/shared/constants/domain';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { useQueryParam } from '@/shared/hooks/use-query-param';
 import { errorMessage } from '@/shared/lib/api-client';
-import { fullName } from '@/shared/lib/utils';
+import { cn, fullName } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Field, Input, Select, Textarea } from '@/shared/ui/form';
 import { Pagination } from '@/shared/ui/layout';
 import { Modal } from '@/shared/ui/modal';
+import { Popover } from '@/shared/ui/popover';
 import { useIssues, useSaveIssue } from '../api';
 import { IssueDrawer } from './issue-drawer';
 import { IssueTable } from './issue-table';
@@ -35,6 +36,13 @@ export function ProjectIssues({ projectId }: { projectId: string }) {
   const canEdit = !!project?.access.canEdit && !project.isArchived;
 
   useEffect(() => setPage(1), [debounced, statusId, severityId, assigneeId]);
+  const activeFilters = [statusId, severityId, assigneeId].filter(Boolean).length;
+  const clearFilters = () => {
+    setSearch('');
+    setStatusId('');
+    setSeverityId('');
+    setAssigneeId('');
+  };
 
   const { data, isLoading, isError, error, refetch } = useIssues({
     projectId,
@@ -48,22 +56,47 @@ export function ProjectIssues({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative w-full max-w-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <div className="relative w-full max-w-64 sm:w-64">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <Input className="pl-9" placeholder="Search issues" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input className="pl-9" placeholder="Search issues" aria-label="Search issues" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <LookupSelect type={LookupType.ISSUE_STATUS} emptyLabel="All statuses" className="w-40" value={statusId} onChange={(e) => setStatusId(e.target.value)} />
-          <LookupSelect type={LookupType.ISSUE_SEVERITY} emptyLabel="All severities" className="w-40" value={severityId} onChange={(e) => setSeverityId(e.target.value)} />
-          <Select className="w-44" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-            <option value="">Any assignee</option>
-            {members?.map((m) => (
-              <option key={m.userId} value={m.userId}>
-                {fullName(m.user)}
-              </option>
-            ))}
-          </Select>
+          <Popover
+            className="w-72 p-3"
+            trigger={({ ref, open, toggle }) => (
+              <Button ref={ref} variant="secondary" onClick={toggle} aria-expanded={open} className={cn(activeFilters > 0 && 'border-brand/40 bg-brand-soft text-brand')}>
+                <ListFilter /> Filter
+                {activeFilters > 0 && <span className="rounded-full bg-brand px-1.5 text-[11px] font-semibold text-brand-foreground">{activeFilters}</span>}
+              </Button>
+            )}
+          >
+            {() => (
+              <div className="space-y-3">
+                <Field label="Status" htmlFor="issue-filter-status">
+                  <LookupSelect id="issue-filter-status" type={LookupType.ISSUE_STATUS} emptyLabel="All statuses" value={statusId} onChange={(e) => setStatusId(e.target.value)} />
+                </Field>
+                <Field label="Severity" htmlFor="issue-filter-severity">
+                  <LookupSelect id="issue-filter-severity" type={LookupType.ISSUE_SEVERITY} emptyLabel="All severities" value={severityId} onChange={(e) => setSeverityId(e.target.value)} />
+                </Field>
+                <Field label="Assignee" htmlFor="issue-filter-assignee">
+                  <Select id="issue-filter-assignee" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+                    <option value="">Any assignee</option>
+                    {members?.map((m) => (
+                      <option key={m.userId} value={m.userId}>
+                        {fullName(m.user)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            )}
+          </Popover>
+          {(activeFilters > 0 || search) && (
+            <Button variant="ghost" onClick={clearFilters} className="text-muted">
+              <X /> Clear
+            </Button>
+          )}
         </div>
         {canEdit && (
           <Button onClick={() => setCreating(true)}>

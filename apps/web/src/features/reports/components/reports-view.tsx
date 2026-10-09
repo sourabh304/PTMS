@@ -27,11 +27,14 @@ import { cn, formatDate, formatMinutes, fullName, humanize, minutesToHours } fro
 import { Avatar } from '@/shared/ui/avatar';
 import { Badge, ColorBadge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { Card, CardBody, CardHeader } from '@/shared/ui/card';
+import { FilterPopover } from '@/shared/components/filter-popover';
+import { KpiStrip } from '@/shared/components/kpi-strip';
+import { Card } from '@/shared/ui/card';
+import { CollapsibleCard } from '@/shared/ui/collapsible';
 import { BarList, ColumnChart, DonutChart } from '@/shared/ui/charts';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
-import { Input, Select } from '@/shared/ui/form';
-import { PageHeader, ProgressBar, StatCard, Tabs } from '@/shared/ui/layout';
+import { Field, Input, Select } from '@/shared/ui/form';
+import { PageHeader, ProgressBar, Segmented, Tabs } from '@/shared/ui/layout';
 import { Table, Td, Th, Tr } from '@/shared/ui/table';
 import { useIssueReport, usePortfolioReport, useWorkloadReport, type PortfolioRow, type ReportRange } from '../api';
 
@@ -56,6 +59,9 @@ type Period = (typeof PERIODS)[number]['value'];
 const DEFAULT_PERIOD: Period = '30';
 
 const iso = (date: Date) => format(date, 'yyyy-MM-dd');
+
+/** Padding for chart bodies inside collapsible cards. */
+const BODY = 'p-[var(--card-p)]';
 
 /** Health → semantic tone. Colors come from theme tokens so they adapt to light/dark mode. */
 const HEALTH_TONE = {
@@ -90,38 +96,55 @@ export function ReportsView() {
     const range = preset?.from ? { from: iso(preset.from()), to: iso(new Date()) } : custom;
     return { ...range, projectId: projectId || undefined };
   }, [period, custom, projectId]);
+  const periodLabel = period === 'custom' ? `${formatDate(custom.from, 'dd MMM')} – ${formatDate(custom.to, 'dd MMM')}` : PERIODS.find((p) => p.value === period)?.label;
+  const projectName = projects?.data.find((p) => p.id === projectId)?.name ?? 'All projects';
 
   return (
     <>
       <PageHeader title="Reports" description="Portfolio health, resource utilization, time and quality insights." />
 
-      <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <Tabs value={tab} onChange={setTab} items={TABS} className="xl:flex-1" />
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <Tabs value={tab} onChange={setTab} items={TABS} className="min-w-0 sm:flex-1" />
         {tab !== 'portfolio' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Select aria-label="Reporting period" className="w-40" value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
-              {PERIODS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </Select>
+          <FilterPopover
+            align="end"
+            summary={`${periodLabel} · ${projectName}`}
+            activeCount={(period !== DEFAULT_PERIOD ? 1 : 0) + (projectId ? 1 : 0)}
+            onReset={() => {
+              setPeriod(DEFAULT_PERIOD);
+              setProjectId('');
+            }}
+          >
+            <Field label="Period">
+              <Select value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
+                {PERIODS.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
             {period === 'custom' && (
-              <div className="flex items-center gap-2">
-                <Input aria-label="From" type="date" className="w-[9.5rem]" value={custom.from} max={custom.to} onChange={(e) => setCustom((r) => ({ ...r, from: e.target.value }))} />
-                <span className="text-sm text-muted">to</span>
-                <Input aria-label="To" type="date" className="w-[9.5rem]" value={custom.to} min={custom.from} onChange={(e) => setCustom((r) => ({ ...r, to: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="From">
+                  <Input type="date" value={custom.from} max={custom.to} onChange={(e) => setCustom((r) => ({ ...r, from: e.target.value }))} />
+                </Field>
+                <Field label="To">
+                  <Input type="date" value={custom.to} min={custom.from} onChange={(e) => setCustom((r) => ({ ...r, to: e.target.value }))} />
+                </Field>
               </div>
             )}
-            <Select aria-label="Project" className="w-48" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              <option value="">All projects</option>
-              {projects?.data.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </Select>
-          </div>
+            <Field label="Project">
+              <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+                <option value="">All projects</option>
+                {projects?.data.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </FilterPopover>
         )}
       </div>
 
@@ -190,29 +213,26 @@ function PortfolioReport() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Active projects" value={summary.projects} icon={<FolderKanban />} />
-        <StatCard label="Average progress" value={`${summary.avgProgress}%`} icon={<TrendingUp />} tone="success" />
-        <StatCard
-          label="Hours logged"
-          value={`${minutesToHours(summary.loggedMinutes)}h`}
-          icon={<Wallet />}
-          tone="warning"
-          hint={summary.budgetHours ? `of ${summary.budgetHours}h budgeted` : 'No budgets set'}
-        />
-        <StatCard label="Need attention" value={summary.attention} icon={<AlertTriangle />} tone="danger" hint="At risk or off track" />
-      </div>
+      <KpiStrip
+        items={[
+          { label: 'Active projects', value: summary.projects, icon: <FolderKanban /> },
+          { label: 'Average progress', value: `${summary.avgProgress}%`, icon: <TrendingUp />, tone: 'success' },
+          {
+            label: 'Hours logged',
+            value: `${minutesToHours(summary.loggedMinutes)}h`,
+            icon: <Wallet />,
+            tone: 'warning',
+            hint: summary.budgetHours ? `of ${summary.budgetHours}h budgeted` : 'No budgets set',
+          },
+          { label: 'Need attention', value: summary.attention, icon: <AlertTriangle />, tone: 'danger', hint: 'At risk or off track' },
+        ]}
+      />
 
       <div className="grid gap-6 xl:grid-cols-5">
-        <Card className="xl:col-span-2">
-          <CardHeader title="Portfolio health" description="Based on overdue work, schedule and budget burn" />
-          <CardBody>
-            <DonutChart data={summary.health} height={176} />
-          </CardBody>
-        </Card>
-        <Card className="xl:col-span-3">
-          <CardHeader title="Completion by project" description="Completed vs open tasks" />
-          <CardBody>
+        <CollapsibleCard className="xl:col-span-2" storageKey="reports.portfolio.health" title="Portfolio health" description="Based on overdue work, schedule and budget burn" bodyClassName={BODY}>
+          <DonutChart data={summary.health} height={176} />
+        </CollapsibleCard>
+        <CollapsibleCard className="xl:col-span-3" storageKey="reports.portfolio.completion" title="Completion by project" description="Completed vs open tasks" bodyClassName={BODY}>
             <ColumnChart
               data={data.map((p) => ({ name: p.key, completed: p.stats.completedTasks, open: p.stats.openTasks }))}
               xKey="name"
@@ -223,20 +243,19 @@ function PortfolioReport() {
                 { key: 'open', label: 'Open', color: SERIES.secondary },
               ]}
             />
-          </CardBody>
-        </Card>
+        </CollapsibleCard>
       </div>
 
-      <Card>
-        <CardHeader
-          title="Projects"
-          description={`${data.length} active projects`}
-          actions={
-            <Button variant="secondary" size="sm" onClick={download}>
-              <Download /> Export CSV
-            </Button>
-          }
-        />
+      <CollapsibleCard
+        storageKey="reports.portfolio.projects"
+        title="Projects"
+        meta={`${data.length} active`}
+        actions={
+          <Button variant="secondary" size="sm" onClick={download}>
+            <Download /> <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+        }
+      >
         <Table>
           <thead>
             <tr>
@@ -297,7 +316,7 @@ function PortfolioReport() {
             })}
           </tbody>
         </Table>
-      </Card>
+      </CollapsibleCard>
     </div>
   );
 }
@@ -315,16 +334,16 @@ function WorkloadReportView({ filters }: { filters: ReportRange }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Team members" value={data.rows.length} icon={<Users />} />
-        <StatCard label="Capacity per person" value={formatMinutes(data.capacityMinutes)} icon={<Gauge />} hint="Working days × hours per day" />
-        <StatCard label="Total logged" value={formatMinutes(totalLogged)} icon={<Clock />} tone="warning" />
-        <StatCard label="Avg. utilization" value={`${avgUtilization}%`} icon={<BarChart3 />} tone={overloaded ? 'danger' : 'success'} hint={`${overloaded} over capacity`} />
-      </div>
+      <KpiStrip
+        items={[
+          { label: 'Team members', value: data.rows.length, icon: <Users /> },
+          { label: 'Capacity per person', value: formatMinutes(data.capacityMinutes), icon: <Gauge />, hint: <span title="Working days × hours per day">days × hours</span> },
+          { label: 'Total logged', value: formatMinutes(totalLogged), icon: <Clock />, tone: 'warning' },
+          { label: 'Avg. utilization', value: `${avgUtilization}%`, icon: <BarChart3 />, tone: overloaded ? 'danger' : 'success', hint: `${overloaded} over capacity` },
+        ]}
+      />
 
-      <Card>
-        <CardHeader title="Resource utilization" description={<RangeCaption from={filters.from} to={filters.to} />} />
-        <CardBody>
+      <CollapsibleCard storageKey="reports.workload.chart" title="Resource utilization" description={<RangeCaption from={filters.from} to={filters.to} />} bodyClassName={BODY}>
           <ColumnChart
             data={data.rows.map((r) => ({ name: r.user.firstName, logged: minutesToHours(r.loggedMinutes), capacity: minutesToHours(data.capacityMinutes) }))}
             xKey="name"
@@ -334,11 +353,9 @@ function WorkloadReportView({ filters }: { filters: ReportRange }) {
               { key: 'capacity', label: 'Capacity', color: SERIES.neutral },
             ]}
           />
-        </CardBody>
-      </Card>
+      </CollapsibleCard>
 
-      <Card>
-        <CardHeader title="People" description="Open work and time logged in the selected period" />
+      <CollapsibleCard storageKey="reports.workload.people" title="People" meta={data.rows.length} description="Open work and time logged in the selected period">
         <Table>
           <thead>
             <tr>
@@ -376,7 +393,7 @@ function WorkloadReportView({ filters }: { filters: ReportRange }) {
             ))}
           </tbody>
         </Table>
-      </Card>
+      </CollapsibleCard>
     </div>
   );
 }
@@ -385,6 +402,7 @@ function WorkloadReportView({ filters }: { filters: ReportRange }) {
 
 function TimeReport({ filters }: { filters: ReportRange }) {
   const { data, isLoading, isError, error, refetch } = useTimeSummary(filters);
+  const [breakdown, setBreakdown] = useState<'project' | 'person'>('project');
   if (isLoading) return <Spinner />;
   if (isError || !data) return <ErrorState message={errorMessage(error)} onRetry={refetch} />;
 
@@ -393,39 +411,47 @@ function TimeReport({ filters }: { filters: ReportRange }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Total logged" value={formatMinutes(data.totalMinutes)} icon={<Clock />} hint={`${data.entries} entries`} />
-        <StatCard label="Billable" value={formatMinutes(data.billableMinutes)} icon={<Receipt />} tone="success" hint={`${billablePct}% of total`} />
-        <StatCard label="Non-billable" value={formatMinutes(data.totalMinutes - data.billableMinutes)} icon={<Wallet />} tone="warning" />
-        <StatCard label="Daily average" value={formatMinutes(activeDays ? data.totalMinutes / activeDays : 0)} icon={<TrendingUp />} hint={`${activeDays} active days`} />
-      </div>
+      <KpiStrip
+        items={[
+          { label: 'Total logged', value: formatMinutes(data.totalMinutes), icon: <Clock />, hint: `${data.entries} entries` },
+          { label: 'Billable', value: formatMinutes(data.billableMinutes), icon: <Receipt />, tone: 'success', hint: `${billablePct}% of total` },
+          { label: 'Non-billable', value: formatMinutes(data.totalMinutes - data.billableMinutes), icon: <Wallet />, tone: 'warning' },
+          { label: 'Daily average', value: formatMinutes(activeDays ? data.totalMinutes / activeDays : 0), icon: <TrendingUp />, hint: `${activeDays} active days` },
+        ]}
+      />
 
-      <Card>
-        <CardHeader title="Hours logged per day" description={<RangeCaption from={filters.from} to={filters.to} />} />
-        <CardBody>
+      <CollapsibleCard storageKey="reports.time.chart" title="Hours logged per day" description={<RangeCaption from={filters.from} to={filters.to} />} bodyClassName={BODY}>
           <ColumnChart
             data={data.byDay.map((d) => ({ day: formatDate(d.date, 'dd MMM'), hours: minutesToHours(d.minutes) }))}
             xKey="day"
             formatValue={(v) => `${v}h`}
             series={[{ key: 'hours', label: 'Hours', color: SERIES.primary }]}
           />
-        </CardBody>
-      </Card>
+      </CollapsibleCard>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader title="By project" description="Hours" />
-          <CardBody>
-            <BarList data={data.byProject.map((r) => ({ id: r.project.id, name: r.project.name, color: r.project.color ?? SERIES.primary, count: minutesToHours(r.minutes) }))} />
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="By person" description="Hours" />
-          <CardBody>
-            <BarList data={data.byUser.map((r) => ({ id: r.user.id, name: fullName(r.user), color: SERIES.primary, count: minutesToHours(r.minutes) }))} />
-          </CardBody>
-        </Card>
-      </div>
+      <CollapsibleCard
+        storageKey="reports.time.breakdown"
+        title="Hours breakdown"
+        meta={breakdown === 'project' ? 'By project' : 'By person'}
+        actions={
+          <Segmented<'project' | 'person'>
+            aria-label="Group hours by"
+            value={breakdown}
+            onChange={setBreakdown}
+            options={[
+              { value: 'project', label: 'Project' },
+              { value: 'person', label: 'Person' },
+            ]}
+          />
+        }
+        bodyClassName={BODY}
+      >
+        {breakdown === 'project' ? (
+          <BarList data={data.byProject.map((r) => ({ id: r.project.id, name: r.project.name, color: r.project.color ?? SERIES.primary, count: minutesToHours(r.minutes) }))} />
+        ) : (
+          <BarList data={data.byUser.map((r) => ({ id: r.user.id, name: fullName(r.user), color: SERIES.primary, count: minutesToHours(r.minutes) }))} />
+        )}
+      </CollapsibleCard>
     </div>
   );
 }
@@ -434,6 +460,7 @@ function TimeReport({ filters }: { filters: ReportRange }) {
 
 function IssuesReport({ filters }: { filters: ReportRange }) {
   const { data, isLoading, isError, error, refetch } = useIssueReport(filters);
+  const [breakdown, setBreakdown] = useState<'status' | 'severity' | 'priority'>('status');
   if (isLoading) return <Spinner />;
   if (isError || !data) return <ErrorState message={errorMessage(error)} onRetry={refetch} />;
 
@@ -443,16 +470,16 @@ function IssuesReport({ filters }: { filters: ReportRange }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Total issues" value={total} icon={<Bug />} />
-        <StatCard label="Created in period" value={created} icon={<AlertTriangle />} tone="danger" />
-        <StatCard label="Resolved in period" value={resolved} icon={<CheckCircle2 />} tone="success" />
-        <StatCard label="Net change" value={`${created - resolved > 0 ? '+' : ''}${created - resolved}`} icon={<TrendingUp />} tone={created > resolved ? 'warning' : 'success'} hint="Created minus resolved" />
-      </div>
+      <KpiStrip
+        items={[
+          { label: 'Total issues', value: total, icon: <Bug /> },
+          { label: 'Created in period', value: created, icon: <AlertTriangle />, tone: 'danger' },
+          { label: 'Resolved in period', value: resolved, icon: <CheckCircle2 />, tone: 'success' },
+          { label: 'Net change', value: `${created - resolved > 0 ? '+' : ''}${created - resolved}`, icon: <TrendingUp />, tone: created > resolved ? 'warning' : 'success', hint: 'created − resolved' },
+        ]}
+      />
 
-      <Card>
-        <CardHeader title="Created vs resolved" description="Per week" />
-        <CardBody>
+      <CollapsibleCard storageKey="reports.issues.trend" title="Created vs resolved" description="Per week" bodyClassName={BODY}>
           <ColumnChart
             data={data.trend.map((t) => ({ ...t, week: formatDate(t.week, 'dd MMM') }))}
             xKey="week"
@@ -461,29 +488,32 @@ function IssuesReport({ filters }: { filters: ReportRange }) {
               { key: 'resolved', label: 'Resolved', color: 'var(--success)' },
             ]}
           />
-        </CardBody>
-      </Card>
+      </CollapsibleCard>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card>
-          <CardHeader title="By status" />
-          <CardBody>
-            <DonutChart data={data.byStatus} height={160} />
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="By severity" />
-          <CardBody>
-            <BarList data={data.bySeverity} />
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="By priority" />
-          <CardBody>
-            <BarList data={data.byPriority} />
-          </CardBody>
-        </Card>
-      </div>
+      <CollapsibleCard
+        storageKey="reports.issues.breakdown"
+        title="Issue breakdown"
+        meta={`By ${breakdown}`}
+        actions={
+          <Segmented<'status' | 'severity' | 'priority'>
+            aria-label="Group issues by"
+            value={breakdown}
+            onChange={setBreakdown}
+            options={[
+              { value: 'status', label: 'Status' },
+              { value: 'severity', label: 'Severity' },
+              { value: 'priority', label: 'Priority' },
+            ]}
+          />
+        }
+        bodyClassName={BODY}
+      >
+        <div className="mx-auto max-w-2xl">
+          {breakdown === 'status' && <DonutChart data={data.byStatus} height={160} />}
+          {breakdown === 'severity' && <BarList data={data.bySeverity} />}
+          {breakdown === 'priority' && <BarList data={data.byPriority} />}
+        </div>
+      </CollapsibleCard>
     </div>
   );
 }

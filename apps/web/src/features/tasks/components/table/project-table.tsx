@@ -22,12 +22,15 @@ import type { Task } from '../../types';
 import { TaskDetailDrawer } from '../task-detail-drawer';
 import { EMPTY_TASK_FILTERS, filtersToQuery } from '../task-filters';
 import { TaskFormModal, type TaskFormDefaults } from '../task-form-modal';
-import { tableLayout } from './table-columns';
+import { TABLE_COLUMNS, tableLayout } from './table-columns';
 import { TableGroup, type GroupModel } from './table-group';
 import type { RowContext } from './task-row';
 import { TableToolbar } from './table-toolbar';
+import { useTableView } from './table-view';
 
 const NEW_GROUP_NAME = 'New group';
+/** Key of the "Other tasks" bucket in the remembered collapsed groups. */
+const UNGROUPED_KEY = 'ungrouped';
 const UNGROUPED: GroupModel = { id: null, name: 'Other tasks', color: FALLBACK_GROUP_COLOR, milestoneId: null };
 
 const toGroup = (list: TaskList): GroupModel => ({ id: list.id, name: list.name, color: list.color ?? FALLBACK_GROUP_COLOR, milestoneId: list.milestoneId });
@@ -57,8 +60,10 @@ export function ProjectTable({ projectId }: { projectId: string }) {
   const deleteGroup = useDeleteTaskList(projectId);
   const canEdit = !!project?.access.canEdit && !project.isArchived;
   const canManage = !!project?.access.canManage && !project.isArchived;
-  const fields = useMemo(() => customFields ?? [], [customFields]);
-  const layout = useMemo(() => tableLayout(fields.length, canManage), [fields.length, canManage]);
+  const { view, toggleColumn, showAllColumns, setShowSummary, toggleGroup, setCollapsedGroups } = useTableView(projectId);
+  const allFields = useMemo(() => customFields ?? [], [customFields]);
+  const fields = useMemo(() => allFields.filter((field) => !view.hiddenColumns.includes(field.id)), [allFields, view.hiddenColumns]);
+  const layout = useMemo(() => tableLayout(fields.length, canManage, view.hiddenColumns), [fields.length, canManage, view.hiddenColumns]);
   const members = useMemo(() => (memberships ?? []).map((m) => m.user), [memberships]);
 
   const { data, isLoading, isError, error, refetch } = useTasks({
@@ -109,6 +114,17 @@ export function ProjectTable({ projectId }: { projectId: string }) {
         onNewTask={() => setCreating(firstGroup ? { taskListId: firstGroup.id ?? undefined, milestoneId: firstGroup.milestoneId ?? undefined } : {})}
         onNewGroup={addGroup}
         creatingGroup={saveGroup.isPending}
+        view={{
+          columns: [...TABLE_COLUMNS.map(({ id, label }) => ({ id, label })), ...allFields.map((field) => ({ id: field.id, label: field.name }))],
+          hiddenColumns: view.hiddenColumns,
+          onToggleColumn: toggleColumn,
+          onShowAllColumns: showAllColumns,
+          showSummary: view.showSummary,
+          onShowSummaryChange: setShowSummary,
+          onCollapseAll: () => setCollapsedGroups(groups.map(({ group }) => group.id ?? UNGROUPED_KEY)),
+          onExpandAll: () => setCollapsedGroups([]),
+          onAddColumn: canManage ? () => setEditingColumn('new') : undefined,
+        }}
       />
 
       {isLoading ? (
@@ -139,6 +155,9 @@ export function ProjectTable({ projectId }: { projectId: string }) {
                 tasks={tasks}
                 context={context}
                 autoEditName={id === newGroupId}
+                collapsed={view.collapsedGroups.includes(id ?? UNGROUPED_KEY)}
+                onToggleCollapsed={() => toggleGroup(id ?? UNGROUPED_KEY)}
+                showSummary={view.showSummary}
                 onAddTask={(title) => createTask.mutate({ projectId, title, taskListId: id, milestoneId: group.milestoneId })}
                 // The "Other tasks" bucket is not a real group, so it cannot be edited.
                 onRename={id ? (name) => saveGroup.mutate({ id, name }) : undefined}
@@ -148,7 +167,7 @@ export function ProjectTable({ projectId }: { projectId: string }) {
             );
           })}
           {canEdit && (
-            <Button variant="secondary" size="sm" onClick={addGroup} loading={saveGroup.isPending}>
+            <Button variant="ghost" size="sm" onClick={addGroup} loading={saveGroup.isPending} className="text-muted">
               <Plus /> Add new group
             </Button>
           )}

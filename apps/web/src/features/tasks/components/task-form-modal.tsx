@@ -11,6 +11,7 @@ import { useTaskLists } from '@/features/task-lists/api';
 import { UserMultiSelect } from '@/features/users/components/user-multi-select';
 import { LookupType } from '@/shared/constants/domain';
 import { Button } from '@/shared/ui/button';
+import { Disclosure } from '@/shared/ui/collapsible';
 import { Field, Input, Select, Textarea } from '@/shared/ui/form';
 import { Modal } from '@/shared/ui/modal';
 import { useCreateTask } from '../api';
@@ -123,41 +124,14 @@ export function TaskFormModal({ open, onClose, projectId, defaults, onCreated }:
           <Input autoFocus placeholder="What needs to be done?" {...form.register('title')} />
         </Field>
         <Field label="Description" className="sm:col-span-6">
-          <Textarea rows={4} {...form.register('description')} />
+          <Textarea rows={3} {...form.register('description')} />
         </Field>
-        <Field label="Status" className="sm:col-span-2">
+        <Field label="Status" className="sm:col-span-3">
           <LookupSelect type={LookupType.TASK_STATUS} emptyLabel="Default" {...form.register('statusId')} />
         </Field>
-        <Field label="Priority" className="sm:col-span-2">
+        <Field label="Priority" className="sm:col-span-3">
           <LookupSelect type={LookupType.PRIORITY} emptyLabel="Default" {...form.register('priorityId')} />
         </Field>
-        <Field label="Estimate (hours)" className="sm:col-span-2">
-          <Input type="number" min={0} step="0.5" {...form.register('estimatedHours')} />
-        </Field>
-        {!defaults?.parentId && (
-          <>
-            <Field label="Task list" className="sm:col-span-3">
-              <Select {...form.register('taskListId')}>
-                <option value="">No list</option>
-                {taskLists?.map((list) => (
-                  <option key={list.id} value={list.id}>
-                    {list.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Milestone" className="sm:col-span-3">
-              <Select {...form.register('milestoneId')}>
-                <option value="">No milestone</option>
-                {milestones?.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </>
-        )}
         <Field label="Start date" className="sm:col-span-3">
           <Input type="date" {...form.register('startDate')} />
         </Field>
@@ -171,6 +145,37 @@ export function TaskFormModal({ open, onClose, projectId, defaults, onCreated }:
             render={({ field }) => <UserMultiSelect options={memberOptions} value={field.value} onChange={field.onChange} placeholder="Assign project members" />}
           />
         </Field>
+        <Disclosure label={defaults?.parentId ? 'More options · estimate' : 'More options · group, milestone, estimate'} className="sm:col-span-6">
+          <div className="grid gap-4 sm:grid-cols-6">
+            {!defaults?.parentId && (
+              <>
+                <Field label="Task list" className="sm:col-span-2">
+                  <Select {...form.register('taskListId')}>
+                    <option value="">No list</option>
+                    {taskLists?.map((list) => (
+                      <option key={list.id} value={list.id}>
+                        {list.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Milestone" className="sm:col-span-2">
+                  <Select {...form.register('milestoneId')}>
+                    <option value="">No milestone</option>
+                    {milestones?.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </>
+            )}
+            <Field label="Estimate (hours)" className="sm:col-span-2">
+              <Input type="number" min={0} step="0.5" {...form.register('estimatedHours')} />
+            </Field>
+          </div>
+        </Disclosure>
       </form>
     </Modal>
   );

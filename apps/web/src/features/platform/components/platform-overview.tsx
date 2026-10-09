@@ -8,7 +8,8 @@ import { timeAgo } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/badge';
 import { Card, CardBody, CardHeader } from '@/shared/ui/card';
 import { ErrorState, Spinner } from '@/shared/ui/feedback';
-import { PageHeader, StatCard } from '@/shared/ui/layout';
+import { PageHeader } from '@/shared/ui/layout';
+import { KpiStrip } from '@/shared/components/kpi-strip';
 import { usePlatformOverview } from '../api';
 
 export function PlatformOverview() {
@@ -19,17 +20,14 @@ export function PlatformOverview() {
   return (
     <>
       <PageHeader title="Platform overview" description="Every organization on this installation and who coordinates it." />
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard
-          label="Organizations"
-          value={data.organizations.total}
-          icon={<Building2 />}
-          hint={`${data.organizations.active} active · ${data.organizations.suspended} suspended`}
-        />
-        <StatCard label="Users" value={data.users} icon={<Users />} tone="success" hint="Across all organizations" />
-        <StatCard label="Projects" value={data.projects} icon={<FolderKanban />} tone="warning" />
-        <StatCard label="Project coordinators" value={data.coordinators} icon={<UserCog />} hint="Appointed by the root account" />
-      </div>
+      <KpiStrip
+        items={[
+          { label: 'Organizations', value: data.organizations.total, icon: <Building2 />, hint: `${data.organizations.active} active · ${data.organizations.suspended} suspended` },
+          { label: 'Users', value: data.users, icon: <Users />, tone: 'success', hint: 'across all organizations' },
+          { label: 'Projects', value: data.projects, icon: <FolderKanban />, tone: 'warning' },
+          { label: 'Project coordinators', value: data.coordinators, icon: <UserCog />, hint: 'appointed by root' },
+        ]}
+      />
 
       <div className="mt-6">
         <Card>

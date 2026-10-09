@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
+import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { CommentThread } from '@/features/comments/components/comment-thread';
 import { LookupSelect } from '@/features/lookups/components/lookup-select';
@@ -10,6 +10,7 @@ import { LookupType } from '@/shared/constants/domain';
 import { errorMessage } from '@/shared/lib/api-client';
 import { formatDateTime, fullName, toInputDate } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { Dropdown, DropdownItem } from '@/shared/ui/dropdown';
 import { ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Field, Input, Select, Textarea } from '@/shared/ui/form';
 import { ConfirmDialog, Drawer } from '@/shared/ui/modal';
@@ -42,14 +43,37 @@ function IssueBody({ issue, onClose }: { issue: Issue; onClose: () => void }) {
   return (
     <div className="space-y-6">
       <div>
-        <Input
-          aria-label="Title"
-          disabled={!canEdit}
-          className="h-auto border-transparent px-0 text-lg font-semibold shadow-none hover:border-border focus:px-3"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => title.trim() && title !== issue.title && patch({ title: title.trim() })}
-        />
+        <div className="flex items-start gap-2">
+          <Input
+            aria-label="Title"
+            disabled={!canEdit}
+            className="h-auto min-w-0 flex-1 border-transparent px-0 text-lg font-semibold shadow-none hover:border-border focus:px-3"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => title.trim() && title !== issue.title && patch({ title: title.trim() })}
+          />
+          {canEdit && (
+            <Dropdown
+              trigger={({ open, toggle }) => (
+                <Button variant="ghost" size="icon" aria-label="Issue actions" aria-expanded={open} onClick={toggle} className="mt-0.5">
+                  <MoreHorizontal />
+                </Button>
+              )}
+            >
+              {(close) => (
+                <DropdownItem
+                  danger
+                  onClick={() => {
+                    close();
+                    setConfirmDelete(true);
+                  }}
+                >
+                  <Trash2 /> Delete issue
+                </DropdownItem>
+              )}
+            </Dropdown>
+          )}
+        </div>
         <p className="mt-1 text-xs text-muted">
           Reported by {fullName(issue.reporter)} · {formatDateTime(issue.createdAt)}
           {issue.resolvedAt && ` · Resolved ${formatDateTime(issue.resolvedAt)}`}
@@ -102,18 +126,11 @@ function IssueBody({ issue, onClose }: { issue: Issue; onClose: () => void }) {
         />
       </Field>
 
-      <section>
+      <section className="border-t border-border pt-4">
         <h3 className="mb-3 text-sm font-semibold">Comments</h3>
         <CommentThread target={{ issueId: issue.id }} />
       </section>
 
-      {canEdit && (
-        <div className="border-t border-border pt-4">
-          <Button variant="ghost" className="text-danger" onClick={() => setConfirmDelete(true)}>
-            <Trash2 className="size-4" /> Delete issue
-          </Button>
-        </div>
-      )}
       <ConfirmDialog
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}

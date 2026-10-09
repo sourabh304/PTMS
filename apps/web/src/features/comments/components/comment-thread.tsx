@@ -1,11 +1,12 @@
 'use client';
 
-import { Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useSession } from '@/features/auth/api';
-import { fullName, timeAgo } from '@/shared/lib/utils';
+import { cn, fullName, timeAgo } from '@/shared/lib/utils';
 import { Avatar } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
+import { Dropdown, DropdownItem } from '@/shared/ui/dropdown';
 import { Spinner } from '@/shared/ui/feedback';
 import { Textarea } from '@/shared/ui/form';
 import { useAddComment, useComments, useDeleteComment, useUpdateComment, type CommentTarget } from '../api';
@@ -33,7 +34,7 @@ export function CommentThread({ target }: { target: CommentTarget }) {
       ) : (
         <ul className="space-y-4">
           {comments.map((comment) => (
-            <li key={comment.id} className="flex gap-3">
+            <li key={comment.id} className="group/comment flex gap-3">
               <Avatar user={comment.author} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-sm">
@@ -43,13 +44,42 @@ export function CommentThread({ target }: { target: CommentTarget }) {
                     {comment.updatedAt !== comment.createdAt && ' · edited'}
                   </span>
                   {comment.authorId === user?.id && editing?.id !== comment.id && (
-                    <span className="ml-auto flex gap-1">
-                      <button type="button" aria-label="Edit comment" onClick={() => setEditing({ id: comment.id, body: comment.body })} className="text-muted hover:text-foreground">
-                        <Pencil className="size-3.5" />
-                      </button>
-                      <button type="button" aria-label="Delete comment" onClick={() => remove.mutate(comment.id)} className="text-muted hover:text-danger">
-                        <Trash2 className="size-3.5" />
-                      </button>
+                    <span className="ml-auto">
+                      <Dropdown
+                        trigger={({ open, toggle }) => (
+                          <button
+                            type="button"
+                            aria-label="Comment actions"
+                            aria-expanded={open}
+                            onClick={toggle}
+                            className={cn('flex size-6 items-center justify-center rounded-ui text-muted hover:bg-surface-muted hover:text-foreground focus-visible:opacity-100 group-hover/comment:opacity-100', !open && 'sm:opacity-0')}
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </button>
+                        )}
+                      >
+                        {(close) => (
+                          <>
+                            <DropdownItem
+                              onClick={() => {
+                                close();
+                                setEditing({ id: comment.id, body: comment.body });
+                              }}
+                            >
+                              <Pencil /> Edit comment
+                            </DropdownItem>
+                            <DropdownItem
+                              danger
+                              onClick={() => {
+                                close();
+                                remove.mutate(comment.id);
+                              }}
+                            >
+                              <Trash2 /> Delete comment
+                            </DropdownItem>
+                          </>
+                        )}
+                      </Dropdown>
                     </span>
                   )}
                 </div>
@@ -79,7 +109,7 @@ export function CommentThread({ target }: { target: CommentTarget }) {
       )}
       <div className="flex gap-3">
         {user && <Avatar user={user} />}
-        <div className="flex-1 space-y-2">
+        <div className="min-w-0 flex-1 space-y-2">
           <Textarea
             rows={2}
             placeholder="Write a comment… (Ctrl+Enter to send)"
@@ -89,9 +119,11 @@ export function CommentThread({ target }: { target: CommentTarget }) {
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit();
             }}
           />
-          <Button size="sm" onClick={submit} loading={add.isPending} disabled={!draft.trim()}>
-            Comment
-          </Button>
+          {(draft.trim() || add.isPending) && (
+            <Button size="sm" onClick={submit} loading={add.isPending} disabled={!draft.trim()}>
+              Comment
+            </Button>
+          )}
         </div>
       </div>
     </div>

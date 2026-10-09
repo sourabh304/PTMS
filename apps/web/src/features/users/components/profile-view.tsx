@@ -11,7 +11,8 @@ import { formatDateTime } from '@/shared/lib/utils';
 import { Avatar } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { Card, CardBody, CardHeader } from '@/shared/ui/card';
+import { Card, CardBody } from '@/shared/ui/card';
+import { CollapsibleCard } from '@/shared/ui/collapsible';
 import { Spinner } from '@/shared/ui/feedback';
 import { Field, Input } from '@/shared/ui/form';
 import { PageHeader } from '@/shared/ui/layout';
@@ -31,24 +32,22 @@ export function ProfileView() {
   return (
     <>
       <PageHeader title="My profile" description="Manage your personal details and password." />
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="mx-auto max-w-4xl space-y-4">
         <Card>
-          <CardBody className="flex flex-col items-center text-center">
+          <CardBody className="flex flex-wrap items-center gap-4">
             <Avatar user={user} size="lg" />
-            <p className="mt-3 font-semibold">
-              {user.firstName} {user.lastName}
-            </p>
-            <p className="text-sm text-muted">{user.email}</p>
-            <Badge tone="brand" className="mt-2">
-              {roleLabel(user.role)}
-            </Badge>
-            <p className="mt-4 text-xs text-muted">Member since {formatDateTime(user.createdAt)}</p>
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-center gap-2 font-semibold">
+                {user.firstName} {user.lastName}
+                <Badge tone="brand">{roleLabel(user.role)}</Badge>
+              </p>
+              <p className="truncate text-sm text-muted">{user.email}</p>
+            </div>
+            <p className="text-xs text-muted">Member since {formatDateTime(user.createdAt)}</p>
           </CardBody>
         </Card>
-        <div className="space-y-6 lg:col-span-2">
-          <Card>
-            <CardHeader title="Personal details" />
-            <CardBody className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-4">
+          <CollapsibleCard storageKey="profile.details" title="Personal details" description="Name, job title and avatar shown to your teammates." bodyClassName="grid gap-4 p-[var(--card-p)] sm:grid-cols-2">
               <Field label="First name">
                 <Input value={values.firstName} onChange={(e) => setValues({ ...values, firstName: e.target.value })} />
               </Field>
@@ -77,8 +76,7 @@ export function ProfileView() {
                   Save profile
                 </Button>
               </div>
-            </CardBody>
-          </Card>
+          </CollapsibleCard>
           <ChangePasswordCard />
         </div>
       </div>
@@ -112,9 +110,13 @@ function ChangePasswordCard() {
   };
 
   return (
-    <Card>
-      <CardHeader title="Change password" description="You will be signed out of all devices after changing it." />
-      <CardBody className="grid gap-4 sm:grid-cols-3">
+    <CollapsibleCard
+      storageKey="profile.password"
+      defaultOpen={false}
+      title="Change password"
+      description="You will be signed out of all devices after changing it."
+      bodyClassName="grid gap-4 p-[var(--card-p)] sm:grid-cols-3"
+    >
         {error && <p className="text-sm text-danger sm:col-span-3">{error}</p>}
         <Field label="Current password">
           <Input type="password" autoComplete="current-password" value={values.currentPassword} onChange={(e) => setValues({ ...values, currentPassword: e.target.value })} />
@@ -130,7 +132,6 @@ function ChangePasswordCard() {
             Update password
           </Button>
         </div>
-      </CardBody>
-    </Card>
+    </CollapsibleCard>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Circle, Flag, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, Flag, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useProject, useProjectMembers } from '@/features/projects/api';
 import { errorMessage } from '@/shared/lib/api-client';
@@ -9,6 +9,8 @@ import { Avatar } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
+import { CollapsibleCard } from '@/shared/ui/collapsible';
+import { Dropdown, DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Field, Input, Select, Textarea } from '@/shared/ui/form';
 import { ProgressBar } from '@/shared/ui/layout';
@@ -28,9 +30,18 @@ export function MilestoneBoard({ projectId }: { projectId: string }) {
   if (isLoading) return <Spinner />;
   if (isError) return <ErrorState message={errorMessage(error)} onRetry={refetch} />;
 
+  const open = (milestones ?? []).filter((m) => !m.completedAt);
+  const completed = (milestones ?? []).filter((m) => !!m.completedAt);
+  const cardProps: Omit<TimelineProps, 'milestones'> = {
+    canEdit,
+    onToggle: (milestone) => save.mutate({ id: milestone.id, projectId, completed: !milestone.completedAt }),
+    onEdit: setEditing,
+    onDelete: setDeleting,
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">Key checkpoints and deliverables for this project.</p>
         {canEdit && (
           <Button onClick={() => setEditing('new')}>
@@ -44,67 +55,27 @@ export function MilestoneBoard({ projectId }: { projectId: string }) {
           <EmptyState icon={<Flag className="size-6" />} title="No milestones yet" description="Milestones help you track major phases and deadlines." />
         </Card>
       ) : (
-        <div className="relative space-y-4 before:absolute before:bottom-4 before:left-5 before:top-4 before:w-0.5 before:bg-border">
-          {milestones.map((milestone) => {
-            const done = !!milestone.completedAt;
-            const late = isOverdue(milestone.dueDate, done);
-            return (
-              <div key={milestone.id} className="relative flex gap-4">
-                <button
-                  type="button"
-                  disabled={!canEdit}
-                  aria-label={done ? 'Mark as open' : 'Mark as completed'}
-                  title={done ? 'Mark as open' : 'Mark as completed'}
-                  onClick={() => save.mutate({ id: milestone.id, projectId, completed: !done })}
-                  className={cn('relative z-[1] mt-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-surface', done ? 'border-success text-success' : late ? 'border-danger text-danger' : 'border-brand text-brand')}
-                >
-                  {done ? <CheckCircle2 className="size-5" /> : <Circle className="size-5" />}
-                </button>
-                <Card className="flex-1 p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className={cn('font-semibold', done && 'text-muted line-through')}>{milestone.name}</h3>
-                      <p className="mt-0.5 text-xs text-muted">
-                        {milestone.startDate ? `${formatDate(milestone.startDate)} → ` : 'Due '}
-                        <span className={cn(late && 'font-medium text-danger')}>{formatDate(milestone.dueDate)}</span>
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {done ? <Badge tone="success">Completed</Badge> : late ? <Badge tone="danger">Overdue</Badge> : <Badge tone="brand">Open</Badge>}
-                      {canEdit && (
-                        <>
-                          <Button variant="ghost" size="icon" aria-label="Edit milestone" onClick={() => setEditing(milestone)}>
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" aria-label="Delete milestone" onClick={() => setDeleting(milestone)}>
-                            <Trash2 className="size-4 text-danger" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  {milestone.description && <p className="mt-3 text-sm text-foreground/80">{milestone.description}</p>}
-                  <div className="mt-4 flex flex-wrap items-center gap-6">
-                    <div className="min-w-48 flex-1">
-                      <div className="mb-1 flex justify-between text-xs">
-                        <span className="text-muted">
-                          {milestone.stats.completedTasks}/{milestone.stats.totalTasks} tasks
-                        </span>
-                        <span className="font-semibold">{milestone.stats.progress}%</span>
-                      </div>
-                      <ProgressBar value={milestone.stats.progress} />
-                    </div>
-                    {milestone.owner && (
-                      <span className="flex items-center gap-2 text-sm">
-                        <Avatar user={milestone.owner} size="xs" /> {fullName(milestone.owner)}
-                      </span>
-                    )}
-                  </div>
-                </Card>
-              </div>
-            );
-          })}
-        </div>
+        <>
+          {open.length > 0 ? (
+            <MilestoneTimeline milestones={open} {...cardProps} />
+          ) : (
+            <Card>
+              <EmptyState icon={<CheckCircle2 className="size-6" />} title="All milestones completed" description="Completed milestones are listed below." />
+            </Card>
+          )}
+          {completed.length > 0 && (
+            <CollapsibleCard
+              title="Completed"
+              meta={`${completed.length} milestone${completed.length === 1 ? '' : 's'}`}
+              icon={<CheckCircle2 />}
+              defaultOpen={false}
+              storageKey={`milestones.completed.${projectId}`}
+              bodyClassName="p-[var(--card-p)]"
+            >
+              <MilestoneTimeline milestones={completed} {...cardProps} />
+            </CollapsibleCard>
+          )}
+        </>
       )}
 
       <MilestoneModal projectId={projectId} milestone={editing} onClose={() => setEditing(null)} />
@@ -116,6 +87,105 @@ export function MilestoneBoard({ projectId }: { projectId: string }) {
         loading={remove.isPending}
         onConfirm={() => deleting && remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })}
       />
+    </div>
+  );
+}
+
+interface TimelineProps {
+  milestones: Milestone[];
+  canEdit: boolean;
+  onToggle: (milestone: Milestone) => void;
+  onEdit: (milestone: Milestone) => void;
+  onDelete: (milestone: Milestone) => void;
+}
+
+function MilestoneTimeline({ milestones, canEdit, onToggle, onEdit, onDelete }: TimelineProps) {
+  return (
+    <div className="relative space-y-3 before:absolute before:bottom-4 before:left-5 before:top-4 before:w-0.5 before:bg-border">
+      {milestones.map((milestone) => {
+        const done = !!milestone.completedAt;
+        const late = isOverdue(milestone.dueDate, done);
+        return (
+          <div key={milestone.id} className="relative flex gap-4">
+            <button
+              type="button"
+              disabled={!canEdit}
+              aria-label={done ? 'Mark as open' : 'Mark as completed'}
+              title={done ? 'Mark as open' : 'Mark as completed'}
+              onClick={() => onToggle(milestone)}
+              className={cn('relative z-[1] mt-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-surface', done ? 'border-success text-success' : late ? 'border-danger text-danger' : 'border-brand text-brand')}
+            >
+              {done ? <CheckCircle2 className="size-5" /> : <Circle className="size-5" />}
+            </button>
+            <Card className="min-w-0 flex-1 px-5 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className={cn('font-semibold', done && 'text-muted line-through')}>{milestone.name}</h3>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {milestone.startDate ? `${formatDate(milestone.startDate)} → ` : 'Due '}
+                    <span className={cn(late && 'font-medium text-danger')}>{formatDate(milestone.dueDate)}</span>
+                    {milestone.owner && (
+                      <span className="ml-2 inline-flex items-center gap-1.5 align-middle">
+                        · <Avatar user={milestone.owner} size="xs" /> {fullName(milestone.owner)}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {done ? <Badge tone="success">Completed</Badge> : late ? <Badge tone="danger">Overdue</Badge> : <Badge tone="brand">Open</Badge>}
+                  {canEdit && (
+                    <Dropdown
+                      trigger={({ open, toggle }) => (
+                        <Button variant="ghost" size="icon" aria-label="Milestone actions" aria-expanded={open} onClick={toggle}>
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      )}
+                    >
+                      {(close) => (
+                        <>
+                          <DropdownItem
+                            onClick={() => {
+                              close();
+                              onEdit(milestone);
+                            }}
+                          >
+                            <Pencil /> Edit milestone
+                          </DropdownItem>
+                          <DropdownItem
+                            onClick={() => {
+                              close();
+                              onToggle(milestone);
+                            }}
+                          >
+                            {done ? <Circle /> : <CheckCircle2 />} {done ? 'Mark as open' : 'Mark as completed'}
+                          </DropdownItem>
+                          <DropdownSeparator />
+                          <DropdownItem
+                            danger
+                            onClick={() => {
+                              close();
+                              onDelete(milestone);
+                            }}
+                          >
+                            <Trash2 /> Delete milestone
+                          </DropdownItem>
+                        </>
+                      )}
+                    </Dropdown>
+                  )}
+                </div>
+              </div>
+              {milestone.description && <p className="mt-2 line-clamp-2 text-sm text-foreground/80" title={milestone.description}>{milestone.description}</p>}
+              <div className="mt-3 flex items-center gap-3">
+                <ProgressBar value={milestone.stats.progress} className="flex-1" />
+                <span className="shrink-0 text-xs tabular-nums text-muted">
+                  {milestone.stats.completedTasks}/{milestone.stats.totalTasks} tasks · <span className="font-semibold text-foreground">{milestone.stats.progress}%</span>
+                </span>
+              </div>
+            </Card>
+          </div>
+        );
+      })}
     </div>
   );
 }

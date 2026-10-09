@@ -1,6 +1,22 @@
 'use client';
 
-import { ArrowLeftRight, ChevronsUpDown, LogOut, Menu, Palette, PanelLeftClose, PanelLeftOpen, ShieldCheck, UserRound, X } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  ChevronRight,
+  ChevronsUpDown,
+  LogOut,
+  Menu,
+  Monitor,
+  Moon,
+  Palette,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Settings,
+  ShieldCheck,
+  Sun,
+  UserRound,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -12,12 +28,13 @@ import { useExitWorkspace } from '@/features/platform/api';
 import { ProjectsNav } from '@/features/projects/components/projects-nav';
 import { GlobalSearch } from '@/features/search/components/global-search';
 import { appConfig } from '@/shared/config/env';
-import { FOOTER_NAVIGATION, NAVIGATION, PLATFORM_NAVIGATION, type NavItem, type NavSection } from '@/shared/config/navigation';
+import { FOOTER_NAVIGATION, NAVIGATION, PLATFORM_NAVIGATION, SETTINGS_NAVIGATION, type NavItem, type NavSection } from '@/shared/config/navigation';
 import { routes } from '@/shared/config/routes';
 import { PLATFORM_ROOT_ROLE, roleLabel } from '@/shared/constants/domain';
 import { useSystemStatus } from '@/shared/hooks/use-system-status';
 import { cn, fullName } from '@/shared/lib/utils';
-import { ThemeToggle } from '@/shared/theme/theme-toggle';
+import type { ThemeMode } from '@/shared/theme/theme.config';
+import { useTheme } from '@/shared/theme/theme-provider';
 import { useNavCollapsed } from '@/shared/theme/use-nav-collapsed';
 import { Avatar } from '@/shared/ui/avatar';
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
@@ -103,7 +120,6 @@ export function AppShell({ children, variant = 'tenant' }: { children: ReactNode
           </button>
           <div className="flex min-w-0 flex-1 items-center">{!platform && <GlobalSearch />}</div>
           <div className="flex items-center gap-1">
-            <ThemeToggle />
             {!platform && <NotificationBell />}
             <div className="mx-1.5 hidden h-6 w-px bg-border sm:block" />
             <UserMenu user={user} variant={variant} />
@@ -194,24 +210,104 @@ function Sidebar({ user, pathname, navigation, workspace, tenant, onClose, colla
         </ul>
       )}
 
-      <div className="shrink-0 space-y-2 border-t border-sidebar-border p-3 [ul+&]:border-t-0">
-        <Link
-          href={workspace.href}
-          title={workspace.name}
-          className="flex items-center gap-2.5 rounded-ui border border-sidebar-border px-2.5 py-2 transition-colors hover:bg-sidebar-hover collapsed:justify-center collapsed:border-transparent collapsed:px-0"
+      <div className="shrink-0 border-t border-sidebar-border p-3 [ul+&]:border-t-0">
+        <WorkspaceMenu user={user} workspace={workspace} tenant={tenant} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Compact workspace card at the bottom of the sidebar. Opens upwards into a
+ * small menu with the workspace's settings pages, the root console switch and
+ * the API status, which used to be a separate always-visible line.
+ */
+function WorkspaceMenu({ user, workspace, tenant }: { user: SessionUser; workspace: WorkspaceInfo; tenant: boolean }) {
+  const router = useRouter();
+  const exit = useExitWorkspace();
+  const { operational, checking } = useSystemStatus();
+  const status = checking ? 'Checking…' : operational ? 'Operational' : 'Degraded';
+  const statusDot = checking ? 'bg-sidebar-muted' : operational ? 'bg-success' : 'bg-danger';
+  const settings = tenant ? SETTINGS_NAVIGATION.filter((item) => !item.permission || user.permissions.includes(item.permission)) : [];
+
+  return (
+    <Dropdown
+      align="left"
+      className="bottom-full mb-2 mt-0 w-60 origin-bottom-left"
+      trigger={({ open, toggle }) => (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          title={`${workspace.name} · API ${status}`}
+          className={cn(
+            'flex w-full items-center gap-2.5 rounded-ui px-2 py-1.5 text-left transition-colors hover:bg-sidebar-hover collapsed:justify-center collapsed:px-0',
+            open && 'bg-sidebar-hover',
+          )}
         >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-ui bg-sidebar-hover text-xs font-semibold uppercase text-sidebar-heading">
+          <span className="relative flex size-8 shrink-0 items-center justify-center rounded-ui bg-sidebar-hover text-xs font-semibold uppercase text-sidebar-heading">
             {initialsOf(workspace.name)}
+            <span className={cn('absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-[var(--sidebar)]', statusDot)} aria-hidden />
           </span>
           <span className="min-w-0 flex-1 collapsed:hidden">
             <span className="block truncate text-sm font-medium text-sidebar-heading">{workspace.name}</span>
-            <span className="block truncate text-xs text-sidebar-muted">{workspace.subtitle}</span>
+            <span className="block truncate text-[11px] text-sidebar-muted">{workspace.subtitle}</span>
           </span>
           <ChevronsUpDown className="size-3.5 shrink-0 text-sidebar-muted collapsed:hidden" />
-        </Link>
-        <SystemStatus />
-      </div>
-    </div>
+        </button>
+      )}
+    >
+      {(close) => {
+        const go = (href: string) => {
+          close();
+          router.push(href);
+        };
+        return (
+          <>
+            <div className="px-2.5 py-2">
+              <p className="truncate text-sm font-medium text-foreground">{workspace.name}</p>
+              <p className="truncate text-xs text-muted">{workspace.subtitle}</p>
+            </div>
+            {settings.length > 0 && (
+              <>
+                <DropdownSeparator />
+                {settings.map((item) => (
+                  <DropdownItem key={item.href} onClick={() => go(item.href)}>
+                    <Settings /> <span className="flex-1">{item.label}</span>
+                    <ChevronRight className="!size-3.5" />
+                  </DropdownItem>
+                ))}
+              </>
+            )}
+            {!tenant && (
+              <>
+                <DropdownSeparator />
+                <DropdownItem onClick={() => go(workspace.href)}>
+                  <ShieldCheck /> Platform overview
+                </DropdownItem>
+              </>
+            )}
+            {tenant && isRootUser(user) && (
+              <DropdownItem
+                onClick={() => {
+                  close();
+                  exit.mutate();
+                }}
+              >
+                <ArrowLeftRight /> Back to platform console
+              </DropdownItem>
+            )}
+            <DropdownSeparator />
+            <div className="flex items-center justify-between px-2.5 py-1.5 font-mono text-[11px] text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <span className={cn('size-1.5 rounded-full', statusDot)} /> API {status.toLowerCase()}
+              </span>
+              {appConfig.version && <span>v{appConfig.version}</span>}
+            </div>
+          </>
+        );
+      }}
+    </Dropdown>
   );
 }
 
@@ -222,20 +318,6 @@ function initialsOf(name: string): string {
     .slice(0, 2)
     .map((word) => word[0])
     .join('');
-}
-
-function SystemStatus() {
-  const { operational, checking } = useSystemStatus();
-  const label = checking ? 'Checking…' : operational ? 'Operational' : 'Degraded';
-  return (
-    <div className="flex items-center justify-between px-1 text-[11px] text-sidebar-muted collapsed:justify-center" title={`API status: ${label}`}>
-      <span className="inline-flex items-center gap-1.5">
-        <span className={cn('size-1.5 rounded-full', checking ? 'bg-sidebar-muted' : operational ? 'bg-success' : 'bg-danger')} />
-        <span className="font-mono collapsed:hidden">{label}</span>
-      </span>
-      {appConfig.version && <span className="font-mono collapsed:hidden">v{appConfig.version}</span>}
-    </div>
-  );
 }
 
 function SidebarLink({ item, active, count }: { item: NavItem; active: boolean; count?: number }) {
@@ -289,6 +371,12 @@ function RootWorkspaceBanner({ organizationName }: { organizationName: string })
   );
 }
 
+const THEME_CHOICES: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
+  { mode: 'light', label: 'Light', icon: Sun },
+  { mode: 'dark', label: 'Dark', icon: Moon },
+  { mode: 'system', label: 'System', icon: Monitor },
+];
+
 function UserMenu({ user, variant }: { user: SessionUser; variant: ShellVariant }) {
   const root = isRootUser(user);
   const exit = useExitWorkspace();
@@ -298,6 +386,7 @@ function UserMenu({ user, variant }: { user: SessionUser; variant: ShellVariant 
       : { profile: routes.profile, appearance: routes.settingsAppearance };
   const logout = useLogout();
   const router = useRouter();
+  const { appearance, update } = useTheme();
 
   const signOut = () =>
     logout.mutate(undefined, {
@@ -338,6 +427,28 @@ function UserMenu({ user, variant }: { user: SessionUser; variant: ShellVariant 
             <DropdownItem onClick={() => go(links.appearance)}>
               <Palette /> Appearance
             </DropdownItem>
+            <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
+              <span className="text-sm text-foreground-soft">Theme</span>
+              <div role="radiogroup" aria-label="Theme" className="inline-flex rounded-ui border border-border bg-surface-muted p-0.5">
+                {THEME_CHOICES.map(({ mode, label, icon: Icon }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={appearance.mode === mode}
+                    aria-label={label}
+                    title={label}
+                    onClick={() => update({ mode })}
+                    className={cn(
+                      'flex size-7 items-center justify-center rounded-[calc(var(--radius)-2px)] transition-colors',
+                      appearance.mode === mode ? 'bg-surface text-foreground shadow-ui-sm' : 'text-muted hover:text-foreground',
+                    )}
+                  >
+                    <Icon className="size-3.5" />
+                  </button>
+                ))}
+              </div>
+            </div>
             {root && variant === 'tenant' && (
               <DropdownItem
                 onClick={() => {

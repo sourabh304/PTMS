@@ -18,7 +18,7 @@ import {
 } from '@/shared/theme/theme.config';
 import { useTheme } from '@/shared/theme/theme-provider';
 import { Button } from '@/shared/ui/button';
-import { Card, CardBody, CardHeader } from '@/shared/ui/card';
+import { CollapsibleCard } from '@/shared/ui/collapsible';
 import { Segmented } from '@/shared/ui/layout';
 
 const MODE_ICONS: Record<ThemeMode, ReactNode> = {
@@ -42,18 +42,19 @@ export function AppearanceSettings() {
   const organizationColor = session?.organization?.primaryColor ?? appConfig.brandColor;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader
-          title="Appearance"
-          description="Personalize how the app looks on this device. Changes apply instantly."
-          actions={
-            <Button variant="secondary" size="sm" onClick={reset}>
-              <RotateCcw /> Reset to defaults
-            </Button>
-          }
-        />
-        <CardBody className="divide-y divide-border p-0">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">Personalize how the app looks on this device. Changes apply instantly.</p>
+        <Button variant="secondary" size="sm" onClick={reset}>
+          <RotateCcw /> Reset to defaults
+        </Button>
+      </div>
+      <CollapsibleCard
+        storageKey="settings.appearance.theme"
+        title="Theme & color"
+        meta={[label(STYLE_OPTIONS, appearance.style), label(THEME_MODES, appearance.mode), label(ACCENT_PRESETS, appearance.accent)].join(' · ')}
+        bodyClassName="divide-y divide-border"
+      >
           <Setting title="Style" description="Overall look of cards, buttons and inputs.">
             <div className="grid gap-3 sm:grid-cols-2">
               {STYLE_OPTIONS.map((style) => (
@@ -115,7 +116,15 @@ export function AppearanceSettings() {
               })}
             </div>
           </Setting>
+      </CollapsibleCard>
 
+      <CollapsibleCard
+        storageKey="settings.appearance.font"
+        defaultOpen={false}
+        title="Typography"
+        meta={label(FONT_OPTIONS, appearance.font)}
+        bodyClassName="divide-y divide-border"
+      >
           <Setting title="Font" description="Typeface used across the interface.">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {FONT_OPTIONS.map((font) => (
@@ -127,7 +136,15 @@ export function AppearanceSettings() {
               ))}
             </div>
           </Setting>
+      </CollapsibleCard>
 
+      <CollapsibleCard
+        storageKey="settings.appearance.layout"
+        defaultOpen={false}
+        title="Layout"
+        meta={[`${label(SIDEBAR_OPTIONS, appearance.sidebar)} sidebar`, label(DENSITY_OPTIONS, appearance.density), `${label(RADIUS_OPTIONS, appearance.radius)} corners`].join(' · ')}
+        bodyClassName="divide-y divide-border"
+      >
           <Setting title="Sidebar" description="Navigation panel style.">
             <Segmented value={appearance.sidebar} onChange={(sidebar) => update({ sidebar })} options={SIDEBAR_OPTIONS.map((o) => ({ value: o.value, label: o.label }))} />
           </Setting>
@@ -139,11 +156,15 @@ export function AppearanceSettings() {
           <Setting title="Corner radius" description="Roundness of cards, inputs and buttons.">
             <Segmented value={appearance.radius} onChange={(radius) => update({ radius })} options={RADIUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))} />
           </Setting>
-        </CardBody>
-      </Card>
+      </CollapsibleCard>
       <p className="text-xs text-muted">Appearance preferences are stored in this browser and don&apos;t affect other people in your organization.</p>
     </div>
   );
+}
+
+/** Label of the selected option, for the collapsed section summaries. */
+function label(options: readonly { value: string; label: string }[], value: string): string {
+  return options.find((o) => o.value === value)?.label ?? value;
 }
 
 function Setting({ title, description, children }: { title: string; description: string; children: ReactNode }) {
@@ -209,7 +230,7 @@ function ModePreview({ mode }: { mode: ThemeMode }) {
     </div>
   );
   return (
-    <div className="flex h-20 w-full">
+    <div className="flex h-14 w-full">
       {mode === 'system' ? (
         <>
           <div className="w-1/2 overflow-hidden">{render(palette.light)}</div>
