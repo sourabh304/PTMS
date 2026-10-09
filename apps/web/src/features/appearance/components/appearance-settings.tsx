@@ -28,6 +28,7 @@ const MODE_ICONS: Record<ThemeMode, ReactNode> = {
 
 /** CSS variable registered by next/font for each selectable font. */
 const FONT_VARIABLES: Record<FontOption, string> = {
+  figtree: 'var(--font-figtree)',
   inter: 'var(--font-inter)',
   geist: 'var(--font-geist)',
   plex: 'var(--font-plex)',

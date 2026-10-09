@@ -27,6 +27,20 @@ export function formatDate(value: DateInput, pattern: string = appConfig.dateFor
   return date ? format(asCalendarDate(date), pattern) : '—';
 }
 
+/** Compact calendar date for dense UI such as table cells. */
+export function formatShortDate(value: DateInput): string {
+  return formatDate(value, appConfig.shortDateFormat);
+}
+
+/** Whole days from today to the given calendar date (negative when in the past). */
+export function daysFromToday(value: DateInput): number | null {
+  const date = toDate(value);
+  if (!date) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((asCalendarDate(date).getTime() - today.getTime()) / 86_400_000);
+}
+
 export function formatDateTime(value: DateInput): string {
   const date = toDate(value);
   return date ? format(date, `${appConfig.dateFormat}, HH:mm`) : '—';

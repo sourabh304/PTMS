@@ -62,6 +62,38 @@ export function useUpdateTask() {
   });
 }
 
+interface QuickUpdate {
+  id: string;
+  input: TaskUpdate;
+  /** Fields to show immediately in cached task lists while the request runs. */
+  preview: Partial<Task>;
+}
+
+type TaskListSnapshot = [readonly unknown[], Paginated<Task> | undefined][];
+
+/**
+ * Inline edits from tables: the change appears instantly (optimistic update)
+ * and is rolled back if the API rejects it.
+ */
+export function useQuickUpdateTask() {
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateTaskData();
+  const listKey = ['tasks', 'list'];
+  return useMutation({
+    mutationFn: ({ id, input }: QuickUpdate) => api.patch<Task>(`/tasks/${id}`, input),
+    onMutate: async ({ id, preview }): Promise<{ snapshot: TaskListSnapshot }> => {
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const snapshot = queryClient.getQueriesData<Paginated<Task>>({ queryKey: listKey });
+      queryClient.setQueriesData<Paginated<Task>>({ queryKey: listKey }, (page) =>
+        page ? { ...page, data: page.data.map((task) => (task.id === id ? { ...task, ...preview } : task)) } : page,
+      );
+      return { snapshot };
+    },
+    onError: (_error, _variables, context) => context?.snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data)),
+    onSettled: invalidate,
+  });
+}
+
 export function useMoveTask() {
   const invalidate = useInvalidateTaskData();
   return useMutation({

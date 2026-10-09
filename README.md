@@ -1,8 +1,8 @@
-# Project Tracker
+# SegueIT Project Tracker
 
-Enterprise project tracking platform — plan, track and deliver projects with task lists,
-Kanban boards, Gantt charts, milestones, issue tracking, timesheets with approvals,
-dashboards and portfolio reporting.
+Work-management platform by SegueIT — plan, track and deliver projects from a colorful,
+inline-editable main table, with Kanban boards, Gantt charts, milestones, issue tracking,
+timesheets with approvals, dashboards and portfolio reporting.
 
 | Layer    | Stack                                                                 |
 | -------- | --------------------------------------------------------------------- |
@@ -35,7 +35,7 @@ The seed creates two kinds of account (values from `apps/api/.env`):
 
 | Account | Scope | Can do |
 | ------- | ----- | ------ |
-| **Root** | Whole platform, no organization | Manage every organization (create, rename, suspend, delete) and is the **only** role that can create, change and delete **plans** and **subscriptions**. Cannot open tenant data. |
+| **Root** | Whole platform, no organization | Manage every organization (create, rename, suspend, delete) and is the **only** role that can create, change and delete **plans** and **subscriptions**. Can open any organization's workspace with Super Admin rights. |
 | **Super Admin** | One organization | Everything in the organization, including managing other Super Admins. Each organization keeps at least one. |
 | **Admin** | One organization | Users, settings, workflows, all projects, timesheet approval, reports, view the plan. Cannot change Super Admins. |
 | **Employee** | One organization | Works on the projects they belong to. |
@@ -59,9 +59,13 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 
 ## Features
 
+- **Home** – personal greeting, quick stats, recent projects, your upcoming work, latest updates and milestones.
+- **Main table** – each project opens on a table of colored, collapsible **groups**: inline-edit the task name, owners, status and priority (full-color labels), timeline and estimate; quick-add tasks per group; per-group summaries (status/priority distribution, date range, total estimate, average progress); rename, recolor and delete groups.
+- **Sidebar** – your projects and **Favorites** (star any project), with a filter for long lists.
+- **My work** – everything assigned to you, grouped into Past dates, Today, This week, Next week, Later and Without a date, with inline status changes.
 - **Projects** – portfolio grid/table, status, owner, budget, timeline, color, archive/restore, members with project roles (Manager / Member / Viewer).
-- **Tasks** – task lists, subtasks, assignees, priorities, estimates, progress, start/due dates, dependencies (with cycle detection), comments, time logged.
-- **Board** – drag & drop Kanban across configurable statuses with persistent ordering.
+- **Tasks** – groups, subtasks, assignees, priorities, estimates, progress, start/due dates, dependencies (with cycle detection), updates (comments), time logged.
+- **Kanban** – drag & drop across configurable statuses with persistent ordering.
 - **Gantt** – day/week/month zoom, dependency arrows, milestones, today marker, drag to reschedule and resize.
 - **Milestones** – timeline view with completion tracking and task-based progress.
 - **Issues** – bug tracker with configurable statuses, severities, priorities, assignee and due dates.
@@ -71,7 +75,7 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Activity & notifications** – audit trail per project and in-app notifications for assignments, comments, reviews.
 - **Administration** – users & roles (Super Admin, Admin, Employee), organization name and default brand color, timezone, working hours, fully configurable workflows, and a read-only view of the organization's plan and usage.
 - **Platform console (Root)** – overview with MRR, organizations (create with first Super Admin, suspend, delete), plan catalogue and subscriptions with enforced limits.
-- **Appearance** – per-user light/dark/system theme, accent color, font (Inter, Geist, IBM Plex Sans, Manrope), density, corner radius, light/dark sidebar, and a collapsible sidebar (Ctrl/⌘+B).
+- **Appearance** – per-user light/dark/system theme, accent color, font (Figtree, Inter, Geist, IBM Plex Sans, Manrope), density, corner radius, light/dark sidebar, and a collapsible sidebar (Ctrl/⌘+B).
 - **Security** – httpOnly cookie auth, short-lived access tokens, rotating refresh tokens with reuse detection, bcrypt, Helmet, rate limiting, strict DTO validation, RBAC + project-level authorization, strict separation of platform (root) and tenant routes.
 
 ---
@@ -80,7 +84,9 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 
 | Concern | Where it lives |
 | ------- | -------------- |
-| Branding, API path, UI defaults | `apps/web/.env.local` (see `.env.example`) |
+| Branding (product name, logo files, brand color), API path, UI defaults, date formats | `apps/web/.env.local` (see `.env.example`); logo files in `apps/web/public/brand/` |
+| Main table columns | `apps/web/src/features/tasks/components/table/table-columns.ts` |
+| Group color palette | `apps/web/src/features/task-lists/group-colors.ts` (UI) and `apps/api/src/features/task-lists/task-list.colors.ts` (defaults for new groups) |
 | Ports, CORS, secrets, cookies, rate limits, pagination | `apps/api/.env` (validated with Zod at boot) |
 | Root account, demo organization, demo data | `apps/api/prisma/seed-data.ts`; `SEED_DEMO_DATA` in `apps/api/.env` |
 | Plan enforcement, default plan currency | `REQUIRE_ACTIVE_SUBSCRIPTION`, `DEFAULT_CURRENCY` in `apps/api/.env` |
@@ -120,10 +126,10 @@ apps/
    └─ src/
       ├─ app/                   routes only (thin pages composing feature components)
       │  ├─ (auth)/login
-      │  └─ (app)/dashboard, my-work, projects/[projectId]/{tasks,board,gantt,…}, timesheets, reports, settings, profile
-      ├─ features/              auth, projects, tasks, gantt, milestones, issues, comments,
-      │                         timesheets, dashboard, reports, activity, notifications,
-      │                         lookups, users, organization, task-lists, my-work
+      │  └─ (app)/home, my-work, projects/[projectId]/{(main table),board,gantt,overview,…}, timesheets, reports, settings, profile
+      ├─ features/              auth, home, projects, tasks (incl. tasks/components/table), gantt,
+      │                         milestones, issues, comments, timesheets, dashboard, reports,
+      │                         activity, notifications, lookups, users, organization, task-lists, my-work
       └─ shared/                config, api client, UI kit, hooks, utils
 ```
 

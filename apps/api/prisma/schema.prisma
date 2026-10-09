@@ -64,6 +64,7 @@ model User {
   comments            Comment[]
   activities          Activity[]
   notifications       Notification[]
+  favoriteProjects    ProjectFavorite[]
 
   @@index([organizationId])
 }
@@ -177,6 +178,7 @@ model Project {
   issues       Issue[]
   timeEntries  TimeEntry[]
   activities   Activity[]
+  favorites    ProjectFavorite[]
 
   @@unique([organizationId, key])
   @@index([organizationId, isArchived])
@@ -194,6 +196,19 @@ model ProjectMember {
 
   @@unique([projectId, userId])
   @@index([userId])
+}
+
+/// A project a user starred; shown under Favorites in the sidebar.
+model ProjectFavorite {
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([userId, projectId])
+  @@index([projectId])
 }
 
 model Milestone {
@@ -222,6 +237,8 @@ model TaskList {
   projectId   String
   milestoneId String?
   name        String
+  /// Hex color of the group header on the project table.
+  color       String?
   position    Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -16,7 +16,7 @@ import { loginSchema, type LoginValues } from '../schemas';
 
 /** Only allow same-app relative redirects after login. */
 function safeNext(next: string | null): string {
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : routes.dashboard;
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : routes.home;
 }
 
 export function LoginForm() {

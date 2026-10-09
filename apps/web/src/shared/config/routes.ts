@@ -1,12 +1,14 @@
 /** Every client route in one place, so links never hard-code paths. */
 export const routes = {
-  home: '/',
+  root: '/',
   login: '/login',
-  dashboard: '/dashboard',
+  home: '/home',
   myWork: '/my-work',
   projects: '/projects',
+  /** The project's main table. */
   project: (id: string) => `/projects/${id}`,
-  projectTasks: (id: string) => `/projects/${id}/tasks`,
+  projectTask: (id: string, taskId: string) => `/projects/${id}?taskId=${taskId}`,
+  projectOverview: (id: string) => `/projects/${id}/overview`,
   projectBoard: (id: string) => `/projects/${id}/board`,
   projectGantt: (id: string) => `/projects/${id}/gantt`,
   projectMilestones: (id: string) => `/projects/${id}/milestones`,

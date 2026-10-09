@@ -1,4 +1,4 @@
-import { BarChart3, Building2, CheckSquare, Clock, CreditCard, FolderKanban, LayoutDashboard, Package, Settings, type LucideIcon } from 'lucide-react';
+import { BarChart3, Building2, CalendarCheck, Clock, CreditCard, House, LayoutDashboard, Package, Settings, type LucideIcon } from 'lucide-react';
 import { Permission } from '@/shared/constants/domain';
 import { routes } from './routes';
 
@@ -9,7 +9,7 @@ export interface NavItem {
   /** Hidden unless the user holds this permission. */
   permission?: Permission;
   /** Counter shown as a badge (key of the nav-counts API response). */
-  badge?: 'myOpenTasks' | 'projects';
+  badge?: 'myOpenTasks';
 }
 
 export interface NavSection {
@@ -17,25 +17,21 @@ export interface NavSection {
   items: NavItem[];
 }
 
+/** Organization workspace; the project list is rendered below these links. */
 export const NAVIGATION: NavSection[] = [
   {
     label: 'Workspace',
     items: [
-      { label: 'Dashboard', href: routes.dashboard, icon: LayoutDashboard },
-      { label: 'My Work', href: routes.myWork, icon: CheckSquare, badge: 'myOpenTasks' },
-      { label: 'Projects', href: routes.projects, icon: FolderKanban, badge: 'projects' },
+      { label: 'Home', href: routes.home, icon: House },
+      { label: 'My work', href: routes.myWork, icon: CalendarCheck, badge: 'myOpenTasks' },
       { label: 'Timesheets', href: routes.timesheets, icon: Clock },
+      { label: 'Reports', href: routes.reports, icon: BarChart3, permission: Permission.REPORTS_VIEW },
     ],
   },
-  {
-    label: 'Insights',
-    items: [{ label: 'Reports', href: routes.reports, icon: BarChart3, permission: Permission.REPORTS_VIEW }],
-  },
-  {
-    label: 'Administration',
-    items: [{ label: 'Settings', href: routes.settings, icon: Settings }],
-  },
 ];
+
+/** Pinned to the bottom of the workspace sidebar. */
+export const FOOTER_NAVIGATION: NavItem[] = [{ label: 'Settings', href: routes.settings, icon: Settings }];
 
 /** Navigation of the platform console (root account only). */
 export const PLATFORM_NAVIGATION: NavSection[] = [

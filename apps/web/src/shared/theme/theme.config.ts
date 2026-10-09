@@ -26,6 +26,7 @@ export const ACCENT_PRESETS = [
 ] as const;
 
 export const FONT_OPTIONS = [
+  { value: 'figtree', label: 'Figtree', description: 'Friendly, clean and open' },
   { value: 'inter', label: 'Inter', description: 'Neutral and highly legible' },
   { value: 'geist', label: 'Geist', description: 'Crisp, modern grotesk' },
   { value: 'plex', label: 'IBM Plex Sans', description: 'Technical, corporate tone' },
@@ -67,7 +68,7 @@ export interface Appearance {
 export const DEFAULT_APPEARANCE: Appearance = {
   mode: 'system',
   accent: 'organization',
-  font: 'inter',
+  font: 'figtree',
   density: 'comfortable',
   radius: 'default',
   sidebar: 'light',

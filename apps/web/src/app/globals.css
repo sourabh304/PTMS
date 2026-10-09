@@ -11,19 +11,19 @@
 @custom-variant collapsed (&:where([data-nav='collapsed'] [data-collapsible] *, [data-nav='collapsed'] [data-collapsible]));
 
 :root {
-  --brand: var(--accent, var(--org-brand, #2563eb));
+  --brand: var(--accent, var(--org-brand, #0b5cad));
   --brand-foreground: var(--accent-foreground, var(--org-brand-foreground, #ffffff));
 
-  --background: #f6f7f9;
+  --background: #f6f7fb;
   --surface: #ffffff;
-  --surface-muted: #f2f4f7;
-  --surface-hover: #f5f6f8;
-  --border: #e4e7ec;
-  --border-strong: #d0d5dd;
-  --foreground: #101828;
-  --foreground-soft: #344054;
-  --muted: #667085;
-  --overlay: rgb(16 24 40 / 0.45);
+  --surface-muted: #f0f1f6;
+  --surface-hover: #f5f6fa;
+  --border: #e3e5ee;
+  --border-strong: #c9ccdb;
+  --foreground: #323338;
+  --foreground-soft: #4a4c57;
+  --muted: #676879;
+  --overlay: rgb(41 47 76 / 0.45);
 
   --danger: #d92d20;
   --success: #079455;
@@ -52,7 +52,7 @@
   --row-py: 0.75rem;
   --radius: 0.5rem;
 
-  --app-font: var(--font-inter);
+  --app-font: var(--font-figtree);
   --sidebar-w: 16rem;
   color-scheme: light;
 }
@@ -62,15 +62,15 @@
 }
 
 [data-mode='dark'] {
-  --background: #0c111d;
-  --surface: #121826;
-  --surface-muted: #1a2232;
-  --surface-hover: #1d2638;
-  --border: #253046;
-  --border-strong: #344054;
-  --foreground: #f2f4f7;
-  --foreground-soft: #cfd4dc;
-  --muted: #98a2b3;
+  --background: #181b34;
+  --surface: #1f2240;
+  --surface-muted: #292c4b;
+  --surface-hover: #2c3052;
+  --border: #363a5d;
+  --border-strong: #4a4e73;
+  --foreground: #e6e8f0;
+  --foreground-soft: #c5c8d6;
+  --muted: #9699ae;
   --overlay: rgb(0 0 0 / 0.6);
 
   --danger: #f97066;
@@ -90,8 +90,8 @@
 }
 
 [data-sidebar='dark'] {
-  --sidebar: #0f1729;
-  --sidebar-border: #0f1729;
+  --sidebar: #0f1d33;
+  --sidebar-border: #0f1d33;
   --sidebar-heading: #ffffff;
   --sidebar-foreground: #c3cad5;
   --sidebar-muted: #7d8899;
@@ -113,6 +113,9 @@
   --radius: 0.875rem;
 }
 
+[data-font='inter'] {
+  --app-font: var(--font-inter);
+}
 [data-font='geist'] {
   --app-font: var(--font-geist);
 }
@@ -220,6 +223,21 @@
     outline: 2px solid color-mix(in srgb, var(--brand) 70%, transparent);
     outline-offset: 2px;
   }
+}
+
+/* Brand logo: show the variant that matches the surface behind it (see BrandLogo). */
+.brand-logo-dark {
+  display: none;
+}
+[data-mode='dark'] .brand-logo-light,
+[data-sidebar='dark'] [data-sidebar-panel] .brand-logo-light,
+.on-dark .brand-logo-light {
+  display: none;
+}
+[data-mode='dark'] .brand-logo-dark,
+[data-sidebar='dark'] [data-sidebar-panel] .brand-logo-dark,
+.on-dark .brand-logo-dark {
+  display: block;
 }
 
 .scrollbar-thin {

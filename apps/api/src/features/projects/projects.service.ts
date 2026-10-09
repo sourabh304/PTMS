@@ -91,13 +91,36 @@ export class ProjectsService {
     return { total, archived, byCategory, members: members.length, projectsWithOverdue, overdueTasks };
   }
 
+  async navigation(user: AuthenticatedUser) {
+    const projects = await this.prisma.project.findMany({
+      where: { ...this.access.visibleProjectsWhere(user), isArchived: false },
+      select: { id: true, name: true, key: true, color: true, favorites: { where: { userId: user.id }, select: { userId: true } } },
+      orderBy: { name: 'asc' },
+    });
+    return projects.map(({ favorites, ...project }) => ({ ...project, isFavorite: favorites.length > 0 }));
+  }
+
+  async setFavorite(user: AuthenticatedUser, projectId: string, favorite: boolean): Promise<void> {
+    await this.access.assertCanView(user, projectId);
+    const key = { userId_projectId: { userId: user.id, projectId } };
+    if (favorite) {
+      await this.prisma.projectFavorite.upsert({ where: key, create: { userId: user.id, projectId }, update: {} });
+    } else {
+      await this.prisma.projectFavorite.deleteMany({ where: { userId: user.id, projectId } });
+    }
+  }
+
   async findOne(user: AuthenticatedUser, id: string) {
     const access = await this.access.assertCanView(user, id);
-    const project = await this.prisma.project.findUniqueOrThrow({ where: { id }, include: PROJECT_INCLUDE });
-    const stats = await this.progress.forProject(user.organizationId, id);
+    const [project, stats, favorite] = await Promise.all([
+      this.prisma.project.findUniqueOrThrow({ where: { id }, include: PROJECT_INCLUDE }),
+      this.progress.forProject(user.organizationId, id),
+      this.prisma.projectFavorite.count({ where: { userId: user.id, projectId: id } }),
+    ]);
     return {
       ...project,
       stats,
+      isFavorite: favorite > 0,
       access: { role: access.memberRole, canEdit: access.canEdit, canManage: access.canManage },
     };
   }

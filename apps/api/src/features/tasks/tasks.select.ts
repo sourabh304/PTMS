@@ -7,7 +7,7 @@ export const TASK_LIST_INCLUDE = {
   status: { select: LOOKUP_SELECT },
   priority: { select: LOOKUP_SELECT },
   project: { select: { id: true, name: true, key: true, color: true } },
-  taskList: { select: { id: true, name: true } },
+  taskList: { select: { id: true, name: true, color: true } },
   milestone: { select: { id: true, name: true } },
   assignees: { select: { user: { select: USER_SUMMARY_SELECT } } },
   _count: { select: { subtasks: true, comments: true } },

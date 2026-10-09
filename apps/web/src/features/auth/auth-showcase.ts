@@ -2,11 +2,9 @@ import { CalendarRange, CheckCircle2, Users, type LucideIcon } from 'lucide-reac
 
 /** Marketing content of the sign-in page; edit here to change what visitors see. */
 export const AUTH_SHOWCASE: {
-  caption: string;
   highlights: { icon: LucideIcon; label: string }[];
   preview: { title: string; rows: { name: string; tag: string; progress: number; note: string; due: string; color: string }[] };
 } = {
-  caption: 'Workspace suite',
   highlights: [
     { icon: CalendarRange, label: 'Gantt timelines & dependencies' },
     { icon: CheckCircle2, label: 'Timesheet approvals' },

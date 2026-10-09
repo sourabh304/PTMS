@@ -45,6 +45,16 @@ export interface ProjectSummary {
 
 export interface ProjectDetail extends Project {
   access: { role: ProjectRole | null; canEdit: boolean; canManage: boolean };
+  isFavorite: boolean;
+}
+
+/** Entry of the sidebar project list. */
+export interface ProjectNavItem {
+  id: string;
+  name: string;
+  key: string;
+  color: string | null;
+  isFavorite: boolean;
 }
 
 export interface ProjectMember {

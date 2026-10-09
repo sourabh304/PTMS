@@ -1,7 +1,7 @@
 import { Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { appConfig } from '@/shared/config/env';
-import { Wordmark } from '@/shared/components/wordmark';
+import { BrandLogo } from '@/shared/components/brand-logo';
 import { ThemeToggle } from '@/shared/theme/theme-toggle';
 import { AUTH_SHOWCASE } from '../auth-showcase';
 import { SystemStatusLine } from './system-status-line';
@@ -17,13 +17,12 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,7fr)_minmax(0,6fr)]">
       {/* ─── Brand panel ─────────────────────────────────────── */}
-      <aside data-sidebar="dark" className="relative hidden flex-col overflow-hidden bg-sidebar p-10 text-sidebar-foreground lg:flex xl:p-12">
+      <aside data-sidebar="dark" className="on-dark relative hidden flex-col overflow-hidden bg-sidebar p-10 text-sidebar-foreground lg:flex xl:p-12">
         <div aria-hidden className="pointer-events-none absolute -left-32 -top-32 size-[30rem] rounded-full bg-brand opacity-[0.18] blur-[120px]" />
         <div aria-hidden className="pointer-events-none absolute -bottom-40 right-0 size-[24rem] rounded-full bg-brand opacity-[0.12] blur-[120px]" />
 
         <div className="relative">
-          <Wordmark className="block text-base text-sidebar-heading" />
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-sidebar-muted">{AUTH_SHOWCASE.caption}</span>
+          <BrandLogo className="text-sidebar-heading [&_img]:h-8" />
         </div>
 
         <div className="relative my-auto max-w-xl py-6">
@@ -67,7 +66,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
       {/* ─── Form panel ──────────────────────────────────────── */}
       <main className="flex flex-col bg-surface">
         <div className="flex h-16 items-center justify-between px-6 sm:px-10">
-          <Wordmark className="lg:invisible" />
+          <BrandLogo className="lg:invisible" />
           <ThemeToggle />
         </div>
         <div className="flex flex-1 items-center justify-center px-6 pb-10 sm:px-10">

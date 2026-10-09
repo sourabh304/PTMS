@@ -59,7 +59,7 @@ function useSearchResults(term: string) {
           title: t.title,
           meta: `${t.project.key}-${t.number} · ${t.project.name}`,
           badge: { color: t.status.color, label: t.status.name },
-          href: `${routes.projectTasks(t.projectId)}?taskId=${t.id}`,
+          href: routes.projectTask(t.projectId, t.id),
         })),
         ...issues.data.map((i) => ({
           id: i.id,

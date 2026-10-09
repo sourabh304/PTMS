@@ -23,7 +23,7 @@ export interface Task {
   status: LookupRef;
   priority: LookupRef;
   project: ProjectRef;
-  taskList: { id: string; name: string } | null;
+  taskList: { id: string; name: string; color: string | null } | null;
   milestone: { id: string; name: string } | null;
   assignees: UserSummary[];
   _count: { subtasks: number; comments: number };

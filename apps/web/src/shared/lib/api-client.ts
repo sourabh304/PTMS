@@ -99,6 +99,7 @@ export const api = {
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
     apiRequest<T>(path, { ...options, method: 'POST', body }),
   patch: <T>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'PATCH', body }),
+  put: <T = void>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'PUT', body }),
   delete: <T = void>(path: string, query?: Record<string, QueryValue>) =>
     apiRequest<T>(path, { method: 'DELETE', query }),
 };

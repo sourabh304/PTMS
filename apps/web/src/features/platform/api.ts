@@ -84,7 +84,7 @@ export function useEnterWorkspace() {
     mutationFn: (organizationId: string) => api.post<void>(`/platform/workspace/${organizationId}`),
     onSuccess: () => {
       queryClient.clear();
-      router.push(routes.dashboard);
+      router.push(routes.home);
     },
   });
 }

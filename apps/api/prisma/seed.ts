@@ -19,6 +19,7 @@ import { OrgRole, PlatformRole, ProjectRole } from '../src/common/constants/role
 import { slugify } from '../src/common/utils/string.util';
 import { DEFAULT_LOOKUPS } from '../src/features/lookups/lookup.defaults';
 import { ORGANIZATION_DEFAULTS } from '../src/features/organizations/organization.defaults';
+import { nextGroupColor } from '../src/features/task-lists/task-list.colors';
 import { DEFAULT_PLANS, DEMO_ORGANIZATION, DEMO_PROJECTS, DEMO_USERS, ROOT_ACCOUNT } from './seed-data';
 
 const prisma = new PrismaClient();
@@ -198,7 +199,13 @@ async function seedDemoOrganization(): Promise<string> {
     let taskNumber = 0;
     for (const [listIndex, list] of spec.taskLists.entries()) {
       const taskList = await prisma.taskList.create({
-        data: { projectId: project.id, name: list.name, position: listIndex, milestoneId: milestones.get(list.milestone) ?? null },
+        data: {
+          projectId: project.id,
+          name: list.name,
+          color: nextGroupColor(listIndex),
+          position: listIndex,
+          milestoneId: milestones.get(list.milestone) ?? null,
+        },
       });
       for (const t of list.tasks) {
         taskNumber++;
@@ -306,12 +313,22 @@ async function seedDemoOrganization(): Promise<string> {
   return organization.id;
 }
 
+/** Gives groups created before group colors existed a color from the palette. */
+async function backfillGroupColors(): Promise<void> {
+  const uncolored = await prisma.taskList.findMany({ where: { color: null }, select: { id: true, position: true } });
+  for (const group of uncolored) {
+    await prisma.taskList.update({ where: { id: group.id }, data: { color: nextGroupColor(group.position) } });
+  }
+  if (uncolored.length) console.log(`✔ Colored ${uncolored.length} existing groups`);
+}
+
 async function main() {
   await seedRoot();
   await seedPlans();
   if (['true', '1', 'yes'].includes((process.env.SEED_DEMO_DATA ?? 'false').toLowerCase())) {
     await seedSubscription(await seedDemoOrganization());
   }
+  await backfillGroupColors();
 }
 
 main()

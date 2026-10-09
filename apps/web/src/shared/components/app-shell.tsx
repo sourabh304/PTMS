@@ -9,9 +9,10 @@ import type { SessionUser } from '@/features/auth/types';
 import { useNavCounts } from '@/features/dashboard/api';
 import { NotificationBell } from '@/features/notifications/components/notification-bell';
 import { useExitWorkspace } from '@/features/platform/api';
+import { ProjectsNav } from '@/features/projects/components/projects-nav';
 import { GlobalSearch } from '@/features/search/components/global-search';
 import { appConfig } from '@/shared/config/env';
-import { NAVIGATION, PLATFORM_NAVIGATION, type NavItem, type NavSection } from '@/shared/config/navigation';
+import { FOOTER_NAVIGATION, NAVIGATION, PLATFORM_NAVIGATION, type NavItem, type NavSection } from '@/shared/config/navigation';
 import { routes } from '@/shared/config/routes';
 import { PLATFORM_ROOT_ROLE } from '@/shared/constants/domain';
 import { useSystemStatus } from '@/shared/hooks/use-system-status';
@@ -21,8 +22,8 @@ import { useNavCollapsed } from '@/shared/theme/use-nav-collapsed';
 import { Avatar } from '@/shared/ui/avatar';
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
 import { ErrorState, Spinner } from '@/shared/ui/feedback';
+import { BrandLogo } from './brand-logo';
 import { BrandingStyles } from './branding-styles';
-import { Wordmark } from './wordmark';
 
 const isActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
@@ -33,7 +34,6 @@ export type ShellVariant = 'tenant' | 'platform';
 interface WorkspaceInfo {
   name: string;
   subtitle: string;
-  caption: string;
   href: string;
 }
 
@@ -41,12 +41,11 @@ const isRootUser = (user: SessionUser) => user.role === PLATFORM_ROOT_ROLE;
 
 function workspaceOf(user: SessionUser, variant: ShellVariant): WorkspaceInfo {
   if (variant === 'platform' || !user.organization) {
-    return { name: 'Platform console', subtitle: 'Root access', caption: 'platform', href: routes.platform };
+    return { name: 'Platform console', subtitle: 'Root access', href: routes.platform };
   }
   return {
     name: user.organization.name,
     subtitle: isRootUser(user) ? 'Opened with root access' : `${humanize(user.role)} workspace`,
-    caption: user.organization.slug,
     href: routes.settings,
   };
 }
@@ -64,7 +63,7 @@ export function AppShell({ children, variant = 'tenant' }: { children: ReactNode
 
   useEffect(() => setMobileOpen(false), [pathname]);
   useEffect(() => {
-    if (misplaced) router.replace(platform ? routes.dashboard : routes.platform);
+    if (misplaced) router.replace(platform ? routes.home : routes.platform);
   }, [misplaced, platform, router]);
 
   if (isLoading || misplaced) return <Spinner className="min-h-screen" label="Loading your workspace" />;
@@ -72,7 +71,7 @@ export function AppShell({ children, variant = 'tenant' }: { children: ReactNode
 
   const navigation = platform ? PLATFORM_NAVIGATION : NAVIGATION;
   const workspace = workspaceOf(user, variant);
-  const sidebarProps = { user, pathname, navigation, workspace, showCounts: !platform };
+  const sidebarProps = { user, pathname, navigation, workspace, tenant: !platform };
 
   return (
     <div className="min-h-screen">
@@ -121,8 +120,8 @@ interface SidebarProps {
   pathname: string;
   navigation: NavSection[];
   workspace: WorkspaceInfo;
-  /** Show tenant counters (open tasks, projects) as badges. */
-  showCounts: boolean;
+  /** Organization workspace: shows counters, the project list and settings. */
+  tenant: boolean;
   /** Mobile drawer close handler. */
   onClose?: () => void;
   /** Desktop only: icon-rail mode. */
@@ -130,16 +129,15 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
-function Sidebar({ user, pathname, navigation, workspace, showCounts, onClose, collapsed, onToggleCollapse }: SidebarProps) {
-  const { data: counts } = useNavCounts(showCounts);
+function Sidebar({ user, pathname, navigation, workspace, tenant, onClose, collapsed, onToggleCollapse }: SidebarProps) {
+  const { data: counts } = useNavCounts(tenant);
   const visible = (items: NavItem[]) => items.filter((item) => !item.permission || user.permissions.includes(item.permission));
 
   return (
-    <div className="flex h-full flex-col border-r border-sidebar-border bg-sidebar">
+    <div data-sidebar-panel className="flex h-full flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border px-4 collapsed:justify-center collapsed:px-0">
-        <Link href={navigation[0].items[0].href} className="min-w-0 collapsed:hidden">
-          <Wordmark className="block text-sidebar-heading" />
-          <span className="block truncate font-mono text-[10px] uppercase tracking-wider text-sidebar-muted">{workspace.caption}</span>
+        <Link href={navigation[0].items[0].href} aria-label={`${appConfig.name} home`} className="min-w-0 text-sidebar-heading collapsed:hidden">
+          <BrandLogo layout="stacked" className="[&_img]:h-5" />
         </Link>
         {onToggleCollapse && (
           <button
@@ -183,9 +181,20 @@ function Sidebar({ user, pathname, navigation, workspace, showCounts, onClose, c
             </div>
           );
         })}
+        {tenant && <ProjectsNav pathname={pathname} />}
       </nav>
 
-      <div className="shrink-0 space-y-2 border-t border-sidebar-border p-3">
+      {tenant && (
+        <ul className="shrink-0 space-y-0.5 border-t border-sidebar-border px-3 pt-3">
+          {visible(FOOTER_NAVIGATION).map((item) => (
+            <li key={item.href}>
+              <SidebarLink item={item} active={isActive(pathname, item.href)} />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="shrink-0 space-y-2 border-t border-sidebar-border p-3 [ul+&]:border-t-0">
         <Link
           href={workspace.href}
           title={workspace.name}
