@@ -29,22 +29,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   const visible = (items: NavItem[]) => items.filter((item) => !item.permission || user.permissions.includes(item.permission));
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex h-16 items-center px-5">
+    <div className="clay flex h-full flex-col rounded-[28px] text-sidebar-foreground">
+      <div className="flex h-20 items-center px-5">
         <Link href={routes.dashboard}>
-          <BrandLogo inverted name={user.organization.name} logoUrl={user.organization.logoUrl} />
+          <BrandLogo name={user.organization.name} logoUrl={user.organization.logoUrl} />
         </Link>
       </div>
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="scrollbar-thin flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
         {visible(MAIN_NAVIGATION).map((item) => (
           <SidebarLink key={item.href} item={item} active={pathname === item.href || pathname.startsWith(`${item.href}/`)} />
         ))}
       </nav>
-      <div className="space-y-1 border-t border-white/10 px-3 py-4">
+      <div className="space-y-1.5 border-t border-border/70 px-3 py-4">
         {visible(SECONDARY_NAVIGATION).map((item) => (
           <SidebarLink key={item.href} item={item} active={pathname.startsWith(item.href)} />
         ))}
-        <p className="px-3 pt-3 text-[11px] text-slate-500">{appConfig.name}</p>
+        <p className="px-3 pt-3 text-[11px] font-medium text-muted">{appConfig.name}</p>
       </div>
     </div>
   );
@@ -52,27 +52,29 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen">
       <BrandingStyles color={user.organization.primaryColor} />
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 lg:block">{sidebar}</aside>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 p-4 lg:block">{sidebar}</aside>
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setMobileOpen(false)} />
-          <aside className="relative h-full w-64">{sidebar}</aside>
+          <div className="absolute inset-0 bg-[#3b2f1e]/25 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="relative h-full w-72 p-3">{sidebar}</aside>
         </div>
       )}
-      <div className="lg:pl-60">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-surface/90 px-4 backdrop-blur sm:px-6">
+      <div className="lg:pl-64">
+        <header className="sticky top-0 z-20 px-4 pt-4 sm:px-6 lg:px-8">
+          <div className="clay flex h-16 items-center justify-between gap-4 rounded-3xl px-4 backdrop-blur sm:px-5">
           <button
             type="button"
-            className="rounded-lg p-2 text-muted hover:bg-surface-muted lg:hidden"
+            className="clay-sm rounded-xl p-2 text-muted lg:hidden"
             onClick={() => setMobileOpen((open) => !open)}
             aria-label="Toggle navigation"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <div className="hidden text-sm text-muted lg:block">{user.organization.name}</div>
+          <div className="hidden text-sm font-bold text-foreground lg:block">{user.organization.name}</div>
           <div className="flex items-center gap-2">
             <NotificationBell />
             <UserMenu />
+          </div>
           </div>
         </header>
         <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">{children}</main>
@@ -87,11 +89,11 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
     <Link
       href={item.href}
       className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
-        active ? 'bg-white/10 text-white' : 'text-sidebar-foreground hover:bg-white/5 hover:text-white',
+        'flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition',
+        active ? 'bg-brand text-brand-foreground shadow-clay-brand' : 'text-sidebar-foreground hover:bg-surface-muted hover:text-foreground hover:shadow-clay-inset',
       )}
     >
-      <Icon className={cn('h-4.5 w-4.5', active && 'text-brand')} />
+      <Icon className="h-4.5 w-4.5" />
       {item.label}
     </Link>
   );
@@ -114,10 +116,10 @@ function UserMenu() {
   return (
     <Dropdown
       trigger={({ toggle }) => (
-        <button type="button" onClick={toggle} className="flex items-center gap-2 rounded-lg p-1 pr-2 hover:bg-surface-muted">
+        <button type="button" onClick={toggle} className="clay-sm flex items-center gap-2 rounded-2xl p-1 pr-3 transition hover:-translate-y-px">
           <Avatar user={user} />
           <span className="hidden text-left sm:block">
-            <span className="block text-sm font-medium leading-tight">{fullName(user)}</span>
+            <span className="block text-sm font-bold leading-tight">{fullName(user)}</span>
             <span className="block text-[11px] leading-tight text-muted">{humanize(user.role)}</span>
           </span>
         </button>
@@ -125,7 +127,7 @@ function UserMenu() {
     >
       {(close) => (
         <>
-          <div className="border-b border-border px-3 py-2">
+          <div className="mb-1 border-b border-border/70 px-3 py-2">
             <p className="truncate text-sm font-medium">{fullName(user)}</p>
             <p className="truncate text-xs text-muted">{user.email}</p>
           </div>

@@ -1,29 +1,47 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens. `--brand` is injected at runtime from env / organization settings
- * (see BrandingStyles), everything else derives from it.
+ * Design tokens — claymorphic theme. `--brand` is injected at runtime from env /
+ * organization settings (see BrandingStyles), everything else derives from it.
+ * Clay surfaces combine a soft outer drop shadow, a white top-left glow and inner
+ * highlights so panels read as puffy, pressable objects rather than flat cards.
  */
 :root {
   --brand: #2563eb;
   --brand-foreground: #ffffff;
-  --background: #f6f7fb;
-  --surface: #ffffff;
-  --surface-muted: #f1f3f8;
-  --border: #e3e6ee;
-  --foreground: #111827;
-  --muted: #6b7280;
-  --danger: #dc2626;
-  --success: #16a34a;
-  --warning: #d97706;
-  --sidebar: #0f172a;
-  --sidebar-foreground: #cbd5e1;
+  --background: #f5eedf;
+  --surface: #fbf6ec;
+  --surface-muted: #efe6d4;
+  --border: #e6dac4;
+  --foreground: #2d2a24;
+  --muted: #7a6f5f;
+  --danger: #e5484d;
+  --success: #22a06b;
+  --warning: #e08a1e;
+  --sidebar: #f7f0e2;
+  --sidebar-foreground: #6a604f;
+
+  --clay-dark: 150 122 84;
+  --clay-light: 255 251 242;
+  --clay-shadow:
+    12px 12px 28px rgb(var(--clay-dark) / 0.22), -10px -10px 24px rgb(var(--clay-light) / 0.95),
+    inset 3px 3px 6px rgb(var(--clay-light) / 0.75), inset -3px -3px 8px rgb(var(--clay-dark) / 0.1);
+  --clay-shadow-sm:
+    6px 6px 14px rgb(var(--clay-dark) / 0.2), -5px -5px 12px rgb(var(--clay-light) / 0.9),
+    inset 2px 2px 3px rgb(var(--clay-light) / 0.7), inset -2px -2px 4px rgb(var(--clay-dark) / 0.1);
+  --clay-shadow-lg:
+    24px 24px 48px rgb(var(--clay-dark) / 0.3), -12px -12px 32px rgb(var(--clay-light) / 0.6),
+    inset 4px 4px 8px rgb(var(--clay-light) / 0.8), inset -4px -4px 10px rgb(var(--clay-dark) / 0.1);
+  --clay-inset: inset 4px 4px 9px rgb(var(--clay-dark) / 0.2), inset -4px -4px 9px rgb(var(--clay-light) / 0.95);
+  --clay-brand-shadow:
+    6px 8px 16px color-mix(in srgb, var(--brand) 38%, transparent), -4px -4px 10px rgb(var(--clay-light) / 0.85),
+    inset 3px 3px 6px rgb(var(--clay-light) / 0.35), inset -3px -4px 8px rgb(0 0 0 / 0.18);
 }
 
 @theme inline {
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --color-brand-soft: color-mix(in srgb, var(--brand) 12%, white);
+  --color-brand-soft: color-mix(in srgb, var(--brand) 14%, var(--surface));
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
@@ -35,7 +53,33 @@
   --color-warning: var(--warning);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --shadow-clay: var(--clay-shadow);
+  --shadow-clay-sm: var(--clay-shadow-sm);
+  --shadow-clay-lg: var(--clay-shadow-lg);
+  --shadow-clay-inset: var(--clay-inset);
+  --shadow-clay-brand: var(--clay-brand-shadow);
+}
+
+/* Raised clay panel (cards, drawers, menus). */
+@utility clay {
+  background: linear-gradient(145deg, #fffaf1 0%, var(--surface) 55%, #f3ead9 100%);
+  box-shadow: var(--clay-shadow);
+  border: 1px solid rgb(var(--clay-light) / 0.7);
+}
+
+/* Smaller raised clay chip (buttons, tiles, board cards). */
+@utility clay-sm {
+  background: linear-gradient(145deg, #fffaf1 0%, var(--surface) 100%);
+  box-shadow: var(--clay-shadow-sm);
+  border: 1px solid rgb(var(--clay-light) / 0.7);
+}
+
+/* Pressed-in clay well (inputs, tracks, segmented controls). */
+@utility clay-inset {
+  background: var(--surface-muted);
+  box-shadow: var(--clay-inset);
+  border: 1px solid transparent;
 }
 
 html,
@@ -47,6 +91,11 @@ body {
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgb(255 214 165 / 0.35), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgb(232 170 96 / 0.12), transparent 60%),
+    var(--background);
+  background-attachment: fixed;
 }
 
 * {
@@ -54,9 +103,10 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--brand) 25%, white);
+  background: color-mix(in srgb, var(--brand) 25%, var(--surface));
 }
 
 .scrollbar-thin {
   scrollbar-width: thin;
+  scrollbar-color: rgb(var(--clay-dark) / 0.35) transparent;
 }

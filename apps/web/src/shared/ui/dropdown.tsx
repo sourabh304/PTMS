@@ -36,7 +36,7 @@ export function Dropdown({ trigger, children, align = 'right', className }: Drop
         <div
           role="menu"
           className={cn(
-            'absolute z-40 mt-2 min-w-48 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-xl',
+            'clay absolute z-40 mt-2 min-w-48 overflow-hidden rounded-2xl p-1.5',
             align === 'right' ? 'right-0' : 'left-0',
             className,
           )}
@@ -54,7 +54,7 @@ export function DropdownItem({ onClick, children, danger }: { onClick: () => voi
       type="button"
       role="menuitem"
       onClick={onClick}
-      className={cn('flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface-muted', danger && 'text-danger')}
+      className={cn('flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium transition hover:bg-surface-muted hover:shadow-clay-inset', danger && 'text-danger')}
     >
       {children}
     </button>

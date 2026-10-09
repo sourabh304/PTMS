@@ -5,9 +5,10 @@ import type { LookupCount } from '@/shared/types/api';
 import { EmptyState } from './feedback';
 
 const tooltipStyle = {
-  borderRadius: 10,
-  border: '1px solid var(--border)',
-  boxShadow: '0 8px 24px rgba(15,23,42,.08)',
+  borderRadius: 16,
+  border: '1px solid rgba(255,251,242,.85)',
+  background: 'var(--surface)',
+  boxShadow: 'var(--clay-shadow-sm)',
   fontSize: 12,
 };
 
@@ -29,7 +30,7 @@ export function DonutChart({ data, height = 220, emptyLabel = 'No data yet' }: {
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-semibold">{total}</span>
+          <span className="text-2xl font-extrabold">{total}</span>
           <span className="text-xs text-muted">total</span>
         </div>
       </div>
@@ -60,8 +61,8 @@ export function BarList({ data, emptyLabel = 'No data yet' }: { data: LookupCoun
             <span>{item.name}</span>
             <span className="font-medium tabular-nums">{item.count}</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
-            <div className="h-full rounded-full" style={{ width: `${(item.count / max) * 100}%`, backgroundColor: item.color }} />
+          <div className="clay-inset h-2.5 overflow-hidden rounded-full">
+            <div className="h-full rounded-full shadow-[inset_1px_1px_2px_rgb(255_251_242/0.5)]" style={{ width: `${(item.count / max) * 100}%`, backgroundColor: item.color }} />
           </div>
         </li>
       ))}
@@ -90,7 +91,7 @@ export function ColumnChart<T extends object>({ data, xKey, series, height = 260
           <Tooltip contentStyle={tooltipStyle} formatter={(value) => (formatValue ? formatValue(Number(value)) : String(value))} cursor={{ fill: 'var(--surface-muted)' }} />
           {series.length > 1 && <Legend wrapperStyle={{ fontSize: 12 }} />}
           {series.map((s) => (
-            <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[4, 4, 0, 0]} stackId={stacked ? 'stack' : undefined} maxBarSize={36} />
+            <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[8, 8, 8, 8]} stackId={stacked ? 'stack' : undefined} maxBarSize={36} />
           ))}
         </BarChart>
       </ResponsiveContainer>

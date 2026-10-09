@@ -43,7 +43,7 @@ export function Modal({ open, onClose, title, description, children, footer, cla
   if (!open || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 pt-[8vh] backdrop-blur-[2px]" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#3b2f1e]/25 p-4 pt-[8vh] backdrop-blur-sm" onMouseDown={onClose}>
       <div
         ref={panelRef}
         role="dialog"
@@ -51,11 +51,11 @@ export function Modal({ open, onClose, title, description, children, footer, cla
         aria-labelledby={titleId}
         tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
-        className={cn('w-full rounded-2xl bg-surface shadow-2xl outline-none', sizes[size], className)}
+        className={cn('w-full rounded-[28px] bg-surface shadow-clay-lg outline-none', sizes[size], className)}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-border/70 px-6 py-4">
           <div>
-            <h2 id={titleId} className="text-base font-semibold">
+            <h2 id={titleId} className="text-base font-bold">
               {title}
             </h2>
             {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
@@ -65,7 +65,7 @@ export function Modal({ open, onClose, title, description, children, footer, cla
           </Button>
         </div>
         <div className="px-6 py-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-border px-6 py-4">{footer}</div>}
+        {footer && <div className="flex justify-end gap-2 border-t border-border/70 px-6 py-4">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -78,7 +78,7 @@ export function Drawer({ open, onClose, title, description, children, footer, cl
   if (!open || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-[#3b2f1e]/20 p-2 backdrop-blur-sm sm:p-3" onMouseDown={onClose}>
       <div
         ref={panelRef}
         role="dialog"
@@ -86,11 +86,11 @@ export function Drawer({ open, onClose, title, description, children, footer, cl
         aria-labelledby={titleId}
         tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
-        className={cn('flex h-full w-full max-w-2xl flex-col bg-surface shadow-2xl outline-none', className)}
+        className={cn('flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-[28px] bg-surface shadow-clay-lg outline-none', className)}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-border/70 px-6 py-4">
           <div className="min-w-0">
-            <h2 id={titleId} className="truncate text-base font-semibold">
+            <h2 id={titleId} className="truncate text-base font-bold">
               {title}
             </h2>
             {description && <div className="mt-0.5 text-sm text-muted">{description}</div>}
@@ -100,7 +100,7 @@ export function Drawer({ open, onClose, title, description, children, footer, cl
           </Button>
         </div>
         <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-border px-6 py-4">{footer}</div>}
+        {footer && <div className="flex justify-end gap-2 border-t border-border/70 px-6 py-4">{footer}</div>}
       </div>
     </div>,
     document.body,

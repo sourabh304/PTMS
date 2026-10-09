@@ -43,9 +43,9 @@ export function ProjectWorkspace({ projectId, children }: { projectId: string; c
       </div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="h-9 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? 'var(--brand)' }} />
+          <span className="h-11 w-2 shrink-0 rounded-full shadow-[inset_1px_1px_2px_rgb(255_251_242/0.5),3px_3px_6px_rgb(150_122_84/0.25)]" style={{ backgroundColor: project.color ?? 'var(--brand)' }} />
           <div className="min-w-0">
-            <h1 className="flex items-center gap-2 truncate text-xl font-semibold tracking-tight">
+            <h1 className="flex items-center gap-2 truncate text-2xl font-extrabold tracking-tight">
               {project.name}
               <ColorBadge color={project.status.color} label={project.status.name} />
               {project.isArchived && <Badge tone="warning">Archived</Badge>}

@@ -64,6 +64,7 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 | Seed admin, demo data | `SEED_*` variables in `apps/api/.env` |
 | Statuses, priorities, severities | Database, per organization — **Settings → Workflow** |
 | Org name, logo, brand color, timezone, week start, working hours | Database — **Settings → Organization** |
+| Default product logo | `apps/web/public/segueit-logo.png` (path set by `NEXT_PUBLIC_LOGO_URL`; falls back to a monogram if missing) |
 | Role → permission matrix | `apps/api/src/common/constants/permissions.constants.ts` (served to the UI via `/auth/me`) |
 | Defaults for new organizations | `apps/api/src/features/lookups/lookup.defaults.ts`, `features/organizations/organization.defaults.ts` |
 

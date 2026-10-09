@@ -9,10 +9,10 @@ import {
 import { cn } from '@/shared/lib/utils';
 
 const control =
-  'w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground shadow-xs placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:bg-surface-muted disabled:opacity-70 aria-invalid:border-danger';
+  'clay-inset w-full rounded-xl px-3.5 text-sm text-foreground transition placeholder:text-muted/70 focus:border-brand/40 focus:bg-surface focus:outline-none focus:ring-4 focus:ring-brand/15 disabled:opacity-70 aria-invalid:border-danger';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, ...props }, ref) => <input ref={ref} className={cn(control, 'h-9', className)} {...props} />,
+  ({ className, ...props }, ref) => <input ref={ref} className={cn(control, 'h-10', className)} {...props} />,
 );
 Input.displayName = 'Input';
 
@@ -25,7 +25,7 @@ Textarea.displayName = 'Textarea';
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
   ({ className, children, ...props }, ref) => (
-    <select ref={ref} className={cn(control, 'h-9 pr-8', className)} {...props}>
+    <select ref={ref} className={cn(control, 'h-10 pr-8', className)} {...props}>
       {children}
     </select>
   ),
@@ -33,7 +33,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 Select.displayName = 'Select';
 
 export function Label({ className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
-  return <label className={cn('mb-1.5 block text-xs font-semibold text-foreground/80', className)} {...props} />;
+  return <label className={cn('mb-1.5 block text-xs font-bold text-foreground/80', className)} {...props} />;
 }
 
 interface FieldProps {
@@ -70,7 +70,7 @@ export function Field({ label, htmlFor, error, hint, required, className, childr
 export const Checkbox = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { label: ReactNode }>(
   ({ label, className, id, ...props }, ref) => (
     <label htmlFor={id} className={cn('inline-flex cursor-pointer items-center gap-2 text-sm', className)}>
-      <input ref={ref} id={id} type="checkbox" className="h-4 w-4 rounded border-border accent-[var(--brand)]" {...props} />
+      <input ref={ref} id={id} type="checkbox" className="h-4 w-4 rounded-md border-border accent-[var(--brand)]" {...props} />
       {label}
     </label>
   ),

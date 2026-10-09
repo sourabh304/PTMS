@@ -35,11 +35,11 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
           type="button"
           disabled={disabled}
           onClick={toggleOpen}
-          className="flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 text-left text-sm shadow-xs focus:border-brand focus:outline-none disabled:opacity-60"
+          className="flex min-h-9 w-full flex-wrap items-center gap-1.5 clay-inset rounded-xl px-2 py-1 text-left text-sm focus:border-brand focus:outline-none disabled:opacity-60"
         >
           {selected.length ? (
             selected.map((user) => (
-              <span key={user.id} className="inline-flex items-center gap-1 rounded-md bg-surface-muted py-0.5 pl-0.5 pr-1.5 text-xs">
+              <span key={user.id} className="inline-flex items-center gap-1 clay-sm rounded-full py-0.5 pl-0.5 pr-2 text-xs font-medium">
                 <Avatar user={user} size="xs" className="ring-0" />
                 {fullName(user)}
                 <X

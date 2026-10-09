@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { appConfig } from '@/shared/config/env';
 import { BrandingStyles } from '@/shared/components/branding-styles';
 import { AppProviders } from '@/shared/providers/app-providers';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta', display: 'swap' });
 
 export const metadata: Metadata = {
   title: { default: appConfig.name, template: `%s · ${appConfig.name}` },
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={jakarta.variable}>
       <body>
         <BrandingStyles />
         <AppProviders>{children}</AppProviders>

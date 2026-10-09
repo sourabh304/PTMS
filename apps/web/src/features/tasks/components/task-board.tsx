@@ -170,15 +170,15 @@ interface ColumnProps {
 function BoardColumn({ id, title, color, tasks, disabled, onOpen, onAdd }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id, disabled });
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-xl bg-surface-muted/70">
+    <div className="clay-inset flex w-72 shrink-0 flex-col rounded-3xl">
       <div className="flex items-center justify-between px-3 py-3">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
           {title}
-          <span className="rounded-full bg-surface px-2 text-xs font-medium text-muted">{tasks.length}</span>
+          <span className="clay-sm rounded-full px-2 text-xs font-bold text-muted">{tasks.length}</span>
         </div>
         {onAdd && (
-          <button type="button" onClick={onAdd} aria-label={`Add task to ${title}`} className="rounded-md p-1 text-muted hover:bg-surface hover:text-foreground">
+          <button type="button" onClick={onAdd} aria-label={`Add task to ${title}`} className="rounded-xl p-1.5 text-muted transition hover:bg-surface hover:text-foreground hover:shadow-clay-sm">
             <Plus className="h-4 w-4" />
           </button>
         )}
@@ -214,7 +214,7 @@ function TaskCard({ task, dragging }: { task: Task; dragging?: boolean }) {
   const closed = task.status.category === StatusCategory.CLOSED;
   const overdue = isOverdue(task.dueDate, closed);
   return (
-    <div className={cn('cursor-pointer rounded-lg border border-border bg-surface p-3 shadow-xs transition hover:shadow-md', dragging && 'rotate-2 shadow-xl')}>
+    <div className={cn('clay-sm cursor-pointer rounded-2xl p-3.5 transition hover:-translate-y-0.5', dragging && 'rotate-2 shadow-clay-lg')}>
       <div className="mb-1 flex items-center justify-between text-xs text-muted">
         <span>
           {task.project.key}-{task.number}

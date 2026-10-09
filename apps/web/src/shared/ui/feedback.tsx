@@ -13,7 +13,7 @@ export function Spinner({ className, label = 'Loading' }: { className?: string; 
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-surface-muted', className)} />;
+  return <div className={cn('clay-inset animate-pulse rounded-xl', className)} />;
 }
 
 interface EmptyStateProps {
@@ -27,10 +27,10 @@ interface EmptyStateProps {
 export function EmptyState({ title, description, action, icon, className }: EmptyStateProps) {
   return (
     <div className={cn('flex flex-col items-center justify-center px-6 py-12 text-center', className)}>
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand">
+      <div className="clay-sm mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-brand">
         {icon ?? <Inbox className="h-6 w-6" />}
       </div>
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-sm font-bold">{title}</h3>
       {description && <p className="mt-1 max-w-sm text-sm text-muted">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -40,7 +40,7 @@ export function EmptyState({ title, description, action, icon, className }: Empt
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div role="alert" className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-danger">
+      <div className="clay-sm flex h-14 w-14 items-center justify-center rounded-2xl text-danger">
         <AlertTriangle className="h-6 w-6" />
       </div>
       <p className="max-w-md text-sm text-foreground/80">{message}</p>

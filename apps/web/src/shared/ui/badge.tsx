@@ -4,9 +4,9 @@ import { cn } from '@/shared/lib/utils';
 const tones = {
   neutral: 'bg-surface-muted text-foreground/80',
   brand: 'bg-brand-soft text-brand',
-  success: 'bg-green-50 text-green-700',
-  warning: 'bg-amber-50 text-amber-700',
-  danger: 'bg-red-50 text-red-700',
+  success: 'bg-emerald-100/80 text-emerald-700',
+  warning: 'bg-amber-100/80 text-amber-700',
+  danger: 'bg-rose-100/80 text-rose-700',
 } as const;
 
 interface BadgeProps {
@@ -17,7 +17,7 @@ interface BadgeProps {
 
 export function Badge({ children, tone = 'neutral', className }: BadgeProps) {
   return (
-    <span className={cn('inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium', tones[tone], className)}>
+    <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-[inset_1px_1px_2px_rgb(255_251_242/0.8),inset_-1px_-1px_2px_rgb(0_0_0/0.06)]', tones[tone], className)}>
       {children}
     </span>
   );
@@ -43,8 +43,8 @@ export function ColorBadge({ color, label, className, variant = 'pill' }: ColorB
   }
   return (
     <span
-      className={cn('inline-flex max-w-full items-center truncate rounded-md px-2 py-0.5 text-xs font-medium', className)}
-      style={{ backgroundColor: `color-mix(in srgb, ${color} 14%, white)`, color }}
+      className={cn('inline-flex max-w-full items-center truncate rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-[inset_1px_1px_2px_rgb(255_251_242/0.8),inset_-1px_-1px_2px_rgb(0_0_0/0.06)]', className)}
+      style={{ backgroundColor: `color-mix(in srgb, ${color} 16%, var(--surface))`, color }}
     >
       {label}
     </span>

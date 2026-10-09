@@ -12,16 +12,16 @@ export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>)
 export function Th({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
-      className={cn('whitespace-nowrap border-b border-border bg-surface-muted/60 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted', className)}
+      className={cn('whitespace-nowrap border-b border-border/70 bg-surface-muted/50 px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-muted', className)}
       {...props}
     />
   );
 }
 
 export function Td({ className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn('border-b border-border px-4 py-3 align-middle', className)} {...props} />;
+  return <td className={cn('border-b border-border/60 px-4 py-3 align-middle', className)} {...props} />;
 }
 
 export function Tr({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn('transition hover:bg-surface-muted/50', className)} {...props} />;
+  return <tr className={cn('transition hover:bg-brand-soft/40', className)} {...props} />;
 }

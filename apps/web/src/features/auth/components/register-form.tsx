@@ -55,7 +55,7 @@ function RegisterFormFields({ minLength }: { minLength: number }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       {register.isError && (
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div role="alert" className="clay-inset rounded-xl px-3.5 py-2.5 text-sm font-medium text-rose-700">
           {errorMessage(register.error)}
         </div>
       )}

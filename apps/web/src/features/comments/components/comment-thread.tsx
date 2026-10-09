@@ -70,7 +70,7 @@ export function CommentThread({ target }: { target: CommentTarget }) {
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-1 whitespace-pre-wrap rounded-lg bg-surface-muted px-3 py-2 text-sm">{comment.body}</p>
+                  <p className="mt-1 whitespace-pre-wrap clay-inset rounded-2xl px-3.5 py-2.5 text-sm">{comment.body}</p>
                 )}
               </div>
             </li>

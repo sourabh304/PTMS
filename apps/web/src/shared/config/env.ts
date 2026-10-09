@@ -13,6 +13,8 @@ export const appConfig = {
   tagline: process.env.NEXT_PUBLIC_APP_TAGLINE ?? '',
   companyName: process.env.NEXT_PUBLIC_COMPANY_NAME ?? '',
   brandColor: process.env.NEXT_PUBLIC_BRAND_COLOR ?? '#2563eb',
+  /** Default product logo served from apps/web/public; organizations can override it. */
+  logoUrl: process.env.NEXT_PUBLIC_LOGO_URL ?? '/segueit-logo.png',
   apiBasePath: process.env.NEXT_PUBLIC_API_BASE_PATH ?? '/api',
   defaultPageSize: toNumber(process.env.NEXT_PUBLIC_DEFAULT_PAGE_SIZE, 20),
   boardPageSize: toNumber(process.env.NEXT_PUBLIC_BOARD_PAGE_SIZE, 200),

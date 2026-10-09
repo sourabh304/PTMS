@@ -61,7 +61,7 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
               <Metric label="Overdue" value={data.milestones.overdue} danger={data.milestones.overdue > 0} />
             </div>
             {data.milestones.next ? (
-              <div className="flex items-center gap-3 rounded-lg bg-surface-muted p-3 text-sm">
+              <div className="clay-inset flex items-center gap-3 rounded-2xl p-3 text-sm">
                 <Flag className="h-4 w-4 text-brand" />
                 <div>
                   <p className="font-medium">{data.milestones.next.name}</p>
@@ -145,7 +145,7 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
 
 function Metric({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
   return (
-    <div className="rounded-lg bg-surface-muted py-2">
+    <div className="clay-sm rounded-2xl py-2.5">
       <p className={`text-xl font-semibold ${danger ? 'text-danger' : ''}`}>{value}</p>
       <p className="text-xs text-muted">{label}</p>
     </div>

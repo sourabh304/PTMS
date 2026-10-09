@@ -21,13 +21,13 @@ export function Avatar({ user, size = 'sm', className }: { user: AvatarUser; siz
   const label = fullName(user);
   if (user.avatarUrl) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={user.avatarUrl} alt={label} title={label} className={cn('rounded-full object-cover ring-2 ring-surface', sizes[size], className)} />;
+    return <img src={user.avatarUrl} alt={label} title={label} className={cn('rounded-full object-cover ring-2 ring-surface shadow-clay-sm', sizes[size], className)} />;
   }
   return (
     <span
       title={label}
       aria-label={label}
-      className={cn('inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-surface', sizes[size], className)}
+      className={cn('inline-flex shrink-0 items-center justify-center rounded-full font-bold text-white ring-2 ring-surface shadow-[3px_3px_6px_rgb(150_122_84/0.25),inset_2px_2px_3px_rgb(255_251_242/0.35),inset_-2px_-2px_4px_rgb(0_0_0/0.15)]', sizes[size], className)}
       style={{ backgroundColor: colorFor(user) }}
     >
       {initials(user)}
@@ -45,7 +45,7 @@ export function AvatarGroup({ users, max = 3, size = 'xs' }: { users: AvatarUser
         <Avatar key={`${fullName(user)}-${index}`} user={user} size={size} />
       ))}
       {rest > 0 && (
-        <span className={cn('inline-flex items-center justify-center rounded-full bg-surface-muted font-semibold text-muted ring-2 ring-surface', sizes[size])}>
+        <span className={cn('inline-flex items-center justify-center rounded-full bg-surface-muted font-bold text-muted ring-2 ring-surface shadow-clay-sm', sizes[size])}>
           +{rest}
         </span>
       )}

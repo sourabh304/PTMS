@@ -183,7 +183,7 @@ function TaskDetailBody({ task, onClose, onOpenTask }: { task: TaskDetail; onClo
         }
       >
         {task.subtasks.length ? (
-          <ul className="divide-y divide-border rounded-lg border border-border">
+          <ul className="clay-inset divide-y divide-border/70 rounded-2xl">
             {task.subtasks.map((sub) => (
               <li key={sub.id}>
                 <button type="button" onClick={() => onOpenTask(sub.id)} className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-surface-muted">
@@ -338,7 +338,7 @@ function DependencyList({
   onRemove?: (dependencyId: string) => void;
 }) {
   return (
-    <div className="rounded-lg border border-border p-3">
+    <div className="clay-sm rounded-2xl p-3.5">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
       {items.length ? (
         <ul className="space-y-1.5">
