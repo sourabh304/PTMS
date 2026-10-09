@@ -47,7 +47,3 @@ export const permissionsForRole = (role: string): readonly Permission[] =>
 
 export const hasPermission = (role: string, permission: Permission): boolean =>
   permissionsForRole(role).includes(permission);
-
-/** Role permissions plus the platform permissions of a root admin. */
-export const permissionsForUser = (user: { role: string; isRootAdmin: boolean }): readonly Permission[] =>
-  user.isRootAdmin ? [...permissionsForRole(user.role), ...ROOT_ONLY_PERMISSIONS] : permissionsForRole(user.role);

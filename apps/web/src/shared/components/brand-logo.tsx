@@ -1,6 +1,3 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
 import { appConfig } from '@/shared/config/env';
 import { cn } from '@/shared/lib/utils';
 
@@ -14,7 +11,6 @@ interface BrandLogoProps {
   inverted?: boolean;
   /** Logo only, without the name. */
   compact?: boolean;
-  size?: 'md' | 'lg';
 }
 
 /**

@@ -68,8 +68,8 @@ export function BarList({ data, emptyLabel = 'No data yet' }: { data: LookupCoun
             <span>{item.name}</span>
             <span className="font-medium tabular-nums text-foreground">{item.count}</span>
           </div>
-          <div className="clay-inset h-2.5 overflow-hidden rounded-full">
-            <div className="h-full rounded-full shadow-[inset_1px_1px_2px_rgb(255_251_242/0.5)]" style={{ width: `${(item.count / max) * 100}%`, backgroundColor: item.color }} />
+          <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
+            <div className="h-full rounded-full" style={{ width: `${(item.count / max) * 100}%`, backgroundColor: item.color }} />
           </div>
         </li>
       ))}
@@ -98,7 +98,7 @@ export function ColumnChart<T extends object>({ data, xKey, series, height = 260
           <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipItemStyle} formatter={(value) => (formatValue ? formatValue(Number(value)) : String(value))} cursor={{ fill: 'var(--surface-muted)' }} />
           {series.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: 'var(--muted)' }} />}
           {series.map((s) => (
-            <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[8, 8, 8, 8]} stackId={stacked ? 'stack' : undefined} maxBarSize={36} />
+            <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[4, 4, 0, 0]} stackId={stacked ? 'stack' : undefined} maxBarSize={36} />
           ))}
         </BarChart>
       </ResponsiveContainer>

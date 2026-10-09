@@ -45,8 +45,6 @@ model User {
   avatarUrl      String?
   role           String
   isActive       Boolean   @default(true)
-  /// Platform-wide super administrator; the only account allowed to create workspaces.
-  isRootAdmin    Boolean   @default(false)
   hourlyRate     Float?
   lastLoginAt    DateTime?
   createdAt      DateTime  @default(now())

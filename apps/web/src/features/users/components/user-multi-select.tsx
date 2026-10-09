@@ -42,7 +42,7 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
         >
           {selected.length ? (
             selected.map((user) => (
-              <span key={user.id} className="inline-flex items-center gap-1 clay-sm rounded-full py-0.5 pl-0.5 pr-2 text-xs font-medium">
+              <span key={user.id} className="inline-flex items-center gap-1 rounded-md bg-surface-muted py-0.5 pl-0.5 pr-1.5 text-xs">
                 <Avatar user={user} size="xs" className="ring-0" />
                 {fullName(user)}
                 <X

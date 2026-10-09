@@ -4,7 +4,6 @@ export interface AuthenticatedUser {
   email: string;
   organizationId: string;
   role: string;
-  isRootAdmin: boolean;
   firstName: string;
   lastName: string;
 }

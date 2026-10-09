@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import { Permission, permissionsForUser } from '../constants/permissions.constants';
+import { hasPermission, Permission } from '../constants/permissions.constants';
 import { PERMISSIONS_KEY } from '../decorators/require-permissions.decorator';
 import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 
@@ -19,8 +19,7 @@ export class PermissionsGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest<Request & { user?: AuthenticatedUser }>();
-    const granted = user ? permissionsForUser(user) : [];
-    if (!user || !required.every((permission) => granted.includes(permission))) {
+    if (!user || !required.every((permission) => hasPermission(user.role, permission))) {
       throw new ForbiddenException('You do not have permission to perform this action');
     }
     return true;

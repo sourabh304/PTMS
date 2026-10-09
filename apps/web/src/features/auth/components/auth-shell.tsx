@@ -12,9 +12,6 @@ const LEGAL_LINKS = [
   { label: 'Security', href: appConfig.securityUrl },
 ].filter((link) => link.href);
 
-const CLAY_ICON =
-  'shadow-[5px_6px_12px_rgb(150_122_84/0.28),inset_2px_2px_4px_rgb(255_251_242/0.6),inset_-2px_-3px_6px_rgb(0_0_0/0.12)]';
-
 export function AuthShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   const year = new Date().getFullYear();
   return (

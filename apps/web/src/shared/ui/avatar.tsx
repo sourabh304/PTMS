@@ -47,7 +47,7 @@ export function AvatarGroup({ users, max = 3, size = 'xs' }: { users: AvatarUser
         <Avatar key={`${fullName(user)}-${index}`} user={user} size={size} />
       ))}
       {rest > 0 && (
-        <span className={cn('inline-flex items-center justify-center rounded-full bg-surface-muted font-bold text-muted ring-2 ring-surface shadow-clay-sm', sizes[size])}>
+        <span className={cn('inline-flex items-center justify-center rounded-full bg-surface-muted font-semibold text-muted ring-2 ring-surface', sizes[size])}>
           +{rest}
         </span>
       )}

@@ -178,7 +178,7 @@ function BoardColumn({ id, title, color, tasks, disabled, onOpen, onAdd }: Colum
         <div className="flex items-center gap-2 text-sm font-semibold">
           <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
           {title}
-          <span className="clay-sm rounded-full px-2 text-xs font-bold text-muted">{tasks.length}</span>
+          <span className="rounded-full bg-surface px-2 text-xs font-medium text-muted">{tasks.length}</span>
         </div>
         {onAdd && (
           <button type="button" onClick={onAdd} aria-label={`Add task to ${title}`} className="rounded-md p-1 text-muted hover:bg-surface hover:text-foreground">
