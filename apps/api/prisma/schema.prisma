@@ -40,6 +40,8 @@ model User {
   jobTitle       String?
   avatarUrl      String?
   role           String
+  /// Platform-wide administrator (the setup admin): the only one who can create and list workspaces.
+  isRootAdmin    Boolean   @default(false)
   isActive       Boolean   @default(true)
   hourlyRate     Float?
   lastLoginAt    DateTime?

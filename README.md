@@ -21,7 +21,7 @@ npm run setup   # creates env files with random secrets, installs, creates & see
 npm run dev     # API on http://localhost:4000, web on http://localhost:3000
 ```
 
-Sign in with the administrator defined by `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
+Sign in with the root administrator defined by `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
 in `apps/api/.env`. When `SEED_DEMO_DATA=true`, demo users share `SEED_DEMO_USER_PASSWORD`
 (e.g. `priya.sharma@<admin email domain>`). **Change these values before any real deployment.**
 
@@ -42,7 +42,7 @@ Change settings with environment variables or a `.env` file next to `docker-comp
 
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@segueit.com` / `ChangeMe@123` | First administrator (created on first start only) |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@segueit.com` / `ChangeMe@123` | Root administrator, the only one who can create workspaces (created on first start only) |
 | `SEED_DEMO_DATA` | `false` | `true` adds sample users and projects on first start |
 | `WEB_PORT` | `3000` | Port on your machine |
 | `COOKIE_SECURE` | `false` | Set `true` when served over HTTPS |
@@ -76,6 +76,7 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Dashboards** – organization dashboard and per-project overview (status mix, priorities, workload, budget burn).
 - **Reports** – portfolio health (on track / at risk / off track) with CSV export, resource utilization vs capacity, time analysis, issue trends.
 - **Activity & notifications** – audit trail per project and in-app notifications for assignments, comments, reviews.
+- **Workspaces** – each company or team gets its own isolated workspace. There is no public sign-up: only the **root administrator** (the setup admin, `SEED_ADMIN_EMAIL`) can create workspaces and their first owner, under **Settings → Workspaces**, and see a list of all of them. Other owners cannot demote, deactivate or reset the password of the root administrator.
 - **Administration** – users & roles, organization branding (name, logo, brand color), timezone, working hours, and fully configurable workflows.
 - **Security** – httpOnly cookie auth, short-lived access tokens, rotating refresh tokens with reuse detection, bcrypt, Helmet, rate limiting, strict DTO validation, RBAC + project-level authorization.
 
@@ -114,18 +115,18 @@ apps/
 │     ├─ common/                guards, decorators, filters, events, pagination, validation
 │     ├─ prisma/                PrismaService
 │     └─ features/
-│        ├─ auth/  users/  organizations/  lookups/
+│        ├─ auth/  users/  organizations/  workspaces/  lookups/
 │        ├─ projects/  task-lists/  tasks/  milestones/  issues/  comments/
 │        ├─ timesheets/  activity/  notifications/
 │        └─ dashboard/  reports/  health/
 └─ web/                         Next.js App Router client
    └─ src/
       ├─ app/                   routes only (thin pages composing feature components)
-      │  ├─ (auth)/login, register
+      │  ├─ (auth)/login
       │  └─ (app)/dashboard, my-work, projects/[projectId]/{tasks,board,gantt,…}, timesheets, reports, settings, profile
       ├─ features/              auth, projects, tasks, gantt, milestones, issues, comments,
       │                         timesheets, dashboard, reports, activity, notifications,
-      │                         lookups, users, organization, task-lists, my-work
+      │                         lookups, users, organization, task-lists, my-work, workspaces
       └─ shared/                config, api client, UI kit, hooks, utils
 ```
 

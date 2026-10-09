@@ -17,7 +17,6 @@ export const envSchema = z.object({
   API_PREFIX: z.string().min(1),
   CORS_ORIGINS: z.string().default(''),
   SWAGGER_ENABLED: booleanish.default(false),
-  ALLOW_PUBLIC_REGISTRATION: booleanish.default(false),
 
   DATABASE_URL: z.string().min(1),
 

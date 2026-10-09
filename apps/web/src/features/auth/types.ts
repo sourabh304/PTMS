@@ -9,6 +9,8 @@ export interface SessionUser {
   jobTitle: string | null;
   avatarUrl: string | null;
   role: string;
+  /** Platform administrator who can create and list workspaces. */
+  isRootAdmin: boolean;
   isActive: boolean;
   hourlyRate: number | null;
   lastLoginAt: string | null;
@@ -19,7 +21,6 @@ export interface SessionUser {
 
 export interface AuthConfig {
   appName: string;
-  allowPublicRegistration: boolean;
   passwordPolicy: {
     minLength: number;
     maxLength: number;
@@ -29,10 +30,4 @@ export interface AuthConfig {
 export interface LoginInput {
   email: string;
   password: string;
-}
-
-export interface RegisterInput extends LoginInput {
-  organizationName: string;
-  firstName: string;
-  lastName: string;
 }

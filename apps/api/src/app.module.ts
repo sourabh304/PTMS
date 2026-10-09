@@ -25,6 +25,7 @@ import { TaskListsModule } from './features/task-lists/task-lists.module';
 import { TasksModule } from './features/tasks/tasks.module';
 import { TimesheetsModule } from './features/timesheets/timesheets.module';
 import { UsersModule } from './features/users/users.module';
+import { WorkspacesModule } from './features/workspaces/workspaces.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -58,6 +59,7 @@ import { PrismaModule } from './prisma/prisma.module';
     NotificationsModule,
     DashboardModule,
     ReportsModule,
+    WorkspacesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

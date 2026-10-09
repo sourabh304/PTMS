@@ -8,6 +8,7 @@ export interface User {
   jobTitle: string | null;
   avatarUrl: string | null;
   role: OrgRole;
+  isRootAdmin: boolean;
   isActive: boolean;
   hourlyRate: number | null;
   lastLoginAt: string | null;

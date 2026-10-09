@@ -26,7 +26,6 @@ const buildConfiguration = () => {
         .map((origin) => origin.trim())
         .filter(Boolean),
       swaggerEnabled: env.SWAGGER_ENABLED,
-      allowPublicRegistration: env.ALLOW_PUBLIC_REGISTRATION,
     },
     auth: {
       accessSecret: env.JWT_ACCESS_SECRET,

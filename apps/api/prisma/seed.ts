@@ -39,7 +39,13 @@ async function main() {
   const saltRounds = Number(requireEnv('BCRYPT_SALT_ROUNDS'));
   const withDemo = ['true', '1', 'yes'].includes((process.env.SEED_DEMO_DATA ?? 'false').toLowerCase());
 
-  if (await prisma.user.findUnique({ where: { email: adminEmail } })) {
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  if (existingAdmin) {
+    // Databases created before the root admin existed: promote the setup admin.
+    if (!existingAdmin.isRootAdmin) {
+      await prisma.user.update({ where: { id: existingAdmin.id }, data: { isRootAdmin: true } });
+      console.log(`✔ ${adminEmail} is now the root administrator`);
+    }
     console.log(`✔ Admin ${adminEmail} already exists - skipping seed`);
     return;
   }
@@ -66,9 +72,10 @@ async function main() {
       lastName: requireEnv('SEED_ADMIN_LAST_NAME'),
       jobTitle: 'Administrator',
       role: OrgRole.OWNER,
+      isRootAdmin: true,
     },
   });
-  console.log(`✔ Created organization "${orgName}" and owner ${adminEmail}`);
+  console.log(`✔ Created organization "${orgName}" and root administrator ${adminEmail}`);
 
   if (!withDemo) return;
 

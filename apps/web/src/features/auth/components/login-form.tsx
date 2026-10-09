@@ -1,14 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { routes } from '@/shared/config/routes';
 import { errorMessage } from '@/shared/lib/api-client';
 import { Button } from '@/shared/ui/button';
 import { Field, Input } from '@/shared/ui/form';
-import { useAuthConfig, useLogin } from '../api';
+import { useLogin } from '../api';
 import { loginSchema, type LoginValues } from '../schemas';
 import { AUTH_BUTTON, AUTH_INPUT, AuthError } from './auth-ui';
 import { PasswordInput } from './password-input';
@@ -22,7 +21,6 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useLogin();
-  const { data: config } = useAuthConfig();
   const form = useForm<LoginValues>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -47,15 +45,7 @@ export function LoginForm() {
       <Button type="submit" size="lg" className={AUTH_BUTTON} loading={form.formState.isSubmitting}>
         Sign in
       </Button>
-      <p className="text-xs text-muted">Forgot your password? Ask your admin to reset it.</p>
-      {config?.allowPublicRegistration && (
-        <p className="border-t border-border pt-5 text-sm text-muted">
-          New to {config.appName}?{' '}
-          <Link href={routes.register} className="font-medium text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground">
-            Create a workspace
-          </Link>
-        </p>
-      )}
+      <p className="text-xs text-muted">Forgot your password or need an account? Ask your administrator.</p>
     </form>
   );
 }
