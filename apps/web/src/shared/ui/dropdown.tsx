@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
+import { Popover } from './popover';
 
 interface DropdownProps {
   trigger: (props: { open: boolean; toggle: () => void }) => ReactNode;
@@ -10,41 +11,23 @@ interface DropdownProps {
   className?: string;
 }
 
-/** Minimal accessible popover menu that closes on outside click / Escape. */
+/**
+ * Accessible menu that closes on outside click / Escape. Rendered in a portal (see Popover),
+ * so scrolling tables and cards with hidden overflow never cut it off.
+ */
 export function Dropdown({ trigger, children, align = 'right', className }: DropdownProps) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (event: MouseEvent) => {
-      if (!ref.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
-    document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
   return (
-    <div ref={ref} className="relative">
-      {trigger({ open, toggle: () => setOpen((value) => !value) })}
-      {open && (
-        <div
-          role="menu"
-          className={cn(
-            'absolute z-40 mt-2 min-w-52 max-w-[calc(100vw-1.5rem)] animate-pop-in overflow-hidden rounded-ui-lg border border-border bg-surface p-1 shadow-ui-lg',
-            align === 'right' ? 'right-0 origin-top-right' : 'left-0 origin-top-left',
-            className,
-          )}
-        >
-          {children(() => setOpen(false))}
-        </div>
+    <Popover
+      align={align === 'right' ? 'end' : 'start'}
+      className={cn('min-w-52 max-w-[calc(100vw-1.5rem)] overflow-hidden p-1', className)}
+      trigger={({ ref, open, toggle }) => (
+        <span ref={ref} className="inline-flex">
+          {trigger({ open, toggle })}
+        </span>
       )}
-    </div>
+    >
+      {(close) => <div role="menu">{children(close)}</div>}
+    </Popover>
   );
 }
 

@@ -18,7 +18,7 @@ const tones = {
 
 const columns = {
   2: 'grid-cols-2',
-  3: 'grid-cols-2 sm:grid-cols-3',
+  3: 'grid-cols-3',
   4: 'grid-cols-2 lg:grid-cols-4',
 } as const;
 
@@ -38,9 +38,9 @@ export function KpiStrip({ items, className }: { items: KpiItem[]; className?: s
               {item.icon && <span className={cn('shrink-0 [&_svg]:size-3.5', tones[item.tone ?? 'brand'])}>{item.icon}</span>}
               {item.label}
             </dt>
-            <dd className="mt-1 flex min-w-0 items-baseline gap-2">
+            <dd className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-2">
               <span className="text-xl font-semibold tabular-nums tracking-tight text-foreground">{item.value}</span>
-              {item.hint && <span className="truncate text-xs text-muted">{item.hint}</span>}
+              {item.hint && <span className="max-w-full truncate text-xs text-muted">{item.hint}</span>}
             </dd>
           </div>
         ))}
