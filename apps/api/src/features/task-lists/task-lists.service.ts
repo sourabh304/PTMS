@@ -5,6 +5,7 @@ import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.in
 import { PrismaService } from '../../prisma/prisma.service';
 import { ProjectAccessService } from '../projects/project-access.service';
 import { CreateTaskListDto, UpdateTaskListDto } from './dto/task-list.dto';
+import { nextGroupColor } from './task-list.colors';
 
 const TASK_LIST_INCLUDE = {
   milestone: { select: { id: true, name: true } },
@@ -31,15 +32,16 @@ export class TaskListsService {
   async create(user: AuthenticatedUser, dto: CreateTaskListDto) {
     await this.access.assertCanEdit(user, dto.projectId);
     if (dto.milestoneId) await this.assertMilestone(dto.projectId, dto.milestoneId);
-    const last = await this.prisma.taskList.findFirst({
-      where: { projectId: dto.projectId },
-      orderBy: { position: 'desc' },
-    });
+    const [last, existing] = await Promise.all([
+      this.prisma.taskList.findFirst({ where: { projectId: dto.projectId }, orderBy: { position: 'desc' } }),
+      this.prisma.taskList.count({ where: { projectId: dto.projectId } }),
+    ]);
     const list = await this.prisma.taskList.create({
       data: {
         projectId: dto.projectId,
         name: dto.name,
         milestoneId: dto.milestoneId ?? null,
+        color: dto.color ?? nextGroupColor(existing),
         position: (last?.position ?? -1) + 1,
       },
       include: TASK_LIST_INCLUDE,
@@ -51,7 +53,7 @@ export class TaskListsService {
       entityType: EntityType.TASK_LIST,
       entityId: list.id,
       action: ActivityAction.CREATED,
-      summary: `created task list ${list.name}`,
+      summary: `created group ${list.name}`,
     });
     return list;
   }

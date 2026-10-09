@@ -23,15 +23,16 @@ export function NotificationBell() {
 
   return (
     <Dropdown
-      className="w-96"
+      // On phones the panel spans the screen under the header instead of hanging off the bell.
+      className="w-96 p-0 max-sm:fixed max-sm:inset-x-3 max-sm:top-14 max-sm:w-auto"
       trigger={({ toggle }) => (
         <button
           type="button"
           onClick={toggle}
           aria-label={`Notifications${count ? ` (${count} unread)` : ''}`}
-          className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-foreground"
+          className="relative flex size-9 items-center justify-center rounded-ui text-muted hover:bg-surface-muted hover:text-foreground"
         >
-          <Bell className="h-5 w-5" />
+          <Bell className="size-5" />
           {count > 0 && (
             <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
               {count > 99 ? '99+' : count}
@@ -53,7 +54,7 @@ function NotificationPanel({ onOpen, onMarkAll, hasUnread }: { onOpen: (n: Notif
         <span className="text-sm font-semibold">Notifications</span>
         {hasUnread && (
           <Button variant="ghost" size="sm" onClick={onMarkAll}>
-            <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+            <CheckCheck className="size-3.5" /> Mark all read
           </Button>
         )}
       </div>
@@ -61,7 +62,7 @@ function NotificationPanel({ onOpen, onMarkAll, hasUnread }: { onOpen: (n: Notif
         {isLoading ? (
           <Spinner />
         ) : !data?.data.length ? (
-          <EmptyState title="You're all caught up" description="New assignments and comments will show up here." />
+          <EmptyState title="You're all caught up" description="Assignments, status changes, comments and due date reminders show up here." />
         ) : (
           data.data.map((notification) => (
             <button
@@ -70,7 +71,7 @@ function NotificationPanel({ onOpen, onMarkAll, hasUnread }: { onOpen: (n: Notif
               onClick={() => onOpen(notification)}
               className={cn('flex w-full gap-3 border-b border-border px-4 py-3 text-left last:border-0 hover:bg-surface-muted', !notification.readAt && 'bg-brand-soft/40')}
             >
-              <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', notification.readAt ? 'bg-transparent' : 'bg-brand')} />
+              <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', notification.readAt ? 'bg-transparent' : 'bg-brand')} />
               <span className="min-w-0">
                 <span className="block text-sm font-medium">{notification.title}</span>
                 {notification.body && <span className="block truncate text-xs text-muted">{notification.body}</span>}

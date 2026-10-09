@@ -5,11 +5,11 @@ import { KeyRound, Pencil, Plus, Search, UserCheck, UserX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useAuthConfig, useSession } from '@/features/auth/api';
+import { usePasswordMinLength, useSession } from '@/features/auth/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { passwordSchema } from '@/features/auth/schemas';
 import { appConfig } from '@/shared/config/env';
-import { ORG_ROLES, Permission, type OrgRole } from '@/shared/constants/domain';
+import { ORG_ADMIN_ROLES, ORG_ROLES, Permission, type OrgRole } from '@/shared/constants/domain';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { errorMessage } from '@/shared/lib/api-client';
 import { formatDateTime, fullName, humanize } from '@/shared/lib/utils';
@@ -56,14 +56,14 @@ export function UserManagement() {
         actions={
           canManage && (
             <Button size="sm" onClick={() => setEditing('new')}>
-              <Plus className="h-3.5 w-3.5" /> Add user
+              <Plus className="size-3.5" /> Add user
             </Button>
           )
         }
       />
       <div className="flex flex-wrap gap-3 border-b border-border px-5 py-3">
         <div className="relative w-full max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <Input className="pl-9" placeholder="Search people" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select className="w-40" value={role} onChange={(e) => setRole(e.target.value)}>
@@ -112,7 +112,7 @@ export function UserManagement() {
                     </div>
                   </Td>
                   <Td>
-                    <Badge tone={user.role === 'OWNER' || user.role === 'ADMIN' ? 'brand' : 'neutral'}>{humanize(user.role)}</Badge>
+                    <Badge tone={ORG_ADMIN_ROLES.includes(user.role) ? 'brand' : 'neutral'}>{humanize(user.role)}</Badge>
                   </Td>
                   <Td className="text-muted">{user.jobTitle ?? '—'}</Td>
                   <Td>{user.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Deactivated</Badge>}</Td>
@@ -121,10 +121,10 @@ export function UserManagement() {
                     <Td>
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" aria-label="Edit user" onClick={() => setEditing(user)}>
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="size-4" />
                         </Button>
                         <Button variant="ghost" size="icon" aria-label="Reset password" onClick={() => setResetting(user)}>
-                          <KeyRound className="h-4 w-4" />
+                          <KeyRound className="size-4" />
                         </Button>
                         {user.id !== session?.id && (
                           <Button
@@ -133,7 +133,7 @@ export function UserManagement() {
                             aria-label={user.isActive ? 'Deactivate' : 'Reactivate'}
                             onClick={() => update.mutate({ id: user.id, isActive: !user.isActive })}
                           >
-                            {user.isActive ? <UserX className="h-4 w-4 text-danger" /> : <UserCheck className="h-4 w-4 text-success" />}
+                            {user.isActive ? <UserX className="size-4 text-danger" /> : <UserCheck className="size-4 text-success" />}
                           </Button>
                         )}
                       </div>
@@ -169,6 +169,7 @@ function UserFormModal({ user, onClose, isSelf }: { user: User | 'new' | null; o
   const create = useCreateUser();
   const update = useUpdateUser();
   const minPasswordLength = usePasswordMinLength();
+  const roleLocked = isSelf;
   const form = useForm<UserValues>({ resolver: zodResolver(userSchema) });
   const { errors } = form.formState;
 
@@ -179,7 +180,7 @@ function UserFormModal({ user, onClose, isSelf }: { user: User | 'new' | null; o
       firstName: existing?.firstName ?? '',
       lastName: existing?.lastName ?? '',
       jobTitle: existing?.jobTitle ?? '',
-      role: existing?.role ?? 'MEMBER',
+      role: existing?.role ?? 'EMPLOYEE',
       hourlyRate: existing?.hourlyRate?.toString() ?? '',
       password: '',
     });
@@ -197,7 +198,7 @@ function UserFormModal({ user, onClose, isSelf }: { user: User | 'new' | null; o
       if (!parsed.success) return form.setError('password', { message: parsed.error.issues[0]?.message });
       create.mutate({ ...base, email: values.email, role: values.role, password: parsed.data }, { onSuccess: onClose });
     } else if (existing) {
-      update.mutate({ id: existing.id, ...base, ...(isSelf ? {} : { role: values.role }) }, { onSuccess: onClose });
+      update.mutate({ id: existing.id, ...base, ...(roleLocked ? {} : { role: values.role }) }, { onSuccess: onClose });
     }
   });
 
@@ -227,8 +228,8 @@ function UserFormModal({ user, onClose, isSelf }: { user: User | 'new' | null; o
         <Field label="Email" required error={errors.email?.message} className="sm:col-span-2">
           <Input type="email" disabled={!isNew} {...form.register('email')} />
         </Field>
-        <Field label="Role" hint={isSelf ? 'You cannot change your own role' : undefined}>
-          <Select disabled={isSelf} {...form.register('role')}>
+        <Field label="Role" hint={isSelf ? 'You cannot change your own role' : roleLocked ? 'The root administrator always stays an Admin' : 'Admin: manages people, projects and settings. Employee: works on the projects they are added to.'}>
+          <Select disabled={roleLocked} {...form.register('role')}>
             {ORG_ROLES.map((r) => (
               <option key={r} value={r}>
                 {humanize(r)}
@@ -295,7 +296,3 @@ function ResetPasswordModal({ user, onClose }: { user: User | null; onClose: () 
 }
 
 /** Password policy published by the API (the API validates again on submit). */
-function usePasswordMinLength(): number {
-  const { data } = useAuthConfig();
-  return data?.passwordPolicy.minLength ?? 1;
-}

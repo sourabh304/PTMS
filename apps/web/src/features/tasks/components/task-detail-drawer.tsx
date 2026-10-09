@@ -177,13 +177,13 @@ function TaskDetailBody({ task, onClose, onOpenTask }: { task: TaskDetail; onClo
         action={
           canEdit && (
             <Button size="sm" variant="secondary" onClick={() => setAddingSubtask(true)}>
-              <Plus className="h-3.5 w-3.5" /> Add
+              <Plus className="size-3.5" /> Add
             </Button>
           )
         }
       >
         {task.subtasks.length ? (
-          <ul className="clay-inset divide-y divide-border/70 rounded-2xl">
+          <ul className="divide-y divide-border rounded-ui border border-border">
             {task.subtasks.map((sub) => (
               <li key={sub.id}>
                 <button type="button" onClick={() => onOpenTask(sub.id)} className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-surface-muted">
@@ -209,7 +209,7 @@ function TaskDetailBody({ task, onClose, onOpenTask }: { task: TaskDetail; onClo
         action={
           canEdit && (
             <Button size="sm" variant="secondary" onClick={() => setLoggingTime(true)}>
-              <Clock className="h-3.5 w-3.5" /> Log time
+              <Clock className="size-3.5" /> Log time
             </Button>
           )
         }
@@ -230,7 +230,7 @@ function TaskDetailBody({ task, onClose, onOpenTask }: { task: TaskDetail; onClo
       {canEdit && (
         <div className="border-t border-border pt-4">
           <Button variant="ghost" className="text-danger" onClick={() => setConfirmDelete(true)}>
-            <Trash2 className="h-4 w-4" /> Delete task
+            <Trash2 className="size-4" /> Delete task
           </Button>
         </div>
       )}
@@ -265,7 +265,7 @@ function DependenciesSection({ task, canEdit, onOpenTask }: { task: TaskDetail; 
         canEdit &&
         !adding && (
           <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
-            <Link2 className="h-3.5 w-3.5" /> Add blocker
+            <Link2 className="size-3.5" /> Add blocker
           </Button>
         )
       }
@@ -338,7 +338,7 @@ function DependencyList({
   onRemove?: (dependencyId: string) => void;
 }) {
   return (
-    <div className="clay-sm rounded-2xl p-3.5">
+    <div className="rounded-ui border border-border p-3">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
       {items.length ? (
         <ul className="space-y-1.5">
@@ -353,7 +353,7 @@ function DependencyList({
               <ColorBadge color={task.status.color} label={task.status.name} variant="dot" />
               {onRemove && (
                 <button type="button" aria-label="Remove dependency" onClick={() => onRemove(dependencyId)} className="text-muted hover:text-danger">
-                  <X className="h-3.5 w-3.5" />
+                  <X className="size-3.5" />
                 </button>
               )}
             </li>

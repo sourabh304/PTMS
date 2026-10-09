@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { Prisma, TimeEntry } from '@prisma/client';
 import { ActivityAction, ApprovalStatus, EntityType, NotificationType } from '../../common/constants/domain.constants';
 import { hasPermission, Permission } from '../../common/constants/permissions.constants';
-import { isOrgAdmin, ProjectRole } from '../../common/constants/roles.constants';
+import { isOrgAdmin, OrgRole, ProjectRole } from '../../common/constants/roles.constants';
 import { NotificationLinks } from '../../common/events/domain-events';
 import { EventPublisher } from '../../common/events/event-publisher.service';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
@@ -25,6 +25,8 @@ const TIME_ENTRY_INCLUDE = {
   task: { select: { id: true, number: true, title: true } },
   issue: { select: { id: true, number: true, title: true } },
 } satisfies Prisma.TimeEntryInclude;
+
+type TimeEntryWithRelations = Prisma.TimeEntryGetPayload<{ include: typeof TIME_ENTRY_INCLUDE }>;
 
 @Injectable()
 export class TimesheetsService {
@@ -101,6 +103,7 @@ export class TimesheetsService {
       include: TIME_ENTRY_INCLUDE,
     });
     this.recordActivity(user, entry, ActivityAction.CREATED, `logged ${this.hours(entry.minutes)} on ${entry.project.name}`);
+    await this.requestApproval(user, entry);
     return entry;
   }
 
@@ -108,12 +111,14 @@ export class TimesheetsService {
     const entry = await this.findVisible(user, id);
     this.assertCanModify(user, entry);
     await this.assertRelations(entry.projectId, dto);
-    return this.prisma.timeEntry.update({
+    const updated = await this.prisma.timeEntry.update({
       where: { id },
       // Any edit sends the entry back for approval.
       data: { ...dto, approvalStatus: ApprovalStatus.PENDING, approvedById: null, approvedAt: null },
       include: TIME_ENTRY_INCLUDE,
     });
+    await this.requestApproval(user, updated);
+    return updated;
   }
 
   async remove(user: AuthenticatedUser, id: string): Promise<void> {
@@ -206,6 +211,31 @@ export class TimesheetsService {
     if (dto.issueId && !(await this.prisma.issue.count({ where: { id: dto.issueId, projectId } }))) {
       throw new BadRequestException('Issue does not belong to this project');
     }
+  }
+
+  /** Tells everyone who can approve this entry (admins, the project owner and managers) that it is waiting. */
+  private async requestApproval(actor: AuthenticatedUser, entry: TimeEntryWithRelations): Promise<void> {
+    const approvers = await this.prisma.user.findMany({
+      where: {
+        organizationId: actor.organizationId,
+        isActive: true,
+        OR: [
+          { role: OrgRole.ADMIN },
+          { ownedProjects: { some: { id: entry.projectId } } },
+          { memberships: { some: { projectId: entry.projectId, role: ProjectRole.MANAGER } } },
+        ],
+      },
+      select: { id: true },
+    });
+    const day = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(entry.date);
+    this.events.notify({
+      recipientIds: approvers.map((approver) => approver.id),
+      actorId: actor.id,
+      type: NotificationType.TIME_ENTRY_SUBMITTED,
+      title: 'Time waiting for your approval',
+      body: `${fullName(entry.user)} logged ${this.hours(entry.minutes)} on ${entry.project.name} for ${day}`,
+      link: NotificationLinks.projectTimesheet(entry.projectId),
+    });
   }
 
   private hours(minutes: number): string {

@@ -27,6 +27,20 @@ export function formatDate(value: DateInput, pattern: string = appConfig.dateFor
   return date ? format(asCalendarDate(date), pattern) : '—';
 }
 
+/** Compact calendar date for dense UI such as table cells. */
+export function formatShortDate(value: DateInput): string {
+  return formatDate(value, appConfig.shortDateFormat);
+}
+
+/** Whole days from today to the given calendar date (negative when in the past). */
+export function daysFromToday(value: DateInput): number | null {
+  const date = toDate(value);
+  if (!date) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((asCalendarDate(date).getTime() - today.getTime()) / 86_400_000);
+}
+
 export function formatDateTime(value: DateInput): string {
   const date = toDate(value);
   return date ? format(date, `${appConfig.dateFormat}, HH:mm`) : '—';
@@ -64,6 +78,15 @@ export function formatMinutes(minutes: number | null | undefined): string {
 }
 
 export const minutesToHours = (minutes: number) => Math.round((minutes / 60) * 10) / 10;
+
+/** Formats an amount in minor units (cents) for display, e.g. 9900 USD → "$99.00". */
+export function formatMoney(amountCents: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amountCents / 100);
+  } catch {
+    return `${(amountCents / 100).toFixed(2)} ${currency}`;
+  }
+}
 
 export function fullName(user?: { firstName: string; lastName: string } | null): string {
   return user ? `${user.firstName} ${user.lastName}`.trim() : '';

@@ -133,6 +133,9 @@ export function TaskBoard({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-4">
+      <p className="text-sm text-muted">
+        {canEdit ? 'Drag a card to another column to change its status. Click a card to see its details.' : 'Click a card to see its details.'}
+      </p>
       <TaskFilters value={filters} onChange={setFilters} members={members?.map((m) => m.user)} hideStatus />
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd}>
         <div className="scrollbar-thin flex gap-4 overflow-x-auto pb-4">
@@ -170,21 +173,21 @@ interface ColumnProps {
 function BoardColumn({ id, title, color, tasks, disabled, onOpen, onAdd }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id, disabled });
   return (
-    <div className="clay-inset flex w-72 shrink-0 flex-col rounded-3xl">
+    <div className="flex w-72 shrink-0 flex-col rounded-ui-lg bg-surface-muted/70">
       <div className="flex items-center justify-between px-3 py-3">
         <div className="flex items-center gap-2 text-sm font-semibold">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+          <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
           {title}
           <span className="clay-sm rounded-full px-2 text-xs font-bold text-muted">{tasks.length}</span>
         </div>
         {onAdd && (
-          <button type="button" onClick={onAdd} aria-label={`Add task to ${title}`} className="rounded-xl p-1.5 text-muted transition hover:bg-surface hover:text-foreground hover:shadow-clay-sm">
-            <Plus className="h-4 w-4" />
+          <button type="button" onClick={onAdd} aria-label={`Add task to ${title}`} className="rounded-md p-1 text-muted hover:bg-surface hover:text-foreground">
+            <Plus className="size-4" />
           </button>
         )}
       </div>
       <SortableContext id={id} items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy} disabled={disabled}>
-        <div ref={setNodeRef} className={cn('flex min-h-32 flex-1 flex-col gap-2 rounded-b-xl px-2 pb-3 transition', isOver && 'bg-brand-soft/60')}>
+        <div ref={setNodeRef} className={cn('flex min-h-32 flex-1 flex-col gap-2 rounded-b-ui-lg px-2 pb-3 transition', isOver && 'bg-brand-soft/60')}>
           {tasks.map((task) => (
             <SortableTaskCard key={task.id} task={task} disabled={disabled} onOpen={onOpen} />
           ))}
@@ -214,9 +217,9 @@ function TaskCard({ task, dragging }: { task: Task; dragging?: boolean }) {
   const closed = task.status.category === StatusCategory.CLOSED;
   const overdue = isOverdue(task.dueDate, closed);
   return (
-    <div className={cn('clay-sm cursor-pointer rounded-2xl p-3.5 transition hover:-translate-y-0.5', dragging && 'rotate-2 shadow-clay-lg')}>
-      <div className="mb-1 flex items-center justify-between text-xs text-muted">
-        <span>
+    <div className={cn('cursor-pointer rounded-ui border border-border bg-surface p-3 shadow-ui-sm transition-[border-color,box-shadow] hover:border-border-strong hover:shadow-ui-md', dragging && 'rotate-2 shadow-ui-lg')}>
+      <div className="mb-1.5 flex items-center justify-between text-xs text-muted">
+        <span className="font-mono">
           {task.project.key}-{task.number}
         </span>
         <ColorBadge color={task.priority.color} label={task.priority.name} variant="dot" />
@@ -231,12 +234,12 @@ function TaskCard({ task, dragging }: { task: Task; dragging?: boolean }) {
         <div className="flex items-center gap-2 text-xs text-muted">
           {task.dueDate && (
             <span className={cn('inline-flex items-center gap-1', overdue && 'font-medium text-danger')}>
-              <CalendarDays className="h-3 w-3" /> {formatDate(task.dueDate, 'dd MMM')}
+              <CalendarDays className="size-3" /> {formatDate(task.dueDate, 'dd MMM')}
             </span>
           )}
           {task._count.comments > 0 && (
             <span className="inline-flex items-center gap-1">
-              <MessageSquare className="h-3 w-3" /> {task._count.comments}
+              <MessageSquare className="size-3" /> {task._count.comments}
             </span>
           )}
         </div>

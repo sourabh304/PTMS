@@ -27,8 +27,11 @@ export interface NotificationRequestedEvent {
 
 /** Client-side routes notifications deep-link to. */
 export const NotificationLinks = {
+  home: () => `/home`,
+  organizationSettings: () => `/settings/organization`,
   project: (projectId: string) => `/projects/${projectId}`,
-  task: (projectId: string, taskId: string) => `/projects/${projectId}/tasks?taskId=${taskId}`,
+  task: (projectId: string, taskId: string) => `/projects/${projectId}?taskId=${taskId}`,
   issue: (projectId: string, issueId: string) => `/projects/${projectId}/issues?issueId=${issueId}`,
   timesheet: () => `/timesheets`,
+  projectTimesheet: (projectId: string) => `/projects/${projectId}/timesheets`,
 };

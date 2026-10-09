@@ -1,17 +1,45 @@
 /**
- * Demo content used only when SEED_DEMO_DATA=true. Dates are offsets (in days)
+ * Data created by `npm run db:seed`. The root account and plans are always created;
+ * everything marked "demo" only when SEED_DEMO_DATA=true. Dates are offsets (in days)
  * from the day the seed runs, so the demo always looks current.
- * The handle "admin" refers to the seeded administrator account.
+ * The handle "admin" refers to the demo organization's super admin.
+ *
+ * These are first-run credentials: change the passwords after the first sign-in.
  */
+import { BillingInterval } from '../src/common/constants/domain.constants';
 import { OrgRole } from '../src/common/constants/roles.constants';
 
+/** Platform root account: manages every organization, plan and subscription. */
+export const ROOT_ACCOUNT = {
+  email: 'root@segueit.com',
+  password: 'ChangeRoot@123',
+  firstName: 'Platform',
+  lastName: 'Root',
+  jobTitle: 'Platform Administrator',
+};
+
+/** Demo organization, its super admin and the password shared by all demo users. */
+export const DEMO_ORGANIZATION = {
+  name: 'SegueIT',
+  planCode: 'BUSINESS',
+  superAdmin: { email: 'admin@segueit.com', password: 'ChangeMe@123', firstName: 'System', lastName: 'Administrator', jobTitle: 'Administrator' },
+  userPassword: 'Welcome@123',
+};
+
+/** Starter catalogue created on first seed; the root account manages plans afterwards. Prices in minor units. */
+export const DEFAULT_PLANS = [
+  { code: 'STARTER', name: 'Starter', description: 'For small teams getting started.', priceCents: 2900, billingInterval: BillingInterval.MONTHLY, maxUsers: 10, maxProjects: 5 },
+  { code: 'BUSINESS', name: 'Business', description: 'For growing teams running several projects.', priceCents: 9900, billingInterval: BillingInterval.MONTHLY, maxUsers: 50, maxProjects: 50 },
+  { code: 'ENTERPRISE', name: 'Enterprise', description: 'Unlimited users and projects.', priceCents: 499000, billingInterval: BillingInterval.YEARLY, maxUsers: null, maxProjects: null },
+];
+
 export const DEMO_USERS = [
-  { handle: 'priya.sharma', firstName: 'Priya', lastName: 'Sharma', jobTitle: 'Delivery Manager', role: OrgRole.MANAGER, hourlyRate: 65 },
-  { handle: 'arjun.mehta', firstName: 'Arjun', lastName: 'Mehta', jobTitle: 'Senior Engineer', role: OrgRole.MEMBER, hourlyRate: 55 },
-  { handle: 'neha.verma', firstName: 'Neha', lastName: 'Verma', jobTitle: 'Frontend Engineer', role: OrgRole.MEMBER, hourlyRate: 45 },
-  { handle: 'rahul.iyer', firstName: 'Rahul', lastName: 'Iyer', jobTitle: 'QA Engineer', role: OrgRole.MEMBER, hourlyRate: 40 },
-  { handle: 'sara.khan', firstName: 'Sara', lastName: 'Khan', jobTitle: 'UX Designer', role: OrgRole.MEMBER, hourlyRate: 50 },
-  { handle: 'client.viewer', firstName: 'Client', lastName: 'Stakeholder', jobTitle: 'Product Owner', role: OrgRole.GUEST, hourlyRate: null },
+  { handle: 'priya.sharma', firstName: 'Priya', lastName: 'Sharma', jobTitle: 'Delivery Manager', role: OrgRole.ADMIN, hourlyRate: 65 },
+  { handle: 'arjun.mehta', firstName: 'Arjun', lastName: 'Mehta', jobTitle: 'Senior Engineer', role: OrgRole.EMPLOYEE, hourlyRate: 55 },
+  { handle: 'neha.verma', firstName: 'Neha', lastName: 'Verma', jobTitle: 'Frontend Engineer', role: OrgRole.EMPLOYEE, hourlyRate: 45 },
+  { handle: 'rahul.iyer', firstName: 'Rahul', lastName: 'Iyer', jobTitle: 'QA Engineer', role: OrgRole.EMPLOYEE, hourlyRate: 40 },
+  { handle: 'sara.khan', firstName: 'Sara', lastName: 'Khan', jobTitle: 'UX Designer', role: OrgRole.EMPLOYEE, hourlyRate: 50 },
+  { handle: 'client.viewer', firstName: 'Client', lastName: 'Stakeholder', jobTitle: 'Product Owner', role: OrgRole.EMPLOYEE, hourlyRate: null },
 ] as const;
 
 interface DemoTask {

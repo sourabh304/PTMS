@@ -1,112 +1,262 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens — claymorphic theme. `--brand` is injected at runtime from env /
- * organization settings (see BrandingStyles), everything else derives from it.
- * Clay surfaces combine a soft outer drop shadow, a white top-left glow and inner
- * highlights so panels read as puffy, pressable objects rather than flat cards.
+ * Design tokens.
+ * Appearance is driven by data attributes on <html> (set by the ThemeProvider and a
+ * pre-paint script): data-mode, data-density, data-radius, data-sidebar, data-font.
+ * The brand color resolves as: user accent → organization color → env default.
  */
-:root {
-  --brand: #2563eb;
-  --brand-foreground: #ffffff;
-  --background: #f5eedf;
-  --surface: #fbf6ec;
-  --surface-muted: #efe6d4;
-  --border: #e6dac4;
-  --foreground: #2d2a24;
-  --muted: #7a6f5f;
-  --danger: #e5484d;
-  --success: #22a06b;
-  --warning: #e08a1e;
-  --sidebar: #f7f0e2;
-  --sidebar-foreground: #6a604f;
+@custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));
+/* Applies inside the desktop sidebar while it is collapsed to an icon rail. */
+@custom-variant collapsed (&:where([data-nav='collapsed'] [data-collapsible] *, [data-nav='collapsed'] [data-collapsible]));
 
-  --clay-dark: 150 122 84;
-  --clay-light: 255 251 242;
-  --clay-shadow:
-    12px 12px 28px rgb(var(--clay-dark) / 0.22), -10px -10px 24px rgb(var(--clay-light) / 0.95),
-    inset 3px 3px 6px rgb(var(--clay-light) / 0.75), inset -3px -3px 8px rgb(var(--clay-dark) / 0.1);
-  --clay-shadow-sm:
-    6px 6px 14px rgb(var(--clay-dark) / 0.2), -5px -5px 12px rgb(var(--clay-light) / 0.9),
-    inset 2px 2px 3px rgb(var(--clay-light) / 0.7), inset -2px -2px 4px rgb(var(--clay-dark) / 0.1);
-  --clay-shadow-lg:
-    24px 24px 48px rgb(var(--clay-dark) / 0.3), -12px -12px 32px rgb(var(--clay-light) / 0.6),
-    inset 4px 4px 8px rgb(var(--clay-light) / 0.8), inset -4px -4px 10px rgb(var(--clay-dark) / 0.1);
-  --clay-inset: inset 4px 4px 9px rgb(var(--clay-dark) / 0.2), inset -4px -4px 9px rgb(var(--clay-light) / 0.95);
-  --clay-brand-shadow:
-    6px 8px 16px color-mix(in srgb, var(--brand) 38%, transparent), -4px -4px 10px rgb(var(--clay-light) / 0.85),
-    inset 3px 3px 6px rgb(var(--clay-light) / 0.35), inset -3px -4px 8px rgb(0 0 0 / 0.18);
+:root {
+  --brand: var(--accent, var(--org-brand, #0b5cad));
+  --brand-foreground: var(--accent-foreground, var(--org-brand-foreground, #ffffff));
+
+  --background: #f6f7fb;
+  --surface: #ffffff;
+  --surface-muted: #f0f1f6;
+  --surface-hover: #f5f6fa;
+  --border: #e3e5ee;
+  --border-strong: #c9ccdb;
+  --foreground: #323338;
+  --foreground-soft: #4a4c57;
+  --muted: #676879;
+  --overlay: rgb(41 47 76 / 0.45);
+
+  --danger: #d92d20;
+  --success: #079455;
+  --warning: #dc6803;
+  --danger-soft: #fef3f2;
+  --success-soft: #ecfdf3;
+  --warning-soft: #fffaeb;
+
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-md: 0 4px 8px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
+  --shadow-lg: 0 12px 24px -6px rgb(16 24 40 / 0.14), 0 4px 8px -4px rgb(16 24 40 / 0.06);
+
+  /* Sidebar (light by default) */
+  --sidebar: var(--surface);
+  --sidebar-border: var(--border);
+  --sidebar-heading: var(--foreground);
+  --sidebar-foreground: var(--foreground-soft);
+  --sidebar-muted: var(--muted);
+  --sidebar-hover: var(--surface-muted);
+  --sidebar-active: color-mix(in srgb, var(--brand) 10%, var(--surface));
+  --sidebar-active-foreground: var(--brand);
+
+  /* Density & shape */
+  --control-h: 2.25rem;
+  --card-p: 1.25rem;
+  --row-py: 0.75rem;
+  --radius: 0.5rem;
+
+  --app-font: var(--font-figtree);
+  --sidebar-w: 16rem;
+  color-scheme: light;
+}
+
+[data-nav='collapsed'] {
+  --sidebar-w: 4.5rem;
+}
+
+[data-mode='dark'] {
+  --background: #181b34;
+  --surface: #1f2240;
+  --surface-muted: #292c4b;
+  --surface-hover: #2c3052;
+  --border: #363a5d;
+  --border-strong: #4a4e73;
+  --foreground: #e6e8f0;
+  --foreground-soft: #c5c8d6;
+  --muted: #9699ae;
+  --overlay: rgb(0 0 0 / 0.6);
+
+  --danger: #f97066;
+  --success: #47cd89;
+  --warning: #fdb022;
+  --danger-soft: rgb(249 112 102 / 0.12);
+  --success-soft: rgb(71 205 137 / 0.12);
+  --warning-soft: rgb(253 176 34 / 0.12);
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 10px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 16px 32px -8px rgb(0 0 0 / 0.55);
+
+  --sidebar-active: color-mix(in srgb, var(--brand) 18%, var(--surface));
+  --sidebar-active-foreground: color-mix(in srgb, var(--brand) 60%, white);
+  color-scheme: dark;
+}
+
+[data-sidebar='dark'] {
+  --sidebar: #0f1d33;
+  --sidebar-border: #0f1d33;
+  --sidebar-heading: #ffffff;
+  --sidebar-foreground: #c3cad5;
+  --sidebar-muted: #7d8899;
+  --sidebar-hover: rgb(255 255 255 / 0.06);
+  --sidebar-active: rgb(255 255 255 / 0.1);
+  --sidebar-active-foreground: #ffffff;
+}
+
+[data-density='compact'] {
+  --control-h: 2rem;
+  --card-p: 1rem;
+  --row-py: 0.5rem;
+}
+
+[data-radius='sharp'] {
+  --radius: 0.25rem;
+}
+[data-radius='rounded'] {
+  --radius: 0.875rem;
+}
+
+[data-font='inter'] {
+  --app-font: var(--font-inter);
+}
+[data-font='geist'] {
+  --app-font: var(--font-geist);
+}
+[data-font='plex'] {
+  --app-font: var(--font-plex);
+}
+[data-font='manrope'] {
+  --app-font: var(--font-manrope);
 }
 
 @theme inline {
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --color-brand-soft: color-mix(in srgb, var(--brand) 14%, var(--surface));
+  --color-brand-soft: color-mix(in srgb, var(--brand) 12%, var(--surface));
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
+  --color-foreground-soft: var(--foreground-soft);
   --color-muted: var(--muted);
+  --color-overlay: var(--overlay);
   --color-danger: var(--danger);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-danger-soft: var(--danger-soft);
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
   --color-sidebar: var(--sidebar);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-heading: var(--sidebar-heading);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
-  --shadow-clay: var(--clay-shadow);
-  --shadow-clay-sm: var(--clay-shadow-sm);
-  --shadow-clay-lg: var(--clay-shadow-lg);
-  --shadow-clay-inset: var(--clay-inset);
-  --shadow-clay-brand: var(--clay-brand-shadow);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-foreground: var(--sidebar-active-foreground);
+
+  --radius-ui: var(--radius);
+  --radius-ui-lg: calc(var(--radius) + 0.25rem);
+  --shadow-ui-sm: var(--shadow-sm);
+  --shadow-ui-md: var(--shadow-md);
+  --shadow-ui-lg: var(--shadow-lg);
+
+  --font-sans: var(--app-font), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', monospace;
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-pop-in: pop-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in-right: slide-in-right 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in-left: slide-in-left 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Raised clay panel (cards, drawers, menus). */
-@utility clay {
-  background: linear-gradient(145deg, #fffaf1 0%, var(--surface) 55%, #f3ead9 100%);
-  box-shadow: var(--clay-shadow);
-  border: 1px solid rgb(var(--clay-light) / 0.7);
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+}
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
 }
 
-/* Smaller raised clay chip (buttons, tiles, board cards). */
-@utility clay-sm {
-  background: linear-gradient(145deg, #fffaf1 0%, var(--surface) 100%);
-  box-shadow: var(--clay-shadow-sm);
-  border: 1px solid rgb(var(--clay-light) / 0.7);
+@layer base {
+  html,
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--brand) 25%, var(--surface));
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--brand) 70%, transparent);
+    outline-offset: 2px;
+  }
 }
 
-/* Pressed-in clay well (inputs, tracks, segmented controls). */
-@utility clay-inset {
-  background: var(--surface-muted);
-  box-shadow: var(--clay-inset);
-  border: 1px solid transparent;
+/* Brand logo: show the variant that matches the surface behind it (see BrandLogo). */
+.brand-logo-dark {
+  display: none;
 }
-
-html,
-body {
-  background: var(--background);
-  color: var(--foreground);
+[data-mode='dark'] .brand-logo-light,
+[data-sidebar='dark'] [data-sidebar-panel] .brand-logo-light,
+.on-dark .brand-logo-light {
+  display: none;
 }
-
-body {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  background:
-    radial-gradient(1200px 600px at 100% -10%, rgb(255 214 165 / 0.35), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgb(232 170 96 / 0.12), transparent 60%),
-    var(--background);
-  background-attachment: fixed;
-}
-
-* {
-  border-color: var(--border);
-}
-
-::selection {
-  background: color-mix(in srgb, var(--brand) 25%, var(--surface));
+[data-mode='dark'] .brand-logo-dark,
+[data-sidebar='dark'] [data-sidebar-panel] .brand-logo-dark,
+.on-dark .brand-logo-dark {
+  display: block;
 }
 
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: rgb(var(--clay-dark) / 0.35) transparent;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Theme switches should not animate every element. */
+.theme-transition-off *,
+.theme-transition-off *::before,
+.theme-transition-off *::after {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

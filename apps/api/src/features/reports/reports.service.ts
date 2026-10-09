@@ -8,7 +8,7 @@ import { ProjectAccessService } from '../projects/project-access.service';
 import { ProjectProgressService } from '../projects/project-progress.service';
 import { USER_SUMMARY_SELECT } from '../users/users.select';
 import { ReportQueryDto } from './dto/report-query.dto';
-import { PROJECT_HEALTH_RULES, ProjectHealth } from './reports.constants';
+import { evaluateProjectHealth, PROJECT_HEALTH_RULES } from '../projects/project-health';
 
 @Injectable()
 export class ReportsService {
@@ -116,7 +116,17 @@ export class ReportsService {
         loggedMinutes,
         openIssues: openIssues.find((row) => row.projectId === project.id)?._count._all ?? 0,
         stats: projectStats,
-        health: this.health(project.status.category, projectStats, project.endDate, project.budgetHours, loggedMinutes, now),
+        health: evaluateProjectHealth(
+          {
+            statusCategory: project.status.category,
+            openTasks: projectStats.openTasks,
+            overdueTasks: projectStats.overdueTasks,
+            endDate: project.endDate,
+            budgetHours: project.budgetHours,
+            loggedMinutes,
+          },
+          now,
+        ),
       };
     });
   }
@@ -166,25 +176,5 @@ export class ReportsService {
       byPriority: bucket(LookupType.PRIORITY, byPriority, 'priorityId'),
       trend: [...weeks.values()],
     };
-  }
-
-  private health(
-    statusCategory: string | null,
-    stats: { openTasks: number; overdueTasks: number },
-    endDate: Date | null,
-    budgetHours: number | null,
-    loggedMinutes: number,
-    now: Date,
-  ): ProjectHealth {
-    if (statusCategory === StatusCategory.CLOSED) return ProjectHealth.COMPLETED;
-    const overdueRatio = stats.openTasks ? stats.overdueTasks / stats.openTasks : 0;
-    const budgetRatio = budgetHours ? loggedMinutes / 60 / budgetHours : 0;
-    if ((endDate && endDate < now && stats.openTasks > 0) || overdueRatio > PROJECT_HEALTH_RULES.offTrackOverdueRatio || budgetRatio > 1) {
-      return ProjectHealth.OFF_TRACK;
-    }
-    if (overdueRatio > PROJECT_HEALTH_RULES.atRiskOverdueRatio || budgetRatio > PROJECT_HEALTH_RULES.atRiskBudgetRatio) {
-      return ProjectHealth.AT_RISK;
-    }
-    return ProjectHealth.ON_TRACK;
   }
 }

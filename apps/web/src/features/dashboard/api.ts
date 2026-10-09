@@ -23,8 +23,21 @@ export interface DashboardOverview {
   projects: Pick<Project, 'id' | 'name' | 'key' | 'color' | 'status' | 'owner' | 'endDate' | 'stats'>[];
 }
 
-export const dashboardKeys = { overview: ['dashboard', 'overview'] as const };
+export const dashboardKeys = {
+  overview: ['dashboard', 'overview'] as const,
+  navCounts: ['dashboard', 'nav-counts'] as const,
+};
 
 export function useDashboard() {
   return useQuery({ queryKey: dashboardKeys.overview, queryFn: () => api.get<DashboardOverview>('/dashboard') });
+}
+
+/** Badge counters for the sidebar; refreshed with any task/project change (shares the 'dashboard' key). */
+export function useNavCounts(enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: dashboardKeys.navCounts,
+    queryFn: () => api.get<{ myOpenTasks: number; projects: number }>('/dashboard/nav-counts'),
+    staleTime: 60_000,
+  });
 }

@@ -24,6 +24,12 @@ export function useAuthConfig() {
   return useQuery({ queryKey: authKeys.config, queryFn: authApi.config, staleTime: Infinity });
 }
 
+/** Minimum password length from the API policy (the API validates again). */
+export function usePasswordMinLength(): number {
+  const { data } = useAuthConfig();
+  return data?.passwordPolicy.minLength ?? 1;
+}
+
 export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation({

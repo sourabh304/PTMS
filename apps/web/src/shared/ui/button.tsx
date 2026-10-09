@@ -3,19 +3,19 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
 const variants = {
-  primary: 'bg-brand text-brand-foreground shadow-clay-brand hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:shadow-clay-inset',
-  secondary: 'clay-sm text-foreground hover:-translate-y-px active:translate-y-0 active:shadow-clay-inset',
-  ghost: 'text-foreground hover:bg-surface-muted hover:shadow-clay-inset',
-  danger:
-    'bg-danger text-white shadow-[6px_8px_16px_rgb(229_72_77/0.35),-4px_-4px_10px_rgb(255_251_242/0.85),inset_3px_3px_6px_rgb(255_251_242/0.3),inset_-3px_-4px_8px_rgb(0_0_0/0.18)] hover:-translate-y-px hover:brightness-110 active:translate-y-0',
-  link: 'text-brand hover:underline px-0 h-auto',
+  primary: 'bg-brand text-brand-foreground shadow-ui-sm hover:bg-[color-mix(in_srgb,var(--brand)_88%,black)]',
+  secondary: 'border border-border bg-surface text-foreground shadow-ui-sm hover:bg-surface-hover hover:border-border-strong',
+  ghost: 'text-foreground-soft hover:bg-surface-muted hover:text-foreground',
+  danger: 'bg-danger text-white shadow-ui-sm hover:bg-[color-mix(in_srgb,var(--danger)_88%,black)]',
+  'danger-ghost': 'text-danger hover:bg-danger-soft',
+  link: 'h-auto px-0 text-brand hover:underline underline-offset-4',
 } as const;
 
 const sizes = {
-  sm: 'h-8 px-3.5 text-xs gap-1.5',
-  md: 'h-10 px-5 text-sm gap-2',
-  lg: 'h-12 px-6 text-sm gap-2',
-  icon: 'h-9 w-9 p-0 justify-center',
+  sm: 'h-8 px-3 text-xs gap-1.5 [&_svg]:size-3.5',
+  md: 'h-[var(--control-h)] px-3.5 text-sm gap-2',
+  lg: 'h-11 px-5 text-sm gap-2',
+  icon: 'h-8 w-8 justify-center p-0',
 } as const;
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -25,20 +25,22 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', loading, disabled, children, type = 'button', ...props }, ref) => (
+  ({ className, variant = 'primary', size = 'md', loading, disabled, children, type = 'button', title, ...props }, ref) => (
     <button
       ref={ref}
       type={type}
+      // Icon-only buttons show their accessible name as a hover tooltip.
+      title={title ?? (size === 'icon' ? props['aria-label'] : undefined)}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex shrink-0 items-center rounded-xl font-semibold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0',
+        'inline-flex shrink-0 select-none items-center whitespace-nowrap rounded-ui font-medium transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
         variants[variant],
         sizes[size],
         className,
       )}
       {...props}
     >
-      {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+      {loading && <Loader2 className="animate-spin" aria-hidden />}
       {children}
     </button>
   ),

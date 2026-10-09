@@ -2,6 +2,7 @@
 
 import { BarChartHorizontal, Diamond } from 'lucide-react';
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useSession } from '@/features/auth/api';
 import { useProject } from '@/features/projects/api';
 import { useGantt, useUpdateTask } from '@/features/tasks/api';
 import { TaskDetailDrawer } from '@/features/tasks/components/task-detail-drawer';
@@ -13,7 +14,7 @@ import { AvatarGroup } from '@/shared/ui/avatar';
 import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Segmented } from '@/shared/ui/layout';
-import { buildTimeline, dayToIso, GANTT_LAYOUT, GANTT_ZOOM, isWeekend, todayDay, toDay, type GanttZoom } from '../gantt.utils';
+import { buildTimeline, dayToDate, dayToIso, GANTT_LAYOUT, GANTT_ZOOM, isWeekend, todayDay, toDay, type GanttZoom } from '../gantt.utils';
 
 type GanttTask = GanttData['tasks'][number];
 
@@ -73,6 +74,8 @@ function buildRows(data: GanttData): Row[] {
 export function GanttChart({ projectId }: { projectId: string }) {
   const { data, isLoading, isError, error, refetch } = useGantt(projectId);
   const { data: project } = useProject(projectId);
+  const { data: session } = useSession();
+  const weekStartsOn = session?.organization?.weekStartsOn ?? 1;
   const canEdit = !!project?.access.canEdit && !project.isArchived;
   const update = useUpdateTask();
   const [zoom, setZoom] = useState<GanttZoom>('week');
@@ -89,8 +92,11 @@ export function GanttChart({ projectId }: { projectId: string }) {
     if (data?.project.startDate) days.push(toDay(data.project.startDate));
     if (data?.project.endDate) days.push(toDay(data.project.endDate));
     days.push(today);
-    return { start: Math.min(...days) - paddingDays, end: Math.max(...days) + paddingDays };
-  }, [rows, data]);
+    const start = Math.min(...days) - paddingDays;
+    // Snap to the organization's first day of the week so week columns line up with real weeks.
+    const offset = (dayToDate(start).getUTCDay() - weekStartsOn + 7) % 7;
+    return { start: start - offset, end: Math.max(...days) + paddingDays };
+  }, [rows, data, weekStartsOn]);
 
   const timeline = useMemo(() => buildTimeline(range.start, range.end, zoom), [range, zoom]);
   const totalDays = range.end - range.start + 1;
@@ -141,7 +147,7 @@ export function GanttChart({ projectId }: { projectId: string }) {
   if (!rows.length) {
     return (
       <Card>
-        <EmptyState icon={<BarChartHorizontal className="h-6 w-6" />} title="Nothing to schedule yet" description="Add tasks with start and due dates to see them on the timeline." />
+        <EmptyState icon={<BarChartHorizontal className="size-6" />} title="Nothing to schedule yet" description="Add tasks with start and due dates to see them on the timeline." />
       </Card>
     );
   }
@@ -180,7 +186,7 @@ export function GanttChart({ projectId }: { projectId: string }) {
                 onClick={() => row.kind === 'task' && setTaskId(row.id)}
               >
                 {row.kind === 'milestone' ? (
-                  <Diamond className="h-3.5 w-3.5 shrink-0 text-brand" fill="currentColor" />
+                  <Diamond className="size-3.5 shrink-0 text-brand" fill="currentColor" />
                 ) : (
                   <span className="shrink-0 text-xs text-muted">
                     {data.project.key}-{row.task!.number}
@@ -269,7 +275,7 @@ export function GanttChart({ projectId }: { projectId: string }) {
                     return (
                       <div
                         key={row.id}
-                        className="absolute z-[3] h-4 w-4 rotate-45 rounded-sm shadow"
+                        className="absolute z-[3] size-4 rotate-45 rounded-sm shadow-ui-sm"
                         style={{ left: x(start) + pxPerDay / 2 - 8, top: i * rowHeight + rowHeight / 2 - 8, backgroundColor: row.color }}
                         title={`${row.label} · ${formatDate(dayToIso(start))}`}
                       />
@@ -279,8 +285,8 @@ export function GanttChart({ projectId }: { projectId: string }) {
                   return (
                     <div
                       key={row.id}
-                      className={cn('group absolute z-[3] select-none overflow-hidden rounded-md shadow-sm', canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer')}
-                      style={{ left: x(start), top, width: barWidth, height: barHeight, backgroundColor: `color-mix(in srgb, ${row.color} 30%, white)` }}
+                      className={cn('group absolute z-[3] select-none overflow-hidden rounded-md shadow-ui-sm', canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer')}
+                      style={{ left: x(start), top, width: barWidth, height: barHeight, backgroundColor: `color-mix(in srgb, ${row.color} 28%, var(--surface))` }}
                       title={`${row.label}\n${formatDate(dayToIso(start))} → ${formatDate(dayToIso(end))} · ${row.progress}%`}
                       onPointerDown={(e) => startDrag(e, row, 'move')}
                       onPointerUp={() => endDrag(row)}
@@ -294,7 +300,7 @@ export function GanttChart({ projectId }: { projectId: string }) {
                       )}
                       {canEdit && (
                         <span
-                          className="absolute right-0 top-0 h-full w-2 cursor-ew-resize bg-black/10 opacity-0 group-hover:opacity-100"
+                          className="absolute right-0 top-0 h-full w-2 cursor-ew-resize bg-foreground/15 opacity-0 group-hover:opacity-100"
                           onPointerDown={(e) => startDrag(e, row, 'resize')}
                           onPointerUp={(e) => {
                             e.stopPropagation();

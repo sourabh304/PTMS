@@ -14,7 +14,7 @@ interface CommentTarget {
   projectId: string;
   title: string;
   link: string;
-  /** Users interested in new comments (creator/reporter + assignees). */
+  /** Users interested in new comments (creator/reporter + assignees); earlier commenters are added on create. */
   watcherIds: string[];
 }
 
@@ -54,8 +54,14 @@ export class CommentsService {
       action: ActivityAction.COMMENTED,
       summary: `commented on ${target.title}`,
     });
+    // Earlier commenters follow the conversation too.
+    const participants = await this.prisma.comment.findMany({
+      where: dto.taskId ? { taskId: dto.taskId } : { issueId: dto.issueId },
+      distinct: ['authorId'],
+      select: { authorId: true },
+    });
     this.events.notify({
-      recipientIds: target.watcherIds,
+      recipientIds: [...target.watcherIds, ...participants.map((p) => p.authorId)],
       actorId: user.id,
       type: NotificationType.COMMENT_ADDED,
       title: `New comment on ${target.title}`,

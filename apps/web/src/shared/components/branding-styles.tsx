@@ -3,9 +3,12 @@ import { contrastText } from '@/shared/lib/utils';
 
 const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
-/** Applies the organization's brand color (or the env default) to the design tokens. */
+/**
+ * Publishes the organization brand color (or the env default) as `--org-brand`.
+ * A personal accent chosen in Settings → Appearance takes precedence (see globals.css).
+ */
 export function BrandingStyles({ color }: { color?: string | null }) {
   const brand = color && HEX.test(color) ? color : appConfig.brandColor;
   if (!HEX.test(brand)) return null;
-  return <style>{`:root{--brand:${brand};--brand-foreground:${contrastText(brand)};}`}</style>;
+  return <style>{`:root{--org-brand:${brand};--org-brand-foreground:${contrastText(brand)};}`}</style>;
 }

@@ -15,6 +15,11 @@ export class DashboardController {
     return this.dashboard.overview(user, query.listSize);
   }
 
+  @Get('nav-counts')
+  navCounts(@CurrentUser() user: AuthenticatedUser) {
+    return this.dashboard.navCounts(user);
+  }
+
   @Get('projects/:projectId')
   project(@CurrentUser() user: AuthenticatedUser, @Param('projectId') projectId: string) {
     return this.dashboard.project(user, projectId);

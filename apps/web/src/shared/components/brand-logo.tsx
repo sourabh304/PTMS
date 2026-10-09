@@ -5,45 +5,44 @@ import { appConfig } from '@/shared/config/env';
 import { cn } from '@/shared/lib/utils';
 
 interface BrandLogoProps {
+  /** Text shown next to the logo; defaults to the product name. */
   name?: string;
+  /** Logo image; defaults to the configured logo. `null` shows a monogram instead. */
   logoUrl?: string | null;
   className?: string;
-  /** Hide the name next to the logo image (the monogram fallback always shows it). */
+  /** The logo sits on a dark surface: use the dark-background variant and light text. */
+  inverted?: boolean;
+  /** Logo only, without the name. */
   compact?: boolean;
   size?: 'md' | 'lg';
 }
 
-const sizes = { md: 'h-11 max-w-[150px]', lg: 'h-16 max-w-[220px]' } as const;
-
 /**
- * Product mark: organization logo, else the default SegueIT logo, sitting on a clay
- * tile. Falls back to a monogram when the image is missing or fails to load.
+ * Brand mark: the company logo with the product name. On regular surfaces both the light
+ * and dark logo variants are rendered and globals.css shows the one matching the theme.
  */
-export function BrandLogo({ name = appConfig.name, logoUrl, className, compact, size = 'md' }: BrandLogoProps) {
-  const src = logoUrl || appConfig.logoUrl;
-  const [failed, setFailed] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-  // A server-rendered <img> can fail before hydration attaches onError, so re-check on mount.
-  useEffect(() => {
-    const img = imgRef.current;
-    setFailed(Boolean(img && img.complete && img.naturalWidth === 0));
-  }, [src]);
-
-  const showImage = Boolean(src) && !failed;
-  const monogram = appConfig.shortName.slice(0, 2).toUpperCase();
+export function BrandLogo({ name = appConfig.name, logoUrl = appConfig.logoUrl, className, inverted, compact }: BrandLogoProps) {
+  const imageClass = 'h-7 w-auto max-w-[8rem] shrink-0 object-contain';
+  // The dark variant only exists for the product's own logo, not for a custom one.
+  const hasDarkVariant = logoUrl === appConfig.logoUrl;
   return (
-    <div className={cn('flex min-w-0 items-center gap-3', className)}>
-      {showImage ? (
-        <span className={cn('clay-sm flex shrink-0 items-center justify-center rounded-2xl px-2.5 py-1.5', sizes[size])}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img ref={imgRef} src={src} alt={`${name} logo`} className="h-full w-auto object-contain" onError={() => setFailed(true)} />
+    <div className={cn('flex min-w-0 items-center gap-2.5', className)}>
+      {logoUrl === null ? (
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-xs font-bold tracking-tight text-brand-foreground shadow-sm">
+          {name.slice(0, 2).toUpperCase()}
         </span>
+      ) : !hasDarkVariant || inverted ? (
+        // eslint-disable-next-line @next/next/no-img-element -- static brand asset
+        <img src={hasDarkVariant ? appConfig.logoDarkUrl : logoUrl} alt={appConfig.companyName} className={imageClass} />
       ) : (
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand text-xs font-extrabold tracking-tight text-brand-foreground shadow-clay-brand">
-          {monogram}
-        </span>
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logoUrl} alt={appConfig.companyName} className={cn('brand-logo-light', imageClass)} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={appConfig.logoDarkUrl} alt={appConfig.companyName} className={cn('brand-logo-dark', imageClass)} />
+        </>
       )}
-      {!(compact && showImage) && <span className="truncate text-sm font-bold tracking-tight text-foreground">{name}</span>}
+      {!compact && <span className={cn('truncate text-sm font-semibold tracking-tight', inverted && 'text-white')}>{name}</span>}
     </div>
   );
 }

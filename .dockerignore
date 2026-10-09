@@ -1,0 +1,17 @@
+.git
+.github
+.claude
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/next-env.d.ts
+**/*.log
+**/*.db
+**/*.db-journal
+
+# Local secrets never go into images
+**/.env
+**/.env.local
+**/.env.*.local

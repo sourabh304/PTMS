@@ -7,10 +7,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { OrgRole } from '../../common/constants/roles.constants';
+import { isSuperAdmin, OrgRole } from '../../common/constants/roles.constants';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { Paginated, PaginationService } from '../../common/pagination/pagination.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import {
   ChangePasswordDto,
   CreateUserDto,
@@ -27,6 +28,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly pagination: PaginationService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async findAll(organizationId: string, query: UserQueryDto): Promise<Paginated<PublicUser>> {
@@ -67,11 +69,11 @@ export class UsersService {
   }
 
   async create(actor: AuthenticatedUser, dto: CreateUserDto): Promise<PublicUser> {
-    this.assertCanAssignRole(actor, dto.role);
     const email = dto.email.toLowerCase();
     if (await this.prisma.user.findUnique({ where: { email } })) {
       throw new ConflictException('A user with this email already exists');
     }
+    await this.subscriptions.assertCapacity(actor.organizationId, 'users');
 
     return this.prisma.user.create({
       data: {
@@ -94,15 +96,15 @@ export class UsersService {
     if (target.id === actor.id && (dto.role !== undefined || dto.isActive === false)) {
       throw new BadRequestException('You cannot change your own role or deactivate yourself');
     }
-    if (target.isRootAdmin && !actor.isRootAdmin) {
-      throw new ForbiddenException('Only a root administrator can change the root administrator account');
-    }
-    if (target.role === OrgRole.OWNER && actor.role !== OrgRole.OWNER) {
-      throw new ForbiddenException('Only an owner can modify another owner');
+    if (target.role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
+      throw new ForbiddenException('Only a super admin can modify another super admin');
     }
     if (dto.role) this.assertCanAssignRole(actor, dto.role);
-    if (target.role === OrgRole.OWNER && (dto.role && dto.role !== OrgRole.OWNER || dto.isActive === false)) {
-      await this.assertAnotherOwnerExists(actor.organizationId, target.id);
+    if (target.role === OrgRole.SUPER_ADMIN && ((dto.role && dto.role !== OrgRole.SUPER_ADMIN) || dto.isActive === false)) {
+      await this.assertAnotherSuperAdminExists(actor.organizationId, target.id);
+    }
+    if (dto.isActive === true && !target.isActive) {
+      await this.subscriptions.assertCapacity(actor.organizationId, 'users');
     }
 
     const user = await this.prisma.user.update({ where: { id }, data: dto, select: USER_PUBLIC_SELECT });
@@ -114,11 +116,8 @@ export class UsersService {
 
   async resetPassword(actor: AuthenticatedUser, id: string, password: string): Promise<void> {
     const target = await this.findOne(actor.organizationId, id);
-    if (target.isRootAdmin && !actor.isRootAdmin) {
-      throw new ForbiddenException('Only a root administrator can change the root administrator account');
-    }
-    if (target.role === OrgRole.OWNER && actor.role !== OrgRole.OWNER) {
-      throw new ForbiddenException('Only an owner can reset another owner’s password');
+    if (target.role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
+      throw new ForbiddenException('Only a super admin can reset another super admin’s password');
     }
     await this.prisma.user.update({ where: { id }, data: { passwordHash: await this.passwords.hash(password) } });
     await this.revokeSessions(id);
@@ -151,17 +150,17 @@ export class UsersService {
   }
 
   private assertCanAssignRole(actor: AuthenticatedUser, role: string): void {
-    if (role === OrgRole.OWNER && actor.role !== OrgRole.OWNER) {
-      throw new ForbiddenException('Only an owner can grant the owner role');
+    if (role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
+      throw new ForbiddenException('Only a super admin can grant the super admin role');
     }
   }
 
-  private async assertAnotherOwnerExists(organizationId: string, excludeId: string): Promise<void> {
-    const owners = await this.prisma.user.count({
-      where: { organizationId, role: OrgRole.OWNER, isActive: true, id: { not: excludeId } },
+  private async assertAnotherSuperAdminExists(organizationId: string, excludeId: string): Promise<void> {
+    const superAdmins = await this.prisma.user.count({
+      where: { organizationId, role: OrgRole.SUPER_ADMIN, isActive: true, id: { not: excludeId } },
     });
-    if (owners === 0) {
-      throw new BadRequestException('The organization must keep at least one active owner');
+    if (superAdmins === 0) {
+      throw new BadRequestException('The organization must keep at least one active super admin');
     }
   }
 }

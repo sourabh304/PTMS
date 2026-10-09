@@ -1,15 +1,16 @@
 import { Module } from '@nestjs/common';
 import { LookupsModule } from '../lookups/lookups.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsController } from './organizations.controller';
 import { OrganizationsService } from './organizations.service';
-import { WorkspacesController } from './workspaces.controller';
-import { WorkspacesService } from './workspaces.service';
+import { PlatformOrganizationsController } from './platform-organizations.controller';
+import { PlatformOrganizationsService } from './platform-organizations.service';
 
 @Module({
-  imports: [LookupsModule, UsersModule],
-  controllers: [OrganizationsController, WorkspacesController],
-  providers: [OrganizationsService, WorkspacesService],
+  imports: [LookupsModule, SubscriptionsModule, UsersModule],
+  controllers: [OrganizationsController, PlatformOrganizationsController],
+  providers: [OrganizationsService, PlatformOrganizationsService],
   exports: [OrganizationsService],
 })
 export class OrganizationsModule {}

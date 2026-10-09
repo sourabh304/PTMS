@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { ActivityAction, EntityType, LookupType, NotificationType } from '../../common/constants/domain.constants';
-import { ProjectRole } from '../../common/constants/roles.constants';
+import { ActivityAction, EntityType, LookupType, NotificationType, StatusCategory } from '../../common/constants/domain.constants';
+import { isRoot, ProjectRole } from '../../common/constants/roles.constants';
 import { NotificationLinks } from '../../common/events/domain-events';
 import { EventPublisher } from '../../common/events/event-publisher.service';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
@@ -9,14 +9,20 @@ import { PaginationService } from '../../common/pagination/pagination.service';
 import { fullName } from '../../common/utils/string.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupsService } from '../lookups/lookups.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { USER_SUMMARY_SELECT } from '../users/users.select';
 import { AddMembersDto, CreateProjectDto, ProjectQueryDto, UpdateProjectDto } from './dto/project.dto';
 import { ProjectAccessService } from './project-access.service';
-import { ProjectProgressService } from './project-progress.service';
+import { evaluateProjectHealth } from './project-health';
+import { ProjectProgressService, type ProgressStats } from './project-progress.service';
+
+/** Number of member avatars embedded in project payloads (the full list has its own endpoint). */
+const MEMBER_PREVIEW_COUNT = 4;
 
 const PROJECT_INCLUDE = {
   status: true,
   owner: { select: USER_SUMMARY_SELECT },
+  members: { take: MEMBER_PREVIEW_COUNT, orderBy: { createdAt: 'asc' }, select: { user: { select: USER_SUMMARY_SELECT } } },
   _count: { select: { members: true, milestones: true, issues: true } },
 } satisfies Prisma.ProjectInclude;
 
@@ -29,6 +35,7 @@ export class ProjectsService {
     private readonly lookups: LookupsService,
     private readonly pagination: PaginationService,
     private readonly events: EventPublisher,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async findAll(user: AuthenticatedUser, query: ProjectQueryDto) {
@@ -38,6 +45,7 @@ export class ProjectsService {
       isArchived: query.archived ?? false,
       ...(query.statusId ? { statusId: query.statusId } : {}),
       ...(query.ownerId ? { ownerId: query.ownerId } : {}),
+      ...(query.statusCategory ? { status: { category: query.statusCategory } } : {}),
       ...(query.search
         ? { OR: [{ name: { contains: query.search } }, { key: { contains: query.search.toUpperCase() } }] }
         : {}),
@@ -54,35 +62,84 @@ export class ProjectsService {
       this.prisma.project.count({ where }),
     ]);
 
-    const stats = await this.progress.forProjects(
-      user.organizationId,
-      projects.map((p) => p.id),
-    );
-    const data = projects.map((project) => ({ ...project, stats: stats.get(project.id)! }));
+    const data = await this.withInsights(user.organizationId, projects);
     return this.pagination.build(data, total, page);
+  }
+
+  /** Portfolio-level counts for the projects page header and status tabs. */
+  async summary(user: AuthenticatedUser) {
+    const visible = this.access.visibleProjectsWhere(user);
+    const active: Prisma.ProjectWhereInput = { ...visible, isArchived: false };
+    const [total, archived, byStatus, lookups, members] = await Promise.all([
+      this.prisma.project.count({ where: active }),
+      this.prisma.project.count({ where: { ...visible, isArchived: true } }),
+      this.prisma.project.groupBy({ by: ['statusId'], where: active, _count: { _all: true } }),
+      this.prisma.lookup.findMany({ where: { organizationId: user.organizationId, type: LookupType.PROJECT_STATUS } }),
+      this.prisma.projectMember.findMany({ where: { project: active }, distinct: ['userId'], select: { userId: true } }),
+    ]);
+    const projectIds = (await this.prisma.project.findMany({ where: active, select: { id: true } })).map((p) => p.id);
+    const stats = await this.progress.forProjects(user.organizationId, projectIds);
+
+    const byCategory = Object.fromEntries(Object.values(StatusCategory).map((category) => [category, 0])) as Record<StatusCategory, number>;
+    for (const row of byStatus) {
+      const category = lookups.find((l) => l.id === row.statusId)?.category as StatusCategory | undefined;
+      if (category) byCategory[category] += row._count._all;
+    }
+    const projectsWithOverdue = [...stats.values()].filter((s) => s.overdueTasks > 0).length;
+    const overdueTasks = [...stats.values()].reduce((sum, s) => sum + s.overdueTasks, 0);
+
+    return { total, archived, byCategory, members: members.length, projectsWithOverdue, overdueTasks };
+  }
+
+  async navigation(user: AuthenticatedUser) {
+    const projects = await this.prisma.project.findMany({
+      where: { ...this.access.visibleProjectsWhere(user), isArchived: false },
+      select: { id: true, name: true, key: true, color: true, favorites: { where: { userId: user.id }, select: { userId: true } } },
+      orderBy: { name: 'asc' },
+    });
+    return projects.map(({ favorites, ...project }) => ({ ...project, isFavorite: favorites.length > 0 }));
+  }
+
+  async setFavorite(user: AuthenticatedUser, projectId: string, favorite: boolean): Promise<void> {
+    await this.access.assertCanView(user, projectId);
+    const key = { userId_projectId: { userId: user.id, projectId } };
+    if (favorite) {
+      await this.prisma.projectFavorite.upsert({ where: key, create: { userId: user.id, projectId }, update: {} });
+    } else {
+      await this.prisma.projectFavorite.deleteMany({ where: { userId: user.id, projectId } });
+    }
   }
 
   async findOne(user: AuthenticatedUser, id: string) {
     const access = await this.access.assertCanView(user, id);
-    const project = await this.prisma.project.findUniqueOrThrow({ where: { id }, include: PROJECT_INCLUDE });
-    const stats = await this.progress.forProject(user.organizationId, id);
+    const [project, stats, favorite] = await Promise.all([
+      this.prisma.project.findUniqueOrThrow({ where: { id }, include: PROJECT_INCLUDE }),
+      this.progress.forProject(user.organizationId, id),
+      this.prisma.projectFavorite.count({ where: { userId: user.id, projectId: id } }),
+    ]);
     return {
       ...project,
       stats,
+      isFavorite: favorite > 0,
       access: { role: access.memberRole, canEdit: access.canEdit, canManage: access.canManage },
     };
   }
 
   async create(user: AuthenticatedUser, dto: CreateProjectDto) {
     this.assertDateRange(dto.startDate, dto.endDate);
+    await this.subscriptions.assertCapacity(user.organizationId, 'projects');
     const statusId = dto.statusId
       ? (await this.lookups.assertValid(user.organizationId, dto.statusId, LookupType.PROJECT_STATUS)).id
       : await this.lookups.getDefaultId(user.organizationId, LookupType.PROJECT_STATUS);
+    // The root account works in an organization without being part of it: it must pick an owner
+    // and is never added as a project member.
+    const actingAsRoot = isRoot(user.role);
+    if (actingAsRoot && !dto.ownerId) throw new BadRequestException('Choose a project owner from the organization');
     const ownerId = dto.ownerId ?? user.id;
     await this.assertOrgUsers(user.organizationId, [ownerId, ...(dto.memberIds ?? [])]);
 
     const memberIds = (dto.memberIds ?? []).filter((id) => id !== ownerId && id !== user.id);
-    const managerIds = [...new Set([ownerId, user.id])];
+    const managerIds = [...new Set(actingAsRoot ? [ownerId] : [ownerId, user.id])];
 
     const project = await this.prisma.project.create({
       data: {
@@ -245,9 +302,52 @@ export class ProjectsService {
       action: ActivityAction.LEFT,
       summary: `removed a member from the project`,
     });
+    this.events.notify({
+      recipientIds: [userId],
+      actorId: user.id,
+      type: NotificationType.PROJECT_REMOVED,
+      title: `You were removed from ${project.name}`,
+      body: `${fullName(user)} removed you from the project; your task assignments there were cleared`,
+      link: NotificationLinks.home(),
+    });
   }
 
   // ─── Private ─────────────────────────────────────────────────
+
+  /** Adds progress, logged hours and health to a page of projects (batched queries). */
+  private async withInsights<T extends { id: string; endDate: Date | null; budgetHours: number | null; status: { category: string | null } }>(
+    organizationId: string,
+    projects: T[],
+  ): Promise<(T & { stats: ProgressStats; loggedMinutes: number; health: string })[]> {
+    const ids = projects.map((p) => p.id);
+    const [stats, logged] = await Promise.all([
+      this.progress.forProjects(organizationId, ids),
+      ids.length
+        ? this.prisma.timeEntry.groupBy({ by: ['projectId'], where: { projectId: { in: ids } }, _sum: { minutes: true } })
+        : Promise.resolve([]),
+    ]);
+    const now = new Date();
+    return projects.map((project) => {
+      const projectStats = stats.get(project.id)!;
+      const loggedMinutes = logged.find((row) => row.projectId === project.id)?._sum.minutes ?? 0;
+      return {
+        ...project,
+        stats: projectStats,
+        loggedMinutes,
+        health: evaluateProjectHealth(
+          {
+            statusCategory: project.status.category,
+            openTasks: projectStats.openTasks,
+            overdueTasks: projectStats.overdueTasks,
+            endDate: project.endDate,
+            budgetHours: project.budgetHours,
+            loggedMinutes,
+          },
+          now,
+        ),
+      };
+    });
+  }
 
   private async findMembership(projectId: string, userId: string) {
     const member = await this.prisma.projectMember.findUnique({ where: { projectId_userId: { projectId, userId } } });

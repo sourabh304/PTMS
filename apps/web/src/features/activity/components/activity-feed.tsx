@@ -24,7 +24,7 @@ export function ActivityFeed({ projectId, pageSize, paginated = true, showProjec
 
   if (isLoading) return <Spinner />;
   if (isError) return <ErrorState message={errorMessage(error)} onRetry={refetch} />;
-  if (!items.length) return <EmptyState icon={<ActivityIcon className="h-6 w-6" />} title="No activity yet" />;
+  if (!items.length) return <EmptyState icon={<ActivityIcon className="size-6" />} title="No activity yet" />;
 
   return (
     <div>

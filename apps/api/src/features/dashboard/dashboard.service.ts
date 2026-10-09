@@ -24,6 +24,22 @@ export class DashboardService {
     private readonly progress: ProjectProgressService,
   ) {}
 
+  /** Small counters shown as badges in the navigation. */
+  async navCounts(user: AuthenticatedUser) {
+    const visibleProjects: Prisma.ProjectWhereInput = { ...this.access.visibleProjectsWhere(user), isArchived: false };
+    const [myOpenTasks, projects] = await Promise.all([
+      this.prisma.task.count({
+        where: {
+          project: visibleProjects,
+          status: { category: { not: StatusCategory.CLOSED } },
+          assignees: { some: { userId: user.id } },
+        },
+      }),
+      this.prisma.project.count({ where: visibleProjects }),
+    ]);
+    return { myOpenTasks, projects };
+  }
+
   /** Organization-wide (permission aware) home dashboard. */
   async overview(user: AuthenticatedUser, listSize: number = DASHBOARD_DEFAULTS.listSize) {
     const now = new Date();

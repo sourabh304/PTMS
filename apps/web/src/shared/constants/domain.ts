@@ -3,6 +3,7 @@
  * Display names for configurable values (statuses, priorities…) always come from the API.
  */
 export const Permission = {
+  PLATFORM_MANAGE: 'platform:manage',
   ORG_MANAGE: 'org:manage',
   USERS_VIEW: 'users:view',
   USERS_MANAGE: 'users:manage',
@@ -12,13 +13,16 @@ export const Permission = {
   TIMESHEETS_APPROVE: 'timesheets:approve',
   TIMESHEETS_VIEW_ALL: 'timesheets:view-all',
   REPORTS_VIEW: 'reports:view',
-  /** Root admins only: create and list workspaces. */
-  WORKSPACES_MANAGE: 'workspaces:manage',
+  SUBSCRIPTION_VIEW: 'subscription:view',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
 
-export const ORG_ROLES = ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'GUEST'] as const;
+/** Platform-level account that manages every organization, plan and subscription. */
+export const PLATFORM_ROOT_ROLE = 'ROOT';
+
+export const ORG_ROLES = ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'] as const;
 export type OrgRole = (typeof ORG_ROLES)[number];
+export const ORG_ADMIN_ROLES: readonly string[] = ['SUPER_ADMIN', 'ADMIN'];
 
 export const PROJECT_ROLES = ['MANAGER', 'MEMBER', 'VIEWER'] as const;
 export type ProjectRole = (typeof PROJECT_ROLES)[number];
@@ -53,3 +57,18 @@ export const ProjectHealth = {
   COMPLETED: 'COMPLETED',
 } as const;
 export type ProjectHealth = (typeof ProjectHealth)[keyof typeof ProjectHealth];
+
+export const SubscriptionStatus = {
+  TRIAL: 'TRIAL',
+  ACTIVE: 'ACTIVE',
+  PAST_DUE: 'PAST_DUE',
+  CANCELED: 'CANCELED',
+  EXPIRED: 'EXPIRED',
+} as const;
+export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];
+
+export const BillingInterval = {
+  MONTHLY: 'MONTHLY',
+  YEARLY: 'YEARLY',
+} as const;
+export type BillingInterval = (typeof BillingInterval)[keyof typeof BillingInterval];

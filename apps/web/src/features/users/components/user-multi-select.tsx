@@ -1,12 +1,12 @@
 'use client';
 
 import { Check, ChevronDown, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { cn, fullName } from '@/shared/lib/utils';
 import type { UserSummary } from '@/shared/types/api';
 import { Avatar } from '@/shared/ui/avatar';
 import { Dropdown } from '@/shared/ui/dropdown';
-import { Input } from '@/shared/ui/form';
+import { Input, useFieldId } from '@/shared/ui/form';
 
 interface UserMultiSelectProps {
   options: UserSummary[];
@@ -18,6 +18,8 @@ interface UserMultiSelectProps {
 
 export function UserMultiSelect({ options, value, onChange, placeholder = 'Select people', disabled }: UserMultiSelectProps) {
   const [search, setSearch] = useState('');
+  const fieldId = useFieldId();
+  const searchId = useId();
   const selected = options.filter((user) => value.includes(user.id));
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -29,13 +31,14 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
   return (
     <Dropdown
       align="left"
-      className="w-full min-w-72"
+      className="w-full min-w-72 p-0"
       trigger={({ toggle: toggleOpen }) => (
         <button
           type="button"
+          id={fieldId}
           disabled={disabled}
           onClick={toggleOpen}
-          className="flex min-h-9 w-full flex-wrap items-center gap-1.5 clay-inset rounded-xl px-2 py-1 text-left text-sm focus:border-brand focus:outline-none disabled:opacity-60"
+          className="flex min-h-[var(--control-h)] w-full flex-wrap items-center gap-1.5 rounded-ui border border-border bg-surface px-2 py-1 text-left text-sm shadow-ui-sm focus:border-brand focus:outline-none disabled:opacity-60"
         >
           {selected.length ? (
             selected.map((user) => (
@@ -43,7 +46,7 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
                 <Avatar user={user} size="xs" className="ring-0" />
                 {fullName(user)}
                 <X
-                  className="h-3 w-3 text-muted hover:text-foreground"
+                  className="size-3 text-muted hover:text-foreground"
                   onClick={(event) => {
                     event.stopPropagation();
                     toggle(user.id);
@@ -54,14 +57,14 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
           ) : (
             <span className="px-1 text-muted/80">{placeholder}</span>
           )}
-          <ChevronDown className="ml-auto h-4 w-4 text-muted" />
+          <ChevronDown className="ml-auto size-4 text-muted" />
         </button>
       )}
     >
       {() => (
         <div>
           <div className="border-b border-border p-2">
-            <Input autoFocus placeholder="Search people" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input id={searchId} aria-label="Search people" autoFocus placeholder="Search people" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <div className="scrollbar-thin max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 && <p className="px-3 py-2 text-sm text-muted">No matches</p>}
@@ -79,7 +82,7 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
                     <span className="block truncate">{fullName(user)}</span>
                     <span className="block truncate text-xs text-muted">{user.email}</span>
                   </span>
-                  {isSelected && <Check className="h-4 w-4 text-brand" />}
+                  {isSelected && <Check className="size-4 text-brand" />}
                 </button>
               );
             })}

@@ -1,6 +1,6 @@
 'use client';
 
-import { addDays, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subMonths, subWeeks } from 'date-fns';
+import { addDays, differenceInCalendarDays, endOfMonth, endOfWeek, format, isValid, startOfMonth, startOfWeek, subMonths, subWeeks } from 'date-fns';
 import { Check, Clock, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useSession } from '@/features/auth/api';
@@ -56,6 +56,23 @@ function resolveRange(preset: RangePreset, weekStartsOn: number, custom: { from:
   }
 }
 
+const MAX_CHART_DAYS = 92;
+
+/** One bar per day of the range (empty days included), so gaps in logged time are visible. */
+function dailyHours(byDay: { date: string; minutes: number }[], range: { from: string; to: string }) {
+  const start = new Date(`${range.from}T00:00:00`);
+  const end = new Date(`${range.to}T00:00:00`);
+  const days = differenceInCalendarDays(end, start) + 1;
+  if (!isValid(start) || !isValid(end) || days < 1 || days > MAX_CHART_DAYS) {
+    return byDay.map((d) => ({ day: formatDate(d.date, 'dd MMM'), hours: minutesToHours(d.minutes) }));
+  }
+  const minutesByDate = new Map(byDay.map((d) => [d.date.slice(0, 10), d.minutes]));
+  return Array.from({ length: days }, (_, i) => {
+    const date = addDays(start, i);
+    return { day: format(date, days <= 7 ? 'EEE d' : 'd MMM'), hours: minutesToHours(minutesByDate.get(iso(date)) ?? 0) };
+  });
+}
+
 export function TimesheetView({ projectId }: { projectId?: string }) {
   const { data: session } = useSession();
   const { can } = usePermissions();
@@ -74,7 +91,7 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
   const review = useReviewTimeEntry();
   const remove = useDeleteTimeEntry();
 
-  const range = useMemo(() => resolveRange(preset, session?.organization.weekStartsOn ?? 1, custom), [preset, session, custom]);
+  const range = useMemo(() => resolveRange(preset, session?.organization?.weekStartsOn ?? 1, custom), [preset, session, custom]);
   const filters = {
     projectId,
     ...range,
@@ -85,17 +102,14 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
   const { data, isLoading, isError, error, refetch } = useTimeEntries({ ...filters, page, limit: appConfig.defaultPageSize });
   const { data: summary } = useTimeSummary(filters);
 
-  const chartData = useMemo(
-    () => (summary?.byDay ?? []).map((d) => ({ day: formatDate(d.date, 'dd MMM'), hours: minutesToHours(d.minutes) })),
-    [summary],
-  );
+  const chartData = useMemo(() => dailyHours(summary?.byDay ?? [], range), [summary, range]);
 
   const editable = (entry: TimeEntry) => entry.userId === session?.id && entry.approvalStatus !== ApprovalStatus.APPROVED;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <Segmented<RangePreset>
             value={preset}
             onChange={(value) => {
@@ -137,17 +151,17 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
           </Select>
         </div>
         <Button onClick={() => setEditing('new')} disabled={!!project && (!project.access.canEdit || project.isArchived)}>
-          <Plus className="h-4 w-4" /> Log time
+          <Plus className="size-4" /> Log time
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Total logged" value={formatMinutes(summary?.totalMinutes)} icon={<Clock className="h-5 w-5" />} hint={`${summary?.entries ?? 0} entries`} />
-        <StatCard label="Billable" value={formatMinutes(summary?.billableMinutes)} icon={<Check className="h-5 w-5" />} tone="success" />
+        <StatCard label="Total logged" value={formatMinutes(summary?.totalMinutes)} icon={<Clock className="size-5" />} hint={`${summary?.entries ?? 0} entries`} />
+        <StatCard label="Billable" value={formatMinutes(summary?.billableMinutes)} icon={<Check className="size-5" />} tone="success" />
         <StatCard
           label="Non-billable"
           value={formatMinutes((summary?.totalMinutes ?? 0) - (summary?.billableMinutes ?? 0))}
-          icon={<X className="h-5 w-5" />}
+          icon={<X className="size-5" />}
           tone="warning"
         />
       </div>
@@ -155,7 +169,11 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
       <Card>
         <CardHeader title="Hours per day" description={`${formatDate(range.from)} → ${formatDate(range.to)}`} />
         <CardBody>
-          <ColumnChart data={chartData} xKey="day" series={[{ key: 'hours', label: 'Hours', color: 'var(--brand)' }]} height={220} />
+          {summary?.totalMinutes ? (
+            <ColumnChart data={chartData} xKey="day" series={[{ key: 'hours', label: 'Hours', color: 'var(--brand)' }]} height={220} />
+          ) : (
+            <EmptyState icon={<Clock className="h-6 w-6" />} title="No time logged in this period" description="Use “Log time” to record the hours you worked." className="py-8" />
+          )}
         </CardBody>
       </Card>
 
@@ -165,7 +183,7 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
         ) : isError ? (
           <ErrorState message={errorMessage(error)} onRetry={refetch} />
         ) : !data?.data.length ? (
-          <EmptyState icon={<Clock className="h-6 w-6" />} title="No time logged in this period" />
+          <EmptyState icon={<Clock className="size-6" />} title="No time logged in this period" />
         ) : (
           <>
             <Table>
@@ -199,7 +217,7 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
                     </Td>
                     <Td className="whitespace-nowrap text-right font-medium">
                       {formatMinutes(entry.minutes)}
-                      {!entry.isBillable && <span className="ml-1 text-xs font-normal text-muted">(nb)</span>}
+                      {!entry.isBillable && <span className="block text-xs font-normal text-muted" title="Not billed to the client">Non-billable</span>}
                     </Td>
                     <Td>
                       <Badge tone={APPROVAL_TONE[entry.approvalStatus]}>{humanize(entry.approvalStatus)}</Badge>
@@ -208,21 +226,21 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
                       <div className="flex justify-end gap-1">
                         {canApprove && entry.userId !== session?.id && entry.approvalStatus !== ApprovalStatus.APPROVED && (
                           <Button variant="ghost" size="icon" aria-label="Approve" onClick={() => review.mutate({ id: entry.id, status: ApprovalStatus.APPROVED })}>
-                            <Check className="h-4 w-4 text-success" />
+                            <Check className="size-4 text-success" />
                           </Button>
                         )}
                         {canApprove && entry.userId !== session?.id && entry.approvalStatus !== ApprovalStatus.REJECTED && (
                           <Button variant="ghost" size="icon" aria-label="Reject" onClick={() => review.mutate({ id: entry.id, status: ApprovalStatus.REJECTED })}>
-                            <X className="h-4 w-4 text-danger" />
+                            <X className="size-4 text-danger" />
                           </Button>
                         )}
                         {editable(entry) && (
                           <>
                             <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(entry)}>
-                              <Pencil className="h-4 w-4" />
+                              <Pencil className="size-4" />
                             </Button>
                             <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => setDeleting(entry)}>
-                              <Trash2 className="h-4 w-4 text-danger" />
+                              <Trash2 className="size-4 text-danger" />
                             </Button>
                           </>
                         )}

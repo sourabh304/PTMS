@@ -1,12 +1,14 @@
 /** Every client route in one place, so links never hard-code paths. */
 export const routes = {
-  home: '/',
+  root: '/',
   login: '/login',
-  dashboard: '/dashboard',
+  home: '/home',
   myWork: '/my-work',
   projects: '/projects',
+  /** The project's main table. */
   project: (id: string) => `/projects/${id}`,
-  projectTasks: (id: string) => `/projects/${id}/tasks`,
+  projectTask: (id: string, taskId: string) => `/projects/${id}?taskId=${taskId}`,
+  projectOverview: (id: string) => `/projects/${id}/overview`,
   projectBoard: (id: string) => `/projects/${id}/board`,
   projectGantt: (id: string) => `/projects/${id}/gantt`,
   projectMilestones: (id: string) => `/projects/${id}/milestones`,
@@ -20,8 +22,14 @@ export const routes = {
   settingsOrganization: '/settings/organization',
   settingsUsers: '/settings/users',
   settingsWorkflow: '/settings/workflow',
+  settingsAppearance: '/settings/appearance',
   profile: '/profile',
-  workspaces: '/workspaces',
+  platform: '/platform',
+  platformOrganizations: '/platform/organizations',
+  platformPlans: '/platform/plans',
+  platformSubscriptions: '/platform/subscriptions',
+  platformProfile: '/platform/profile',
+  platformAppearance: '/platform/appearance',
 } as const;
 
 /** Routes reachable without a session. */

@@ -21,18 +21,22 @@ model Organization {
   timezone           String
   weekStartsOn       Int
   workingHoursPerDay Float
+  /// Suspended organizations cannot sign in (managed by the platform root account).
+  isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  users      User[]
-  projects   Project[]
-  lookups    Lookup[]
-  activities Activity[]
+  users         User[]
+  projects      Project[]
+  lookups       Lookup[]
+  activities    Activity[]
+  subscriptions Subscription[]
 }
 
+/// Tenant users belong to an organization; the platform ROOT account has no organization.
 model User {
   id             String    @id @default(cuid())
-  organizationId String
+  organizationId String?
   email          String    @unique
   passwordHash   String
   firstName      String
@@ -48,7 +52,7 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization        Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   refreshTokens       RefreshToken[]
   ownedProjects       Project[]        @relation("ProjectOwner")
   memberships         ProjectMember[]
@@ -62,8 +66,46 @@ model User {
   comments            Comment[]
   activities          Activity[]
   notifications       Notification[]
+  favoriteProjects    ProjectFavorite[]
 
   @@index([organizationId])
+}
+
+/// Commercial plan offered by the platform. Limits are null when unlimited.
+model Plan {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  description     String?
+  priceCents      Int
+  currency        String
+  billingInterval String
+  maxUsers        Int?
+  maxProjects     Int?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+/// Plan assigned to an organization. At most one TRIAL/ACTIVE subscription is current at a time.
+model Subscription {
+  id             String    @id @default(cuid())
+  organizationId String
+  planId         String
+  status         String
+  startDate      DateTime
+  endDate        DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, status])
+  @@index([planId])
 }
 
 model RefreshToken {
@@ -72,14 +114,17 @@ model RefreshToken {
   tokenHash String
   expiresAt DateTime
   revokedAt DateTime?
-  userAgent String?
-  ipAddress String?
-  createdAt DateTime  @default(now())
+  userAgent  String?
+  ipAddress  String?
+  /// "Keep me signed in": longer lifetime and a persistent cookie.
+  persistent Boolean   @default(false)
+  createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
+
 
 /// Configurable, per-organization values: task/issue/project statuses,
 /// priorities and issue severities.
@@ -135,6 +180,7 @@ model Project {
   issues       Issue[]
   timeEntries  TimeEntry[]
   activities   Activity[]
+  favorites    ProjectFavorite[]
 
   @@unique([organizationId, key])
   @@index([organizationId, isArchived])
@@ -152,6 +198,19 @@ model ProjectMember {
 
   @@unique([projectId, userId])
   @@index([userId])
+}
+
+/// A project a user starred; shown under Favorites in the sidebar.
+model ProjectFavorite {
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([userId, projectId])
+  @@index([projectId])
 }
 
 model Milestone {
@@ -180,6 +239,8 @@ model TaskList {
   projectId   String
   milestoneId String?
   name        String
+  /// Hex color of the group header on the project table.
+  color       String?
   position    Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -204,6 +265,9 @@ model Task {
   priorityId     String
   startDate      DateTime?
   dueDate        DateTime?
+  /// Due date the "due soon" / "overdue" reminders were last sent for (a new due date re-arms them).
+  dueSoonNotifiedFor DateTime?
+  overdueNotifiedFor DateTime?
   estimatedHours Float?
   progress       Int       @default(0)
   position       Float     @default(0)
@@ -271,6 +335,9 @@ model Issue {
   milestoneId String?
   taskId      String?
   dueDate     DateTime?
+  /// Due date the "due soon" / "overdue" reminders were last sent for (a new due date re-arms them).
+  dueSoonNotifiedFor DateTime?
+  overdueNotifiedFor DateTime?
   resolvedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Permission } from '../../common/constants/permissions.constants';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -21,6 +21,29 @@ export class ProjectsController {
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: ProjectQueryDto) {
     return this.projects.findAll(user, query);
+  }
+
+  @Get('summary')
+  summary(@CurrentUser() user: AuthenticatedUser) {
+    return this.projects.summary(user);
+  }
+
+  /** Lightweight list of every visible, active project for the sidebar. */
+  @Get('navigation')
+  navigation(@CurrentUser() user: AuthenticatedUser) {
+    return this.projects.navigation(user);
+  }
+
+  @Put(':id/favorite')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  favorite(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.projects.setFavorite(user, id, true);
+  }
+
+  @Delete(':id/favorite')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  unfavorite(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.projects.setFavorite(user, id, false);
   }
 
   @Post()

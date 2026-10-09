@@ -150,6 +150,16 @@ export class IssuesService {
     if (dto.assigneeId && dto.assigneeId !== existing.assigneeId) {
       this.notifyAssignee(user, issue, dto.assigneeId);
     }
+    if (statusChanged) {
+      this.events.notify({
+        recipientIds: [issue.reporterId, ...(issue.assigneeId ? [issue.assigneeId] : [])],
+        actorId: user.id,
+        type: NotificationType.ISSUE_STATUS_CHANGED,
+        title: `${this.ref(issue)} moved to ${issue.status.name}`,
+        body: `${fullName(user)} changed the status of "${issue.title}"`,
+        link: NotificationLinks.issue(issue.projectId, issue.id),
+      });
+    }
     return issue;
   }
 
