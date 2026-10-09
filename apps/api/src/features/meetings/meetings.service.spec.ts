@@ -30,9 +30,16 @@ const meeting = (overrides: object = {}) => ({
 describe('MeetingsService.sendReminders', () => {
   it('waits until the digest hour in the organization time zone', async () => {
     const { service, prisma, events } = setup({ timezone: 'America/New_York', meetings: [meeting()] });
-    await service.sendReminders(ORG, undefined, now); // 05:00 in New York
-    expect(prisma.meeting.findMany).not.toHaveBeenCalled();
+    await service.sendReminders(ORG, undefined, now); // 05:00 in New York, meeting at 10:00
     expect(events.notify).not.toHaveBeenCalled();
+    expect(prisma.meeting.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('announces a meeting that starts before the digest hour an hour ahead', async () => {
+    const early = meeting({ startsAt: new Date('2026-10-09T09:45:00Z'), endsAt: new Date('2026-10-09T10:15:00Z') });
+    const { service, events } = setup({ timezone: 'America/New_York', meetings: [early] });
+    await service.sendReminders(ORG, undefined, now); // 05:00 in New York, meeting at 05:45
+    expect(events.notify).toHaveBeenCalledWith(expect.objectContaining({ title: 'Today 05:45 · Client demo', link: '/calendar?date=2026-10-09' }));
   });
 
   it('tells everyone in the organization about organization-wide meetings today, once', async () => {
@@ -44,12 +51,13 @@ describe('MeetingsService.sendReminders', () => {
     expect(prisma.meeting.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['m1'] } }, data: { reminderSentAt: now } });
   });
 
-  it("only tells a project's members about its meetings", async () => {
+  it("only tells a project's members (and its organizer) about its meetings", async () => {
     const project = { name: 'Website', members: [{ userId: 'u2' }] };
-    const { service, prisma, events } = setup({ meetings: [meeting({ project })] });
+    const { service, prisma, events } = setup({ meetings: [meeting({ project, createdById: 'coordinator' })] });
     await service.sendReminders(ORG, undefined, now);
     expect(prisma.user.findMany).not.toHaveBeenCalled();
-    expect(events.notify).toHaveBeenCalledWith(expect.objectContaining({ recipientIds: ['u2'] }));
+    // The coordinator who scheduled it is told too.
+    expect(events.notify).toHaveBeenCalledWith(expect.objectContaining({ recipientIds: ['u2', 'coordinator'] }));
   });
 
   it('skips meetings on another local day', async () => {
