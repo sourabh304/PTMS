@@ -194,7 +194,9 @@ export class TimesheetsService {
       throw new BadRequestException('Approved entries are locked');
     }
     // Members change time only on projects they still work on, and never on archived ones.
-    await this.access.assertCanEdit(user, entry.projectId);
+    const { memberRole, project } = await this.access.resolve(user, entry.projectId);
+    if (!memberRole) throw new ForbiddenException('You are no longer a member of this project');
+    if (project.isArchived) throw new BadRequestException('Archived projects are read-only');
   }
 
   private async assertRelations(projectId: string, dto: Pick<UpdateTimeEntryDto, 'taskId' | 'issueId'>) {

@@ -139,7 +139,10 @@ export class MeetingsService {
         startsAt: { gte: addDays(now, -1.5), lte: addDays(now, 1.5) },
         ...(meetingId ? { id: meetingId } : {}),
       },
-      include: { project: { select: { name: true, members: { where: { user: { isActive: true } }, select: { userId: true } } } } },
+      include: {
+        project: { select: { name: true, members: { where: { user: { isActive: true } }, select: { userId: true } } } },
+        createdBy: { select: { isActive: true } },
+      },
     });
     const dueToday = meetings.filter(
       (meeting) =>
@@ -152,8 +155,9 @@ export class MeetingsService {
       ? (await this.prisma.user.findMany({ where: { organizationId, isActive: true }, select: { id: true } })).map((u) => u.id)
       : [];
     for (const meeting of dueToday) {
-      // The person who scheduled it is told too, even when they are not a member of the project.
-      const recipientIds = meeting.project ? [...meeting.project.members.map((member) => member.userId), meeting.createdById] : everyone;
+      // The person who scheduled it is told too (while active), even when they are not a member of the project.
+      const organizer = meeting.createdBy.isActive ? [meeting.createdById] : [];
+      const recipientIds = meeting.project ? [...meeting.project.members.map((member) => member.userId), ...organizer] : everyone;
       this.events.notify({
         recipientIds,
         actorId: SYSTEM_ACTOR,

@@ -24,6 +24,8 @@ const meeting = (overrides: object = {}) => ({
   startsAt: new Date('2026-10-09T14:00:00Z'),
   endsAt: new Date('2026-10-09T15:00:00Z'),
   project: null,
+  createdById: 'coordinator',
+  createdBy: { isActive: true },
   ...overrides,
 });
 
@@ -58,6 +60,13 @@ describe('MeetingsService.sendReminders', () => {
     expect(prisma.user.findMany).not.toHaveBeenCalled();
     // The coordinator who scheduled it is told too.
     expect(events.notify).toHaveBeenCalledWith(expect.objectContaining({ recipientIds: ['u2', 'coordinator'] }));
+  });
+
+  it('leaves out an organizer whose account has been deactivated', async () => {
+    const project = { name: 'Website', members: [{ userId: 'u2' }] };
+    const { service, events } = setup({ meetings: [meeting({ project, createdBy: { isActive: false } })] });
+    await service.sendReminders(ORG, undefined, now);
+    expect(events.notify).toHaveBeenCalledWith(expect.objectContaining({ recipientIds: ['u2'] }));
   });
 
   it('skips meetings on another local day', async () => {

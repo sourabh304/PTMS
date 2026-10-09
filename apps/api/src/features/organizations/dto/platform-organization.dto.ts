@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+import { IsBoolean, IsDefined, IsEmail, IsIn, IsObject, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import { TrimString } from '../../../common/transformers/query.transformers';
 import { IsPassword } from '../../../common/validation/password.policy';
@@ -50,6 +50,8 @@ export class CreatePlatformOrganizationDto {
   name: string;
 
   @ApiProperty({ type: InitialCoordinatorDto, description: 'First project coordinator of the new organization' })
+  @IsDefined()
+  @IsObject()
   @ValidateNested()
   @Type(() => InitialCoordinatorDto)
   coordinator: InitialCoordinatorDto;

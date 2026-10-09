@@ -11,7 +11,7 @@ import { normalizeRole, OrgRole } from '../../common/constants/roles.constants';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { Paginated, PaginationService } from '../../common/pagination/pagination.service';
 import { StatusCategory } from '../../common/constants/domain.constants';
-import { addDays, startOfDayUtc, startOfWeekUtc } from '../../common/utils/date.util';
+import { addDays, overdueCutoff, startOfWeekUtc, todayInTimezone } from '../../common/utils/date.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   ChangePasswordDto,
@@ -85,16 +85,22 @@ export class UsersService {
   /** Everything a coordinator needs to know about one person: projects, open work, time and activity. */
   async details(organizationId: string, id: string) {
     const user = await this.findOne(organizationId, id);
-    const organization = await this.prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { weekStartsOn: true } });
+    const organization = await this.prisma.organization.findUniqueOrThrow({
+      where: { id: organizationId },
+      select: { weekStartsOn: true, timezone: true },
+    });
     const now = new Date();
-    const today = startOfDayUtc(now);
-    const weekStart = startOfWeekUtc(now, organization.weekStartsOn);
+    const today = todayInTimezone(organization.timezone, now);
+    const weekStart = startOfWeekUtc(today, organization.weekStartsOn);
     const monthAgo = addDays(today, -DETAILS_WINDOW_DAYS);
+    // Time logged ahead of today does not count towards "this week" / "last 30 days" yet.
+    const endOfToday = addDays(today, 1);
     const openStatus: Prisma.LookupWhereInput = { OR: [{ category: null }, { category: { not: StatusCategory.CLOSED } }] };
     const assigned: Prisma.TaskWhereInput = { assignees: { some: { userId: id } }, project: { organizationId, isArchived: false } };
+    const openIssues: Prisma.IssueWhereInput = { assigneeId: id, project: { organizationId, isArchived: false }, status: openStatus };
     const lookup = { select: { id: true, name: true, color: true, category: true } };
 
-    const [memberships, tasks, issues, completedTasks, weekTime, monthTime, recentTime, activity] = await Promise.all([
+    const [memberships, tasks, issues, completedTasks, weekTime, monthTime, recentTime, activity, overdueTasks, openIssueCount] = await Promise.all([
       this.prisma.projectMember.findMany({
         where: { userId: id, project: { organizationId } },
         orderBy: { createdAt: 'asc' },
@@ -120,7 +126,7 @@ export class UsersService {
         },
       }),
       this.prisma.issue.findMany({
-        where: { assigneeId: id, project: { organizationId, isArchived: false }, status: openStatus },
+        where: openIssues,
         orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
         take: DETAILS_LIST_SIZE,
         select: {
@@ -134,8 +140,8 @@ export class UsersService {
         },
       }),
       this.prisma.task.count({ where: { ...assigned, completedAt: { gte: monthAgo } } }),
-      this.prisma.timeEntry.aggregate({ where: { userId: id, date: { gte: weekStart } }, _sum: { minutes: true } }),
-      this.prisma.timeEntry.aggregate({ where: { userId: id, date: { gte: monthAgo } }, _sum: { minutes: true } }),
+      this.prisma.timeEntry.aggregate({ where: { userId: id, date: { gte: weekStart, lt: endOfToday } }, _sum: { minutes: true } }),
+      this.prisma.timeEntry.aggregate({ where: { userId: id, date: { gte: monthAgo, lt: endOfToday } }, _sum: { minutes: true } }),
       this.prisma.timeEntry.findMany({
         where: { userId: id, project: { organizationId } },
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
@@ -148,6 +154,9 @@ export class UsersService {
         take: DETAILS_RECENT_SIZE,
         select: { id: true, summary: true, createdAt: true, project: { select: { id: true, name: true } } },
       }),
+      // Counted separately: the lists above are capped at DETAILS_LIST_SIZE.
+      this.prisma.task.count({ where: { ...assigned, status: openStatus, dueDate: { lt: overdueCutoff(organization.timezone, now) } } }),
+      this.prisma.issue.count({ where: openIssues }),
     ]);
 
     const openTaskCounts = await this.prisma.task.groupBy({
@@ -162,9 +171,9 @@ export class UsersService {
       stats: {
         projects: memberships.filter((m) => !m.project.isArchived).length,
         openTasks: [...openByProject.values()].reduce((sum, count) => sum + count, 0),
-        overdueTasks: tasks.filter((task) => task.dueDate && task.dueDate < today).length,
+        overdueTasks,
         completedTasks30d: completedTasks,
-        openIssues: issues.length,
+        openIssues: openIssueCount,
         minutesThisWeek: weekTime._sum.minutes ?? 0,
         minutes30d: monthTime._sum.minutes ?? 0,
       },

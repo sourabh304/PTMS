@@ -23,6 +23,18 @@ export function todayInTimezone(timezone: string, now = new Date()): Date {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
+/**
+ * Due dates are calendar days (UTC midnight): work is overdue once its due day is before today in the
+ * organization's timezone, so something due today is not overdue yet. Use as `dueDate: { lt: cutoff }`.
+ */
+export function overdueCutoff(timezone: string, now = new Date()): Date {
+  return todayInTimezone(timezone, now);
+}
+
+export function isOverdue(dueDate: Date | null | undefined, cutoff: Date): boolean {
+  return !!dueDate && dueDate < cutoff;
+}
+
 export function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * DAY_MS);
 }

@@ -17,11 +17,12 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState, type ReactNode } from 'react';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useProjects } from '@/features/projects/api';
 import { useTimeSummary } from '@/features/timesheets/api';
 import { appConfig } from '@/shared/config/env';
 import { routes } from '@/shared/config/routes';
-import { ProjectHealth } from '@/shared/constants/domain';
+import { Permission, ProjectHealth } from '@/shared/constants/domain';
 import { errorMessage } from '@/shared/lib/api-client';
 import { cn, formatDate, formatMinutes, fullName, humanize, minutesToHours } from '@/shared/lib/utils';
 import { Avatar } from '@/shared/ui/avatar';
@@ -85,6 +86,13 @@ const SERIES = {
 };
 
 export function ReportsView() {
+  const { can, user } = usePermissions();
+  if (!user) return <Spinner />;
+  if (!can(Permission.REPORTS_VIEW)) return <EmptyState icon={<BarChart3 />} title="Only project coordinators can view reports" />;
+  return <ReportsContent />;
+}
+
+function ReportsContent() {
   const [tab, setTab] = useState<Tab>('portfolio');
   const [period, setPeriod] = useState<Period>(DEFAULT_PERIOD);
   const [custom, setCustom] = useState({ from: iso(subDays(new Date(), 30)), to: iso(new Date()) });

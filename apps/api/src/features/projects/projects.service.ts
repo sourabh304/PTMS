@@ -233,7 +233,7 @@ export class ProjectsService {
   }
 
   async addMembers(user: AuthenticatedUser, projectId: string, dto: AddMembersDto) {
-    const { project } = await this.access.assertCanManage(user, projectId);
+    const { project } = await this.access.assertCanManageWritable(user, projectId);
     await this.assertOrgUsers(user.organizationId, dto.userIds);
 
     const existing = await this.prisma.projectMember.findMany({
@@ -268,13 +268,14 @@ export class ProjectsService {
   }
 
   async removeMember(user: AuthenticatedUser, projectId: string, userId: string): Promise<void> {
-    const { project } = await this.access.assertCanManage(user, projectId);
+    const { project } = await this.access.assertCanManageWritable(user, projectId);
     if (userId === project.ownerId) {
       throw new BadRequestException('Transfer ownership before removing the project owner');
     }
     await this.findMembership(projectId, userId);
     await this.prisma.$transaction([
       this.prisma.taskAssignee.deleteMany({ where: { userId, task: { projectId } } }),
+      this.prisma.issue.updateMany({ where: { projectId, assigneeId: userId }, data: { assigneeId: null } }),
       this.prisma.projectMember.delete({ where: { projectId_userId: { projectId, userId } } }),
     ]);
     this.events.activity({
@@ -291,7 +292,7 @@ export class ProjectsService {
       actorId: user.id,
       type: NotificationType.PROJECT_REMOVED,
       title: `You were removed from ${project.name}`,
-      body: `${fullName(user)} removed you from the project; your task assignments there were cleared`,
+      body: `${fullName(user)} removed you from the project; your task and issue assignments there were cleared`,
       link: NotificationLinks.home(),
     });
   }

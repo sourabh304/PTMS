@@ -14,13 +14,14 @@ import {
   LookupType,
   StatusCategory,
 } from '../src/common/constants/domain.constants';
-import { LEGACY_ORG_ROLES, OrgRole, PlatformRole, ProjectRole } from '../src/common/constants/roles.constants';
+import { OrgRole, PlatformRole, ProjectRole } from '../src/common/constants/roles.constants';
 import { slugify } from '../src/common/utils/string.util';
 import { DEFAULT_LOOKUPS } from '../src/features/lookups/lookup.defaults';
 import { ORGANIZATION_DEFAULTS } from '../src/features/organizations/organization.defaults';
 import { nextGroupColor } from '../src/features/task-lists/task-list.colors';
 import { AutomationAction, AutomationTrigger } from '../src/features/automations/automation.constants';
 import { CustomFieldType } from '../src/features/custom-fields/custom-field.constants';
+import { upgradeLegacyRoles } from '../src/features/users/role-upgrade.service';
 import { DEMO_MEETINGS, DEMO_ORGANIZATION, DEMO_PROJECTS, DEMO_USERS, ROOT_ACCOUNT } from './seed-data';
 
 const prisma = new PrismaClient();
@@ -61,15 +62,15 @@ async function seedRoot(): Promise<void> {
   console.log(`✔ Created root account ${email} (change its password after the first sign-in)`);
 }
 
-/** Creates the demo organization, its coordinator and demo data; returns the organization id. */
-async function seedDemoOrganization(): Promise<string> {
+/** Creates the demo organization, its coordinator and demo data (meetings included) on the first run only. */
+async function seedDemoOrganization(): Promise<void> {
   const { name: orgName, coordinator } = DEMO_ORGANIZATION;
   const adminEmail = coordinator.email.toLowerCase();
 
   const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (existing?.organizationId) {
     console.log(`✔ Project coordinator ${adminEmail} already exists`);
-    return existing.organizationId;
+    return;
   }
 
   // ─── Organization & workflow ────────────────────────────────
@@ -285,9 +286,9 @@ async function seedDemoOrganization(): Promise<string> {
     await seedBoardExtras(project.id, owner.id, taskIds, lookups);
     console.log(`✔ Seeded demo project ${spec.key} - ${spec.name}`);
   }
+  await seedDemoMeetings(organization.id, admin.id);
 
   console.log(`✔ Demo users sign in with DEMO_ORGANIZATION.userPassword (e.g. ${DEMO_USERS[0].handle}@${domain})`);
-  return organization.id;
 }
 
 /**
@@ -337,12 +338,10 @@ async function seedBoardExtras(
   });
 }
 
-/** Adds the demo meetings when the demo organization has none yet. */
-async function seedDemoMeetings(organizationId: string): Promise<void> {
-  if (await prisma.meeting.count({ where: { organizationId } })) return;
-  const coordinator = await prisma.user.findUniqueOrThrow({ where: { email: DEMO_ORGANIZATION.coordinator.email.toLowerCase() } });
+/** Adds the demo meetings to a newly created demo organization (never re-adds ones a user deleted). */
+async function seedDemoMeetings(organizationId: string, coordinatorId: string): Promise<void> {
   const projects = await prisma.project.findMany({ where: { organizationId }, select: { id: true, key: true } });
-  await prisma.meeting.createMany({
+  const { count } = await prisma.meeting.createMany({
     data: DEMO_MEETINGS.flatMap((meeting) => {
       const projectId = meeting.project ? projects.find((p) => p.key === meeting.project)?.id : null;
       if (projectId === undefined) return [];
@@ -357,21 +356,11 @@ async function seedDemoMeetings(organizationId: string): Promise<void> {
         link: meeting.link,
         startsAt,
         endsAt: new Date(startsAt.getTime() + meeting.minutes * 60_000),
-        createdById: coordinator.id,
+        createdById: coordinatorId,
       }];
     }),
   });
-  console.log(`✔ Added ${DEMO_MEETINGS.length} demo meetings`);
-}
-
-/** Maps roles stored by earlier versions (super admin, admin, employee, project manager/viewer) to today's roles. */
-async function upgradeLegacyRoles(): Promise<void> {
-  let changed = 0;
-  for (const [legacy, role] of Object.entries(LEGACY_ORG_ROLES)) {
-    changed += (await prisma.user.updateMany({ where: { role: legacy }, data: { role } })).count;
-  }
-  changed += (await prisma.projectMember.updateMany({ where: { role: { not: ProjectRole.MEMBER } }, data: { role: ProjectRole.MEMBER } })).count;
-  if (changed) console.log(`✔ Upgraded ${changed} legacy role assignments`);
+  console.log(`✔ Added ${count} demo meetings`);
 }
 
 /** Gives groups created before group colors existed a color from the palette. */
@@ -385,9 +374,10 @@ async function backfillGroupColors(): Promise<void> {
 
 async function main() {
   await seedRoot();
-  await upgradeLegacyRoles();
+  const upgraded = await upgradeLegacyRoles(prisma);
+  if (upgraded) console.log(`✔ Upgraded ${upgraded} legacy role assignments`);
   if (['true', '1', 'yes'].includes((process.env.SEED_DEMO_DATA ?? 'false').toLowerCase())) {
-    await seedDemoMeetings(await seedDemoOrganization());
+    await seedDemoOrganization();
   }
   await backfillGroupColors();
 }

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Lookup, Prisma } from '@prisma/client';
 import { LookupType, StatusCategory } from '../../common/constants/domain.constants';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
-import { addDays, startOfWeekUtc } from '../../common/utils/date.util';
+import { addDays, isOverdue, overdueCutoff, startOfWeekUtc } from '../../common/utils/date.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ProjectAccessService } from '../projects/project-access.service';
 import { ProjectProgressService } from '../projects/project-progress.service';
@@ -71,7 +71,7 @@ export class DashboardService {
     ] = await Promise.all([
       this.prisma.project.count({ where: { ...visibleProjects, status: { category: { not: StatusCategory.CLOSED } } } }),
       this.prisma.task.count({ where: { ...taskScope, ...openTask } }),
-      this.prisma.task.count({ where: { ...taskScope, ...openTask, dueDate: { lt: now } } }),
+      this.prisma.task.count({ where: { ...taskScope, ...openTask, dueDate: { lt: overdueCutoff(organization.timezone, now) } } }),
       this.prisma.task.count({ where: { ...taskScope, ...openTask, assignees: { some: { userId: user.id } } } }),
       this.prisma.issue.count({ where: openIssue }),
       this.prisma.issue.count({ where: { ...openIssue, assigneeId: user.id } }),
@@ -136,7 +136,6 @@ export class DashboardService {
   /** Detailed dashboard for a single project. */
   async project(user: AuthenticatedUser, projectId: string) {
     const { project } = await this.access.assertCanView(user, projectId);
-    const now = new Date();
     const openTask: Prisma.TaskWhereInput = { projectId, status: { category: { not: StatusCategory.CLOSED } } };
 
     const [
@@ -152,6 +151,7 @@ export class DashboardService {
       milestones,
       stats,
       estimated,
+      organization,
     ] = await Promise.all([
       this.prisma.lookup.findMany({ where: { organizationId: user.organizationId }, orderBy: { position: 'asc' } }),
       this.prisma.task.groupBy({ by: ['statusId'], where: { projectId }, _count: { _all: true } }),
@@ -172,7 +172,9 @@ export class DashboardService {
       this.prisma.milestone.findMany({ where: { projectId }, orderBy: { dueDate: 'asc' } }),
       this.progress.forProject(user.organizationId, projectId),
       this.prisma.task.aggregate({ where: { projectId }, _sum: { estimatedHours: true } }),
+      this.prisma.organization.findUniqueOrThrow({ where: { id: user.organizationId }, select: { timezone: true } }),
     ]);
+    const cutoff = overdueCutoff(organization.timezone);
 
     const workload = members
       .map((member) => {
@@ -181,7 +183,7 @@ export class DashboardService {
           user: member.user,
           role: member.role,
           openTasks: own.length,
-          overdueTasks: own.filter((a) => a.task.dueDate && a.task.dueDate < now).length,
+          overdueTasks: own.filter((a) => isOverdue(a.task.dueDate, cutoff)).length,
         };
       })
       .sort((a, b) => b.openTasks - a.openTasks);
@@ -200,7 +202,7 @@ export class DashboardService {
       milestones: {
         total: milestones.length,
         completed: milestones.filter((m) => m.completedAt).length,
-        overdue: milestones.filter((m) => !m.completedAt && m.dueDate < now).length,
+        overdue: milestones.filter((m) => !m.completedAt && isOverdue(m.dueDate, cutoff)).length,
         next: milestones.find((m) => !m.completedAt) ?? null,
       },
     };

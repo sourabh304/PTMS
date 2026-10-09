@@ -36,7 +36,7 @@ export class CustomFieldsService {
   }
 
   async create(user: AuthenticatedUser, projectId: string, dto: CreateCustomFieldDto) {
-    await this.access.assertCanManage(user, projectId);
+    await this.access.assertCanManageWritable(user, projectId);
     const count = await this.prisma.customField.count({ where: { projectId } });
     if (count >= MAX_CUSTOM_FIELDS) throw new BadRequestException(`A project can have at most ${MAX_CUSTOM_FIELDS} custom columns`);
     const options = dto.type === CustomFieldType.DROPDOWN ? this.normalizeOptions(dto.options ?? []) : null;
@@ -149,7 +149,7 @@ export class CustomFieldsService {
   private async findManageable(user: AuthenticatedUser, id: string): Promise<CustomField> {
     const field = await this.prisma.customField.findFirst({ where: { id, project: { organizationId: user.organizationId } } });
     if (!field) throw new NotFoundException('Column not found');
-    await this.access.assertCanManage(user, field.projectId);
+    await this.access.assertCanManageWritable(user, field.projectId);
     return field;
   }
 

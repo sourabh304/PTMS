@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { LookupType, StatusCategory } from '../../common/constants/domain.constants';
+import { overdueCutoff } from '../../common/utils/date.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupsService } from '../lookups/lookups.service';
 
@@ -25,7 +26,10 @@ export class ProjectProgressService {
     );
     if (!projectIds.length) return result;
 
-    const closedIds = await this.lookups.idsByCategory(organizationId, LookupType.TASK_STATUS, StatusCategory.CLOSED);
+    const [closedIds, organization] = await Promise.all([
+      this.lookups.idsByCategory(organizationId, LookupType.TASK_STATUS, StatusCategory.CLOSED),
+      this.prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { timezone: true } }),
+    ]);
     const [byStatus, overdue] = await Promise.all([
       this.prisma.task.groupBy({
         by: ['projectId', 'statusId'],
@@ -34,7 +38,7 @@ export class ProjectProgressService {
       }),
       this.prisma.task.groupBy({
         by: ['projectId'],
-        where: { projectId: { in: projectIds }, statusId: { notIn: closedIds }, dueDate: { lt: new Date() } },
+        where: { projectId: { in: projectIds }, statusId: { notIn: closedIds }, dueDate: { lt: overdueCutoff(organization.timezone) } },
         _count: { _all: true },
       }),
     ]);

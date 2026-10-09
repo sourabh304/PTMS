@@ -14,7 +14,11 @@ export class PrismaExceptionFilter implements ExceptionFilter {
 
     // Input the DTOs let through but the database rejects (e.g. null for a required field).
     if (exception instanceof Prisma.PrismaClientValidationError) {
-      response.status(HttpStatus.BAD_REQUEST).json({ statusCode: HttpStatus.BAD_REQUEST, message: 'Some values are missing or invalid', error: 'Bad Request' });
+      // Logged as well, since a query the code builds wrongly ends up here too.
+      this.logger.warn(`Rejected invalid query: ${exception.message.split('\n').pop()}`);
+      const field = /Argument `(\w+)`/.exec(exception.message)?.[1];
+      const message = field ? `Missing or invalid value for ${field}` : 'Some values are missing or invalid';
+      response.status(HttpStatus.BAD_REQUEST).json({ statusCode: HttpStatus.BAD_REQUEST, message, error: 'Bad Request' });
       return;
     }
 

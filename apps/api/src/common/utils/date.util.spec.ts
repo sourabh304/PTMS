@@ -1,4 +1,4 @@
-import { countWorkingDays, startOfWeekUtc, todayInTimezone } from './date.util';
+import { countWorkingDays, isOverdue, overdueCutoff, startOfWeekUtc, todayInTimezone } from './date.util';
 
 describe('date utils', () => {
   it('finds the start of the week for a Monday-first organization', () => {
@@ -23,5 +23,19 @@ describe('date utils', () => {
 
   it('falls back to the UTC date for an unknown timezone', () => {
     expect(todayInTimezone('Not/AZone', new Date('2026-10-09T23:30:00Z')).toISOString()).toBe('2026-10-09T00:00:00.000Z');
+  });
+
+  it('treats work due today as not overdue yet', () => {
+    const cutoff = overdueCutoff('UTC', new Date('2026-10-09T23:00:00Z'));
+    expect(isOverdue(new Date('2026-10-08T00:00:00Z'), cutoff)).toBe(true);
+    expect(isOverdue(new Date('2026-10-09T00:00:00Z'), cutoff)).toBe(false);
+    expect(isOverdue(null, cutoff)).toBe(false);
+  });
+
+  it('moves the overdue cutoff with the organization timezone', () => {
+    // 20:00 UTC on the 9th is already the 10th in Kolkata, so work due on the 9th is overdue there.
+    const now = new Date('2026-10-09T20:00:00Z');
+    expect(isOverdue(new Date('2026-10-09T00:00:00Z'), overdueCutoff('Asia/Kolkata', now))).toBe(true);
+    expect(isOverdue(new Date('2026-10-09T00:00:00Z'), overdueCutoff('UTC', now))).toBe(false);
   });
 });

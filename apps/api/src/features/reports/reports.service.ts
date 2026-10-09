@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LookupType, StatusCategory } from '../../common/constants/domain.constants';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
-import { addDays, countWorkingDays, startOfDayUtc, startOfWeekUtc } from '../../common/utils/date.util';
+import { addDays, countWorkingDays, isOverdue, overdueCutoff, startOfDayUtc, startOfWeekUtc } from '../../common/utils/date.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ProjectAccessService } from '../projects/project-access.service';
 import { ProjectProgressService } from '../projects/project-progress.service';
@@ -60,7 +60,7 @@ export class ReportsService {
     ]);
 
     const capacityMinutes = Math.round(countWorkingDays(from, to) * organization.workingHoursPerDay * 60);
-    const now = new Date();
+    const cutoff = overdueCutoff(organization.timezone);
 
     return {
       from,
@@ -72,7 +72,7 @@ export class ReportsService {
         return {
           user: member,
           openTasks: own.length,
-          overdueTasks: own.filter((a) => a.task.dueDate && a.task.dueDate < now).length,
+          overdueTasks: own.filter((a) => isOverdue(a.task.dueDate, cutoff)).length,
           estimatedHours: own.reduce((sum, a) => sum + (a.task.estimatedHours ?? 0), 0),
           loggedMinutes,
           utilization: capacityMinutes ? Math.round((loggedMinutes / capacityMinutes) * 100) : 0,

@@ -100,15 +100,14 @@ export class CommentsService {
       include: { task: { select: { projectId: true } }, issue: { select: { projectId: true } } },
     });
     const projectId = comment?.task?.projectId ?? comment?.issue?.projectId;
-    if (!comment || !projectId || !(await this.access.resolve(user, projectId)).canView) {
-      throw new NotFoundException('Comment not found');
-    }
-    await this.assertWritable(user, projectId);
+    if (!comment || !projectId) throw new NotFoundException('Comment not found');
+    await this.assertWritable(user, projectId, 'Comment not found');
     return comment;
   }
 
-  private async assertWritable(user: AuthenticatedUser, projectId: string): Promise<void> {
-    const { project } = await this.access.assertCanView(user, projectId);
+  private async assertWritable(user: AuthenticatedUser, projectId: string, notFound = 'Project not found'): Promise<void> {
+    const { canView, project } = await this.access.resolve(user, projectId);
+    if (!canView) throw new NotFoundException(notFound);
     if (project.isArchived) throw new BadRequestException('Archived projects are read-only');
   }
 

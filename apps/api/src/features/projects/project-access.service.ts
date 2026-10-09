@@ -63,6 +63,13 @@ export class ProjectAccessService {
     return access;
   }
 
+  /** Like assertCanManage, but also refuses setup changes (members, automations, columns) on archived projects. */
+  async assertCanManageWritable(user: AuthenticatedUser, projectId: string): Promise<ProjectAccess> {
+    const access = await this.assertCanManage(user, projectId);
+    if (access.project.isArchived) throw new BadRequestException('Archived projects are read-only');
+    return access;
+  }
+
   /** Ensures the given users are members of the project (used for assignment). */
   async assertMembers(projectId: string, userIds: string[]): Promise<void> {
     const unique = [...new Set(userIds)];

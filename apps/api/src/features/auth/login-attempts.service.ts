@@ -6,6 +6,8 @@ interface Attempts {
   failures: number;
   /** When the counting window started; failures older than the lockout window are forgotten. */
   since: number;
+  /** Set once `maxFailures` is reached: sign-ins are refused until then. */
+  lockedUntil?: number;
 }
 
 /** Entries kept before expired ones are swept, so the map cannot grow without bound. */
@@ -19,30 +21,32 @@ const SWEEP_THRESHOLD = 1000;
 export class LoginAttemptsService {
   private readonly attempts = new Map<string, Attempts>();
   private readonly maxFailures: number;
-  private readonly windowMs: number;
+  private readonly lockoutMs: number;
 
   constructor(config: ConfigService<AppConfig, true>) {
     const throttle = config.get('throttle', { infer: true });
     this.maxFailures = throttle.loginMaxFailures;
-    this.windowMs = throttle.loginLockoutMs;
+    this.lockoutMs = throttle.loginLockoutMs;
   }
 
-  /** Throws 429 while the account is locked after too many failures. */
-  assertAllowed(email: string, now = Date.now()): void {
-    const entry = this.current(email, now);
-    if (entry && entry.failures >= this.maxFailures) {
-      const minutes = Math.max(1, Math.ceil((entry.since + this.windowMs - now) / 60_000));
+  /**
+   * Counts a sign-in attempt, throwing 429 while the account is locked. Attempts are counted before the
+   * password is checked, so parallel guesses cannot all slip past the limit; `reset` once it is right.
+   */
+  recordAttempt(email: string, now = Date.now()): void {
+    if (this.attempts.size > SWEEP_THRESHOLD) this.sweep(now);
+    const entry = this.current(email, now) ?? { failures: 0, since: now };
+    if (entry.lockedUntil) {
+      const minutes = Math.max(1, Math.ceil((entry.lockedUntil - now) / 60_000));
       throw new HttpException(
         `Too many failed sign-in attempts. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`,
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
-  }
-
-  recordFailure(email: string, now = Date.now()): void {
-    if (this.attempts.size > SWEEP_THRESHOLD) this.sweep(now);
-    const entry = this.current(email, now);
-    this.attempts.set(email, entry ? { ...entry, failures: entry.failures + 1 } : { failures: 1, since: now });
+    entry.failures += 1;
+    // The lock runs for the whole lockout period from the last allowed attempt.
+    if (entry.failures >= this.maxFailures) entry.lockedUntil = now + this.lockoutMs;
+    this.attempts.set(email, entry);
   }
 
   reset(email: string): void {
@@ -51,14 +55,18 @@ export class LoginAttemptsService {
 
   private current(email: string, now: number): Attempts | undefined {
     const entry = this.attempts.get(email);
-    if (entry && now - entry.since >= this.windowMs) {
+    if (entry && this.expired(entry, now)) {
       this.attempts.delete(email);
       return undefined;
     }
     return entry;
   }
 
+  private expired(entry: Attempts, now: number): boolean {
+    return now >= (entry.lockedUntil ?? entry.since + this.lockoutMs);
+  }
+
   private sweep(now: number): void {
-    for (const [email, entry] of this.attempts) if (now - entry.since >= this.windowMs) this.attempts.delete(email);
+    for (const [email, entry] of this.attempts) if (this.expired(entry, now)) this.attempts.delete(email);
   }
 }

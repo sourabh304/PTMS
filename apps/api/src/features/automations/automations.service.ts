@@ -47,7 +47,7 @@ export class AutomationsService {
   }
 
   async create(user: AuthenticatedUser, projectId: string, dto: CreateAutomationDto) {
-    await this.access.assertCanManage(user, projectId);
+    await this.access.assertCanManageWritable(user, projectId);
     const values = await this.validate(user, projectId, dto.trigger, dto.triggerValue ?? null, dto.action, dto.actionValue ?? null);
     return this.prisma.automation.create({
       data: { projectId, name: dto.name, trigger: dto.trigger, action: dto.action, ...values, isActive: dto.isActive ?? true, createdById: user.id },
@@ -78,7 +78,7 @@ export class AutomationsService {
   private async findManageable(user: AuthenticatedUser, id: string): Promise<Automation> {
     const automation = await this.prisma.automation.findFirst({ where: { id, project: { organizationId: user.organizationId } } });
     if (!automation) throw new NotFoundException('Automation not found');
-    await this.access.assertCanManage(user, automation.projectId);
+    await this.access.assertCanManageWritable(user, automation.projectId);
     return automation;
   }
 

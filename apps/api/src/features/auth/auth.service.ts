@@ -35,14 +35,14 @@ export class AuthService {
 
   async login(dto: LoginDto, meta: ClientMeta): Promise<TokenPair> {
     const email = dto.email.toLowerCase();
-    this.attempts.assertAllowed(email);
+    // Unknown emails count too, so the response never tells which accounts exist.
+    this.attempts.recordAttempt(email);
     const user = await this.prisma.user.findUnique({
       where: { email },
       include: { organization: { select: { isActive: true } } },
     });
     const valid = user ? await this.passwords.verify(dto.password, user.passwordHash) : false;
     if (!user || !valid) {
-      this.attempts.recordFailure(email);
       throw new UnauthorizedException('Invalid email or password');
     }
     this.attempts.reset(email);

@@ -30,7 +30,7 @@ export class OrganizationsService {
   }
 
   update(id: string, dto: UpdateOrganizationDto): Promise<Organization> {
-    if (dto.timezone && !this.isValidTimezone(dto.timezone)) {
+    if (dto.timezone !== undefined && !this.isValidTimezone(dto.timezone)) {
       throw new BadRequestException('Unknown timezone');
     }
     return this.prisma.organization.update({ where: { id }, data: dto });
