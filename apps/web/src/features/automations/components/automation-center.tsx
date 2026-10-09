@@ -61,8 +61,20 @@ function Sentence({ rule, options }: { rule: Pick<AutomationInput, 'trigger' | '
   const actionValue = valueName(action.value, rule.actionValue, options);
   return (
     <p className="text-sm leading-7 text-foreground-soft">
-      <span className="font-semibold text-foreground">When</span> {trigger.label} {triggerValue && <Chip tone="neutral">{triggerValue}</Chip>}
-      <span className="font-semibold text-foreground">, then</span> {action.label} {actionValue && <Chip>{actionValue}</Chip>}
+      <span className="font-semibold text-foreground">When</span> {trigger.label}
+      {triggerValue && (
+        <>
+          {' '}
+          <Chip tone="neutral">{triggerValue}</Chip>
+        </>
+      )}
+      <span className="font-semibold text-foreground">, then</span> {action.label}
+      {actionValue && (
+        <>
+          {' '}
+          <Chip>{actionValue}</Chip>
+        </>
+      )}
     </p>
   );
 }

@@ -206,6 +206,11 @@
   background-color: var(--surface);
   box-shadow: var(--clay-inset), 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
 }
+/* Table cells stay flat: their editors sit inside the cell rather than as wells. */
+[data-style='clay'] [role='gridcell'] input[type='date'] {
+  background-color: transparent;
+  box-shadow: none;
+}
 [data-style='clay'] body {
   background:
     radial-gradient(1100px 560px at 100% -10%, rgb(255 214 165 / 0.35), transparent 60%),

@@ -2,7 +2,8 @@ import { StatusCategory } from '@/shared/constants/domain';
 import { formatShortDate } from '@/shared/lib/utils';
 import type { LookupRef } from '@/shared/types/api';
 import type { Task } from '../../types';
-import { GROUP_STRIP_WIDTH, TABLE_GRID, TABLE_MIN_WIDTH } from './table-columns';
+import { readCustomValue, type CustomField } from '@/features/custom-fields/types';
+import { GROUP_STRIP_WIDTH, type TableLayout } from './table-columns';
 
 /** Share of tasks per label, in first-seen order, for the distribution bars. */
 function distribution(tasks: Task[], pick: (task: Task) => LookupRef) {
@@ -28,7 +29,22 @@ function DistributionBar({ tasks, pick }: { tasks: Task[]; pick: (task: Task) =>
 }
 
 /** Footer of a group: how its tasks are distributed across each column. */
-export function GroupSummary({ tasks }: { tasks: Task[] }) {
+/** Group total of a custom column: sum of numbers, checked count, average rating. */
+function customSummary(field: CustomField, tasks: Task[]): string {
+  const values = tasks.map((t) => readCustomValue(t.customValues, field.id));
+  if (field.type === 'NUMBER') {
+    const numbers = values.filter((v): v is number => typeof v === 'number');
+    return numbers.length ? `${(Math.round(numbers.reduce((a, b) => a + b, 0) * 100) / 100).toLocaleString()} sum` : '';
+  }
+  if (field.type === 'CHECKBOX') return `${values.filter((v) => v === true).length}/${tasks.length}`;
+  if (field.type === 'RATING') {
+    const ratings = values.filter((v): v is number => typeof v === 'number');
+    return ratings.length ? `${(ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)} ★ avg` : '';
+  }
+  return '';
+}
+
+export function GroupSummary({ tasks, layout, customFields }: { tasks: Task[]; layout: TableLayout; customFields: CustomField[] }) {
   if (!tasks.length) return null;
   const starts = tasks.map((t) => t.startDate ?? t.dueDate).filter((d): d is string => !!d).sort();
   const dues = tasks.map((t) => t.dueDate ?? t.startDate).filter((d): d is string => !!d).sort();
@@ -37,7 +53,7 @@ export function GroupSummary({ tasks }: { tasks: Task[] }) {
   const progress = Math.round(tasks.reduce((sum, t) => sum + t.progress, 0) / tasks.length);
 
   return (
-    <div role="row" aria-label="Group summary" className="grid h-10 text-xs text-muted" style={{ gridTemplateColumns: TABLE_GRID, minWidth: TABLE_MIN_WIDTH }}>
+    <div role="row" aria-label="Group summary" className="grid h-10 text-xs text-muted" style={{ gridTemplateColumns: layout.grid, minWidth: layout.minWidth }}>
       <span />
       <span className="sticky bg-background" style={{ left: GROUP_STRIP_WIDTH }} />
       <span className="border-l border-border" />
@@ -52,6 +68,11 @@ export function GroupSummary({ tasks }: { tasks: Task[] }) {
       </div>
       <div className="flex items-center justify-center font-medium tabular-nums text-foreground-soft">{estimate ? `${estimate}h` : '—'}</div>
       <div className="flex items-center justify-center font-medium tabular-nums text-foreground-soft">{progress}% avg</div>
+      {customFields.map((field) => (
+        <div key={field.id} className="flex items-center justify-center truncate px-1 font-medium tabular-nums text-foreground-soft">
+          {customSummary(field, tasks)}
+        </div>
+      ))}
     </div>
   );
 }

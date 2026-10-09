@@ -2,6 +2,9 @@
 
 import { ListChecks, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useCustomFields, useDeleteCustomField, useSetCustomValue } from '@/features/custom-fields/api';
+import { CustomFieldModal } from '@/features/custom-fields/components/custom-field-modal';
+import type { CustomField } from '@/features/custom-fields/types';
 import { useLookups } from '@/features/lookups/api';
 import { useProject, useProjectMembers } from '@/features/projects/api';
 import { FALLBACK_GROUP_COLOR } from '@/features/task-lists/group-colors';
@@ -19,6 +22,7 @@ import type { Task } from '../../types';
 import { TaskDetailDrawer } from '../task-detail-drawer';
 import { EMPTY_TASK_FILTERS, filtersToQuery } from '../task-filters';
 import { TaskFormModal, type TaskFormDefaults } from '../task-form-modal';
+import { tableLayout } from './table-columns';
 import { TableGroup, type GroupModel } from './table-group';
 import type { RowContext } from './task-row';
 import { TableToolbar } from './table-toolbar';
@@ -41,12 +45,20 @@ export function ProjectTable({ projectId }: { projectId: string }) {
   const [creating, setCreating] = useState<TaskFormDefaults | null>(null);
   const [deleting, setDeleting] = useState<GroupModel | null>(null);
   const [newGroupId, setNewGroupId] = useState<string | null>(null);
+  const [editingColumn, setEditingColumn] = useState<CustomField | 'new' | null>(null);
+  const [deletingColumn, setDeletingColumn] = useState<CustomField | null>(null);
+  const { data: customFields } = useCustomFields(projectId);
+  const setCustom = useSetCustomValue();
+  const deleteColumn = useDeleteCustomField(projectId);
 
   const createTask = useCreateTask();
   const quickUpdate = useQuickUpdateTask();
   const saveGroup = useSaveTaskList(projectId);
   const deleteGroup = useDeleteTaskList(projectId);
   const canEdit = !!project?.access.canEdit && !project.isArchived;
+  const canManage = !!project?.access.canManage && !project.isArchived;
+  const fields = useMemo(() => customFields ?? [], [customFields]);
+  const layout = useMemo(() => tableLayout(fields.length, canManage), [fields.length, canManage]);
   const members = useMemo(() => (memberships ?? []).map((m) => m.user), [memberships]);
 
   const { data, isLoading, isError, error, refetch } = useTasks({
@@ -70,6 +82,13 @@ export function ProjectTable({ projectId }: { projectId: string }) {
     priorities,
     members,
     canEdit,
+    canManage,
+    layout,
+    customFields: fields,
+    onSetCustom: (task, field, value) => setCustom.mutate({ taskId: task.id, fieldId: field.id, value }),
+    onAddColumn: () => setEditingColumn('new'),
+    onEditColumn: setEditingColumn,
+    onDeleteColumn: setDeletingColumn,
     onOpen: (task) => setTaskId(task.id),
     onUpdate: (task, input, preview) => quickUpdate.mutate({ id: task.id, input, preview }),
   };
@@ -138,6 +157,15 @@ export function ProjectTable({ projectId }: { projectId: string }) {
 
       <TaskFormModal open={!!creating} onClose={() => setCreating(null)} projectId={projectId} defaults={creating ?? undefined} />
       <TaskDetailDrawer taskId={taskId} onClose={() => setTaskId(null)} onOpenTask={setTaskId} />
+      <CustomFieldModal projectId={projectId} field={editingColumn} onClose={() => setEditingColumn(null)} />
+      <ConfirmDialog
+        open={!!deletingColumn}
+        onClose={() => setDeletingColumn(null)}
+        title="Delete column"
+        message={`Delete "${deletingColumn?.name}" and every value in it? This cannot be undone.`}
+        loading={deleteColumn.isPending}
+        onConfirm={() => deletingColumn && deleteColumn.mutate(deletingColumn.id, { onSuccess: () => setDeletingColumn(null) })}
+      />
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}

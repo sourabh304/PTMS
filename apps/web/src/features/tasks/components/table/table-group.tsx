@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, MoreHorizontal, Palette, Pencil, Trash2 } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, Palette, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { GROUP_COLORS } from '@/features/task-lists/group-colors';
 import { cn } from '@/shared/lib/utils';
@@ -9,7 +9,8 @@ import { InlineEdit } from '@/shared/ui/inline-edit';
 import { Popover } from '@/shared/ui/popover';
 import type { Task } from '../../types';
 import { GroupSummary } from './group-summary';
-import { GROUP_STRIP_WIDTH, TABLE_COLUMNS, TABLE_GRID, TABLE_MIN_WIDTH } from './table-columns';
+import type { CustomField } from '@/features/custom-fields/types';
+import { GROUP_STRIP_WIDTH, TABLE_COLUMNS, type TableLayout } from './table-columns';
 import { TaskRow, type RowContext } from './task-row';
 
 export interface GroupModel {
@@ -77,7 +78,7 @@ export function TableGroup({ group, tasks, context, autoEditName, onAddTask, onR
           type="button"
           onClick={() => setCollapsed(false)}
           className="flex h-10 w-full items-center gap-3 overflow-hidden rounded-ui border border-border bg-surface pr-4 text-left text-sm"
-          style={{ minWidth: Math.min(TABLE_MIN_WIDTH, 480) }}
+          style={{ minWidth: Math.min(context.layout.minWidth, 480) }}
         >
           <span className="h-full shrink-0" style={{ width: GROUP_STRIP_WIDTH, backgroundColor: group.color }} />
           <span className="font-medium" style={{ color: group.color }}>
@@ -87,24 +88,25 @@ export function TableGroup({ group, tasks, context, autoEditName, onAddTask, onR
         </button>
       ) : (
         <div role="table" aria-label={`${group.name} tasks`} className="overflow-hidden rounded-ui border-l-0">
-          <ColumnHeader color={group.color} />
+          <ColumnHeader color={group.color} context={context} />
           {tasks.map((task) => (
             <TaskRow key={task.id} task={task} color={group.color} context={context} />
           ))}
-          {context.canEdit && <AddTaskRow color={group.color} onAdd={onAddTask} />}
-          <GroupSummary tasks={tasks} />
+          {context.canEdit && <AddTaskRow color={group.color} layout={context.layout} onAdd={onAddTask} />}
+          <GroupSummary tasks={tasks} layout={context.layout} customFields={context.customFields} />
         </div>
       )}
     </section>
   );
 }
 
-function ColumnHeader({ color }: { color: string }) {
+function ColumnHeader({ color, context }: { color: string; context: RowContext }) {
+  const { layout, customFields, canManage } = context;
   return (
     <div
       role="row"
       className="grid h-9 rounded-tl-ui border-y border-r border-border bg-surface text-xs font-medium text-muted"
-      style={{ gridTemplateColumns: TABLE_GRID, minWidth: TABLE_MIN_WIDTH }}
+      style={{ gridTemplateColumns: layout.grid, minWidth: layout.minWidth }}
     >
       <span aria-hidden className="sticky left-0 z-[1] rounded-tl-ui" style={{ backgroundColor: color }} />
       <span role="columnheader" className="sticky z-[1] flex items-center border-r border-border bg-surface pl-3.5" style={{ left: GROUP_STRIP_WIDTH }}>
@@ -115,11 +117,80 @@ function ColumnHeader({ color }: { color: string }) {
           {column.label}
         </span>
       ))}
+      {customFields.map((field) => (
+        <CustomColumnHeader key={field.id} field={field} context={context} />
+      ))}
+      {layout.addColumn && canManage && (
+        <span role="columnheader" className="flex items-center justify-center">
+          <button
+            type="button"
+            onClick={context.onAddColumn}
+            aria-label="Add column"
+            title="Add column"
+            className="flex size-7 items-center justify-center rounded-ui text-muted hover:bg-surface-muted hover:text-foreground"
+          >
+            <Plus className="size-4" />
+          </button>
+        </span>
+      )}
     </div>
   );
 }
 
-function AddTaskRow({ color, onAdd }: { color: string; onAdd: (title: string) => void }) {
+function CustomColumnHeader({ field, context }: { field: CustomField; context: RowContext }) {
+  if (!context.canManage) {
+    return (
+      <span role="columnheader" className="flex items-center justify-center truncate border-r border-border px-2 last:border-r-0">
+        {field.name}
+      </span>
+    );
+  }
+  return (
+    <span role="columnheader" className="group/col relative flex items-center justify-center border-r border-border px-6 last:border-r-0">
+      <span className="truncate">{field.name}</span>
+      <Popover
+        align="end"
+        className="w-48 p-1"
+        trigger={({ ref, toggle }) => (
+          <button
+            ref={ref}
+            type="button"
+            onClick={toggle}
+            aria-label={`${field.name} column actions`}
+            className="absolute right-1 flex size-6 items-center justify-center rounded-ui text-muted opacity-0 hover:bg-surface-muted hover:text-foreground focus-visible:opacity-100 group-hover/col:opacity-100"
+          >
+            <MoreHorizontal className="size-4" />
+          </button>
+        )}
+      >
+        {(close) => (
+          <>
+            <DropdownItem
+              onClick={() => {
+                close();
+                context.onEditColumn(field);
+              }}
+            >
+              <Pencil /> Edit column
+            </DropdownItem>
+            <DropdownSeparator />
+            <DropdownItem
+              danger
+              onClick={() => {
+                close();
+                context.onDeleteColumn(field);
+              }}
+            >
+              <Trash2 /> Delete column
+            </DropdownItem>
+          </>
+        )}
+      </Popover>
+    </span>
+  );
+}
+
+function AddTaskRow({ color, layout, onAdd }: { color: string; layout: TableLayout; onAdd: (title: string) => void }) {
   const [title, setTitle] = useState('');
   const submit = () => {
     const value = title.trim();
@@ -128,7 +199,7 @@ function AddTaskRow({ color, onAdd }: { color: string; onAdd: (title: string) =>
     setTitle('');
   };
   return (
-    <div className="grid h-10 border-b border-r border-border bg-surface" style={{ gridTemplateColumns: TABLE_GRID, minWidth: TABLE_MIN_WIDTH }}>
+    <div className="grid h-10 border-b border-r border-border bg-surface" style={{ gridTemplateColumns: layout.grid, minWidth: layout.minWidth }}>
       <span aria-hidden className="sticky left-0 z-[1] rounded-bl-ui opacity-50" style={{ backgroundColor: color }} />
       <div className="sticky z-[1] col-span-1 flex items-center bg-surface px-2" style={{ left: GROUP_STRIP_WIDTH }}>
         <input

@@ -26,6 +26,7 @@ import { ProjectsModule } from './features/projects/projects.module';
 import { ReportsModule } from './features/reports/reports.module';
 import { SubscriptionsModule } from './features/subscriptions/subscriptions.module';
 import { AutomationsModule } from './features/automations/automations.module';
+import { CustomFieldsModule } from './features/custom-fields/custom-fields.module';
 import { TaskListsModule } from './features/task-lists/task-lists.module';
 import { TasksModule } from './features/tasks/tasks.module';
 import { TimesheetsModule } from './features/timesheets/timesheets.module';
@@ -55,6 +56,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ProjectsModule,
     TaskListsModule,
     AutomationsModule,
+    CustomFieldsModule,
     TasksModule,
     MilestonesModule,
     IssuesModule,

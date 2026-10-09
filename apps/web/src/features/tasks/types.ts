@@ -27,6 +27,8 @@ export interface Task {
   milestone: { id: string; name: string } | null;
   assignees: UserSummary[];
   _count: { subtasks: number; comments: number };
+  /** Values of the project's custom columns, JSON-encoded. */
+  customValues: { fieldId: string; value: string }[];
 }
 
 interface DependencyTask {

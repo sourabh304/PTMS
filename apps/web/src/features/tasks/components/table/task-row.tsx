@@ -1,6 +1,8 @@
 'use client';
 
 import { GitBranch, Maximize2, MessageSquare } from 'lucide-react';
+import { CustomCell } from '@/features/custom-fields/components/custom-cell';
+import { readCustomValue, type CustomField } from '@/features/custom-fields/types';
 import type { Lookup } from '@/features/lookups/types';
 import { StatusCategory } from '@/shared/constants/domain';
 import { cn } from '@/shared/lib/utils';
@@ -9,7 +11,7 @@ import { InlineEdit } from '@/shared/ui/inline-edit';
 import type { Task, TaskUpdate } from '../../types';
 import { LookupCell } from './lookup-cell';
 import { PeopleCell } from './people-cell';
-import { GROUP_STRIP_WIDTH, TABLE_GRID, TABLE_MIN_WIDTH } from './table-columns';
+import { GROUP_STRIP_WIDTH, type TableLayout } from './table-columns';
 import { TimelineCell } from './timeline-cell';
 
 export interface RowContext {
@@ -17,6 +19,14 @@ export interface RowContext {
   priorities: Lookup[];
   members: UserSummary[];
   canEdit: boolean;
+  /** Project managers add, rename and delete custom columns. */
+  canManage: boolean;
+  layout: TableLayout;
+  customFields: CustomField[];
+  onSetCustom: (task: Task, field: CustomField, value: unknown) => void;
+  onAddColumn: () => void;
+  onEditColumn: (field: CustomField) => void;
+  onDeleteColumn: (field: CustomField) => void;
   onOpen: (task: Task) => void;
   /** Saves a change; `preview` is shown immediately. */
   onUpdate: (task: Task, input: TaskUpdate, preview: Partial<Task>) => void;
@@ -26,12 +36,12 @@ export interface RowContext {
 const cell = 'h-full min-w-0 border-r border-border';
 
 export function TaskRow({ task, color, context }: { task: Task; color: string; context: RowContext }) {
-  const { statuses, priorities, members, canEdit, onOpen, onUpdate } = context;
+  const { statuses, priorities, members, canEdit, onOpen, onUpdate, layout, customFields, onSetCustom } = context;
   const closed = task.status.category === StatusCategory.CLOSED;
   const estimate = task.estimatedHours ?? null;
 
   return (
-    <div role="row" className="group/row grid h-10 border-b border-border bg-surface text-sm hover:bg-surface-hover" style={{ gridTemplateColumns: TABLE_GRID, minWidth: TABLE_MIN_WIDTH }}>
+    <div role="row" className="group/row grid h-10 border-b border-border bg-surface text-sm hover:bg-surface-hover" style={{ gridTemplateColumns: layout.grid, minWidth: layout.minWidth }}>
       <span aria-hidden className="sticky left-0 z-[1]" style={{ backgroundColor: color }} />
 
       <div role="gridcell" className={cn(cell, 'sticky z-[1] flex items-center gap-1.5 bg-inherit pl-2 pr-2')} style={{ left: GROUP_STRIP_WIDTH }}>
@@ -121,6 +131,12 @@ export function TaskRow({ task, color, context }: { task: Task; color: string; c
         </div>
         <span className="w-9 text-right text-xs tabular-nums text-muted">{task.progress}%</span>
       </div>
+      {customFields.map((field) => (
+        <div key={field.id} role="gridcell" className={cell}>
+          <CustomCell field={field} value={readCustomValue(task.customValues, field.id)} disabled={!canEdit} onChange={(value) => onSetCustom(task, field, value)} />
+        </div>
+      ))}
+      {layout.addColumn && <div aria-hidden />}
     </div>
   );
 }

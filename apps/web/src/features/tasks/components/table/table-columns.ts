@@ -16,5 +16,25 @@ const TASK_COLUMN_MIN = 260;
 /** Colored group strip at the start of every row. */
 export const GROUP_STRIP_WIDTH = 6;
 
-export const TABLE_GRID = `${GROUP_STRIP_WIDTH}px minmax(${TASK_COLUMN_MIN}px, 1fr) ${TABLE_COLUMNS.map((c) => `${c.width}px`).join(' ')}`;
-export const TABLE_MIN_WIDTH = GROUP_STRIP_WIDTH + TASK_COLUMN_MIN + TABLE_COLUMNS.reduce((sum, c) => sum + c.width, 0);
+/** Width of each custom column, and of the trailing "+" column that adds one. */
+export const CUSTOM_COLUMN_WIDTH = 150;
+export const ADD_COLUMN_WIDTH = 44;
+
+export interface TableLayout {
+  grid: string;
+  minWidth: number;
+  customCount: number;
+  /** Whether the trailing "+ add column" cell is shown. */
+  addColumn: boolean;
+}
+
+/** Grid of the built-in columns followed by the project's custom columns. */
+export function tableLayout(customCount = 0, addColumn = false): TableLayout {
+  const widths = [...TABLE_COLUMNS.map((c) => c.width), ...Array<number>(customCount).fill(CUSTOM_COLUMN_WIDTH), ...(addColumn ? [ADD_COLUMN_WIDTH] : [])];
+  return {
+    grid: `${GROUP_STRIP_WIDTH}px minmax(${TASK_COLUMN_MIN}px, 1fr) ${widths.map((w) => `${w}px`).join(' ')}`,
+    minWidth: GROUP_STRIP_WIDTH + TASK_COLUMN_MIN + widths.reduce((sum, w) => sum + w, 0),
+    customCount,
+    addColumn,
+  };
+}

@@ -11,6 +11,7 @@ export const TASK_LIST_INCLUDE = {
   milestone: { select: { id: true, name: true } },
   assignees: { select: { user: { select: USER_SUMMARY_SELECT } } },
   _count: { select: { subtasks: true, comments: true } },
+  customValues: { select: { fieldId: true, value: true } },
 } satisfies Prisma.TaskInclude;
 
 const DEPENDENCY_TASK_SELECT = {

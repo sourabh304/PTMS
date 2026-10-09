@@ -181,6 +181,7 @@ model Project {
   activities   Activity[]
   favorites    ProjectFavorite[]
   automations  Automation[]
+  customFields CustomField[]
 
   @@unique([organizationId, key])
   @@index([organizationId, isArchived])
@@ -290,6 +291,7 @@ model Task {
   comments     Comment[]
   timeEntries  TimeEntry[]
   issues       Issue[]
+  customValues CustomFieldValue[]
 
   @@unique([projectId, number])
   @@index([projectId, statusId])
@@ -458,4 +460,37 @@ model Automation {
   createdBy User    @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([projectId, trigger, isActive])
+}
+
+/// Extra column on a project's main table (see custom-field.constants.ts for the types).
+model CustomField {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  type      String
+  /// JSON array of { id, label, color } for dropdown columns.
+  options   String?
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  values  CustomFieldValue[]
+
+  @@index([projectId, position])
+}
+
+/// A task's value in a custom column, stored as JSON.
+model CustomFieldValue {
+  id        String   @id @default(cuid())
+  fieldId   String
+  taskId    String
+  value     String
+  updatedAt DateTime @updatedAt
+
+  field CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  task  Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([fieldId, taskId])
+  @@index([taskId])
 }
