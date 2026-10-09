@@ -44,13 +44,6 @@ Inside a project, members additionally hold a project role (Manager / Member / V
 Plan limits (max users / projects) are enforced by the API; set `REQUIRE_ACTIVE_SUBSCRIPTION=true`
 to block adding users and projects for organizations without a current subscription.
 
-### Workspaces and the root admin
-
-There is no public sign-up. New workspaces (organizations) can only be created by the
-**root admin** (`SEED_ROOT_ADMIN_EMAIL` / `SEED_ROOT_ADMIN_PASSWORD`, default `root@segueit.com`)
-from the **Workspaces** page, which creates the organization with its first owner account.
-Organization owners and admins cannot see that page, and cannot edit or deactivate the root admin.
-
 API documentation (Swagger) is served at `http://localhost:4000/api/docs` when `SWAGGER_ENABLED=true`.
 
 ### Run with Docker
@@ -100,6 +93,10 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Projects** – portfolio grid/table, status, owner, budget, timeline, color, archive/restore, members with project roles (Manager / Member / Viewer).
 - **Tasks** – groups, subtasks, assignees, priorities, estimates, progress, start/due dates, dependencies (with cycle detection), updates (comments), time logged.
 - **Kanban** – drag & drop across configurable statuses with persistent ordering.
+- **Calendar** – month view per project and in My work; items span start → due date, drag a day to reschedule, drag from the Unscheduled tray to plan.
+- **Workload** – estimated hours per person per week against capacity (working hours × 5), colour-coded with the items behind each cell.
+- **Custom columns** – per project: text, numbers, dropdown (coloured choices), checkbox, date, link, tags and rating; edited inline on the main table with group totals.
+- **Automations** – "when … then …" rules per project: when an item is created, its status or priority changes or someone is assigned, set status/priority, assign, move to a group, set a due date, or notify people. Recipes included; chains stop after 3 levels.
 - **Gantt** – day/week/month zoom, dependency arrows, milestones, today marker, drag to reschedule and resize.
 - **Milestones** – timeline view with completion tracking and task-based progress.
 - **Issues** – bug tracker with configurable statuses, severities, priorities, assignee and due dates.
@@ -109,7 +106,7 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Activity & notifications** – audit trail per project and in-app notifications: task/issue assignment, task and issue status changes, due date changes, new comments (creator, assignees and everyone in the thread), added to / removed from a project, time submitted for approval and reviewed, due today/tomorrow and overdue reminders (hourly, in the organization's timezone), and plan changes for organization admins.
 - **Administration** – users & roles (Super Admin, Admin, Employee), organization name and default brand color, timezone, working hours, fully configurable workflows, and a read-only view of the organization's plan and usage.
 - **Platform console (Root)** – overview with MRR, organizations (create with first Super Admin, suspend, delete), plan catalogue and subscriptions with enforced limits.
-- **Appearance** – per-user light/dark/system theme, accent color, font (Figtree, Inter, Geist, IBM Plex Sans, Manrope), density, corner radius, light/dark sidebar, and a collapsible sidebar (Ctrl/⌘+B).
+- **Appearance** – Claymorphic (cream, default) or Classic style, per-user light/dark/system theme, accent color, font (Figtree, Inter, Geist, IBM Plex Sans, Manrope), density, corner radius, light/dark sidebar, and a collapsible sidebar (Ctrl/⌘+B).
 - **Security** – httpOnly cookie auth, short-lived access tokens, rotating refresh tokens with reuse detection, bcrypt, Helmet, rate limiting, strict DTO validation, RBAC + project-level authorization, strict separation of platform (root) and tenant routes.
 
 ---

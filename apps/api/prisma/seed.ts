@@ -20,6 +20,8 @@ import { slugify } from '../src/common/utils/string.util';
 import { DEFAULT_LOOKUPS } from '../src/features/lookups/lookup.defaults';
 import { ORGANIZATION_DEFAULTS } from '../src/features/organizations/organization.defaults';
 import { nextGroupColor } from '../src/features/task-lists/task-list.colors';
+import { AutomationAction, AutomationTrigger } from '../src/features/automations/automation.constants';
+import { CustomFieldType } from '../src/features/custom-fields/custom-field.constants';
 import { DEFAULT_PLANS, DEMO_ORGANIZATION, DEMO_PROJECTS, DEMO_USERS, ROOT_ACCOUNT } from './seed-data';
 
 const prisma = new PrismaClient();
@@ -306,11 +308,59 @@ async function seedDemoOrganization(): Promise<string> {
         createdAt: dayOffset(Math.min(spec.startOffset, 0)),
       },
     });
+    await seedBoardExtras(project.id, owner.id, taskIds, lookups);
     console.log(`✔ Seeded demo project ${spec.key} - ${spec.name}`);
   }
 
   console.log(`✔ Demo users sign in with DEMO_ORGANIZATION.userPassword (e.g. ${DEMO_USERS[0].handle}@${domain})`);
   return organization.id;
+}
+
+/**
+ * Demo custom columns (with values) and automations, so the main table and the
+ * Automations tab show what they can do.
+ */
+async function seedBoardExtras(
+  projectId: string,
+  ownerId: string,
+  taskIds: Map<string, string>,
+  lookups: { id: string; type: string; category: string | null; position: number }[],
+): Promise<void> {
+  const phases = [
+    { id: 'discovery', label: 'Discovery', color: '#579bfc' },
+    { id: 'build', label: 'Build', color: '#fdab3d' },
+    { id: 'launch', label: 'Launch', color: '#00c875' },
+  ];
+  const phase = await prisma.customField.create({
+    data: { projectId, name: 'Phase', type: CustomFieldType.DROPDOWN, options: JSON.stringify(phases), position: 0 },
+  });
+  const budget = await prisma.customField.create({ data: { projectId, name: 'Budget ($)', type: CustomFieldType.NUMBER, position: 1 } });
+  const approved = await prisma.customField.create({ data: { projectId, name: 'Client approved', type: CustomFieldType.CHECKBOX, position: 2 } });
+
+  const tasks = await prisma.task.findMany({
+    where: { id: { in: [...taskIds.values()] } },
+    select: { id: true, estimatedHours: true, status: { select: { category: true } } },
+    orderBy: { number: 'asc' },
+  });
+  const values = tasks.flatMap((task, index) => {
+    const done = task.status.category === StatusCategory.CLOSED;
+    const rows = [
+      { fieldId: phase.id, taskId: task.id, value: JSON.stringify(phases[Math.min(phases.length - 1, Math.floor((index / tasks.length) * phases.length))].id) },
+      ...(task.estimatedHours ? [{ fieldId: budget.id, taskId: task.id, value: JSON.stringify(Math.round(task.estimatedHours * 85)) }] : []),
+    ];
+    if (done) rows.push({ fieldId: approved.id, taskId: task.id, value: 'true' });
+    return rows;
+  });
+  await prisma.customFieldValue.createMany({ data: values });
+
+  const closed = lookups.find((l) => l.type === LookupType.TASK_STATUS && l.category === StatusCategory.CLOSED);
+  const highest = lookups.filter((l) => l.type === LookupType.PRIORITY).sort((a, b) => b.position - a.position)[0];
+  await prisma.automation.createMany({
+    data: [
+      ...(closed ? [{ projectId, name: 'Tell the creator when work is done', trigger: AutomationTrigger.STATUS_CHANGED, triggerValue: closed.id, action: AutomationAction.NOTIFY_CREATOR, createdById: ownerId }] : []),
+      ...(highest ? [{ projectId, name: 'Escalate top-priority items to the project owner', trigger: AutomationTrigger.PRIORITY_CHANGED, triggerValue: highest.id, action: AutomationAction.NOTIFY_USER, actionValue: ownerId, createdById: ownerId }] : []),
+    ],
+  });
 }
 
 /** Gives groups created before group colors existed a color from the palette. */
