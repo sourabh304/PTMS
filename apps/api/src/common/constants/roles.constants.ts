@@ -1,9 +1,12 @@
-/**
- * Workspace-wide roles. The root administrator is an ADMIN whose user record has isRootAdmin set.
- * - ADMIN: manages users, projects and settings, and sees everything in the workspace.
- * - EMPLOYEE: works on the projects they are added to and logs their own time.
- */
+/** Platform-level role: manages every organization, plan and subscription. Never belongs to an organization. */
+export const PlatformRole = {
+  ROOT: 'ROOT',
+} as const;
+export type PlatformRole = (typeof PlatformRole)[keyof typeof PlatformRole];
+
+/** Organization-wide roles, ordered from most to least privileged. */
 export const OrgRole = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
   ADMIN: 'ADMIN',
   EMPLOYEE: 'EMPLOYEE',
 } as const;
@@ -27,6 +30,10 @@ export const ProjectRole = {
 export type ProjectRole = (typeof ProjectRole)[keyof typeof ProjectRole];
 export const PROJECT_ROLES = Object.values(ProjectRole);
 
+export const ORG_ADMIN_ROLES: readonly OrgRole[] = [OrgRole.SUPER_ADMIN, OrgRole.ADMIN];
 export const PROJECT_EDITOR_ROLES: readonly ProjectRole[] = [ProjectRole.MANAGER, ProjectRole.MEMBER];
 
-export const isOrgAdmin = (role: string): boolean => role === OrgRole.ADMIN;
+export const isRoot = (role: string): boolean => role === PlatformRole.ROOT;
+/** Root acts with super admin authority inside whichever organization it has opened. */
+export const isSuperAdmin = (role: string): boolean => role === OrgRole.SUPER_ADMIN || isRoot(role);
+export const isOrgAdmin = (role: string): boolean => ORG_ADMIN_ROLES.includes(role as OrgRole) || isRoot(role);

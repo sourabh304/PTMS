@@ -9,7 +9,7 @@ import { usePasswordMinLength, useSession } from '@/features/auth/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { passwordSchema } from '@/features/auth/schemas';
 import { appConfig } from '@/shared/config/env';
-import { ORG_ROLES, Permission, type OrgRole } from '@/shared/constants/domain';
+import { ORG_ADMIN_ROLES, ORG_ROLES, Permission, type OrgRole } from '@/shared/constants/domain';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { errorMessage } from '@/shared/lib/api-client';
 import { formatDateTime, fullName, humanize } from '@/shared/lib/utils';
@@ -56,14 +56,14 @@ export function UserManagement() {
         actions={
           canManage && (
             <Button size="sm" onClick={() => setEditing('new')}>
-              <Plus className="h-3.5 w-3.5" /> Add user
+              <Plus className="size-3.5" /> Add user
             </Button>
           )
         }
       />
       <div className="flex flex-wrap gap-3 border-b border-border px-5 py-3">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <Input className="pl-9" placeholder="Search people" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select className="w-40" value={role} onChange={(e) => setRole(e.target.value)}>
@@ -112,10 +112,7 @@ export function UserManagement() {
                     </div>
                   </Td>
                   <Td>
-                    <span className="flex flex-wrap gap-1">
-                      <Badge tone={user.role === 'ADMIN' ? 'brand' : 'neutral'}>{humanize(user.role)}</Badge>
-                      {user.isRootAdmin && <Badge tone="warning">Root admin</Badge>}
-                    </span>
+                    <Badge tone={ORG_ADMIN_ROLES.includes(user.role) ? 'brand' : 'neutral'}>{humanize(user.role)}</Badge>
                   </Td>
                   <Td className="text-muted">{user.jobTitle ?? '—'}</Td>
                   <Td>{user.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Deactivated</Badge>}</Td>
@@ -124,21 +121,19 @@ export function UserManagement() {
                     <Td>
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" aria-label="Edit user" onClick={() => setEditing(user)}>
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="size-4" />
                         </Button>
-                        {(!user.isRootAdmin || user.id === session?.id) && (
-                          <Button variant="ghost" size="icon" aria-label="Reset password" onClick={() => setResetting(user)}>
-                            <KeyRound className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {user.id !== session?.id && !user.isRootAdmin && (
+                        <Button variant="ghost" size="icon" aria-label="Reset password" onClick={() => setResetting(user)}>
+                          <KeyRound className="size-4" />
+                        </Button>
+                        {user.id !== session?.id && (
                           <Button
                             variant="ghost"
                             size="icon"
                             aria-label={user.isActive ? 'Deactivate' : 'Reactivate'}
                             onClick={() => update.mutate({ id: user.id, isActive: !user.isActive })}
                           >
-                            {user.isActive ? <UserX className="h-4 w-4 text-danger" /> : <UserCheck className="h-4 w-4 text-success" />}
+                            {user.isActive ? <UserX className="size-4 text-danger" /> : <UserCheck className="size-4 text-success" />}
                           </Button>
                         )}
                       </div>

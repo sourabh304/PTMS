@@ -7,10 +7,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { OrgRole } from '../../common/constants/roles.constants';
+import { isSuperAdmin, OrgRole } from '../../common/constants/roles.constants';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { Paginated, PaginationService } from '../../common/pagination/pagination.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import {
   ChangePasswordDto,
   CreateUserDto,
@@ -27,6 +28,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly pagination: PaginationService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async findAll(organizationId: string, query: UserQueryDto): Promise<Paginated<PublicUser>> {
@@ -71,6 +73,7 @@ export class UsersService {
     if (await this.prisma.user.findUnique({ where: { email } })) {
       throw new ConflictException('A user with this email already exists');
     }
+    await this.subscriptions.assertCapacity(actor.organizationId, 'users');
 
     return this.prisma.user.create({
       data: {
@@ -93,11 +96,15 @@ export class UsersService {
     if (target.id === actor.id && (dto.role !== undefined || dto.isActive === false)) {
       throw new BadRequestException('You cannot change your own role or deactivate yourself');
     }
-    if (target.isRootAdmin && (dto.role !== undefined || dto.isActive === false)) {
-      throw new ForbiddenException('The root administrator cannot be demoted or deactivated');
+    if (target.role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
+      throw new ForbiddenException('Only a super admin can modify another super admin');
     }
-    if (target.role === OrgRole.ADMIN && ((dto.role && dto.role !== OrgRole.ADMIN) || dto.isActive === false)) {
-      await this.assertAnotherAdminExists(actor.organizationId, target.id);
+    if (dto.role) this.assertCanAssignRole(actor, dto.role);
+    if (target.role === OrgRole.SUPER_ADMIN && ((dto.role && dto.role !== OrgRole.SUPER_ADMIN) || dto.isActive === false)) {
+      await this.assertAnotherSuperAdminExists(actor.organizationId, target.id);
+    }
+    if (dto.isActive === true && !target.isActive) {
+      await this.subscriptions.assertCapacity(actor.organizationId, 'users');
     }
 
     const user = await this.prisma.user.update({ where: { id }, data: dto, select: USER_PUBLIC_SELECT });
@@ -109,8 +116,8 @@ export class UsersService {
 
   async resetPassword(actor: AuthenticatedUser, id: string, password: string): Promise<void> {
     const target = await this.findOne(actor.organizationId, id);
-    if (target.isRootAdmin && target.id !== actor.id) {
-      throw new ForbiddenException('Only the root administrator can change their own password');
+    if (target.role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
+      throw new ForbiddenException('Only a super admin can reset another super admin’s password');
     }
     await this.prisma.user.update({ where: { id }, data: { passwordHash: await this.passwords.hash(password) } });
     await this.revokeSessions(id);
@@ -142,12 +149,18 @@ export class UsersService {
     });
   }
 
-  private async assertAnotherAdminExists(organizationId: string, excludeId: string): Promise<void> {
-    const admins = await this.prisma.user.count({
-      where: { organizationId, role: OrgRole.ADMIN, isActive: true, id: { not: excludeId } },
+  private assertCanAssignRole(actor: AuthenticatedUser, role: string): void {
+    if (role === OrgRole.SUPER_ADMIN && !isSuperAdmin(actor.role)) {
+      throw new ForbiddenException('Only a super admin can grant the super admin role');
+    }
+  }
+
+  private async assertAnotherSuperAdminExists(organizationId: string, excludeId: string): Promise<void> {
+    const superAdmins = await this.prisma.user.count({
+      where: { organizationId, role: OrgRole.SUPER_ADMIN, isActive: true, id: { not: excludeId } },
     });
-    if (admins === 0) {
-      throw new BadRequestException('The workspace must keep at least one active admin');
+    if (superAdmins === 0) {
+      throw new BadRequestException('The organization must keep at least one active super admin');
     }
   }
 }

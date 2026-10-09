@@ -147,7 +147,7 @@ export function GanttChart({ projectId }: { projectId: string }) {
   if (!rows.length) {
     return (
       <Card>
-        <EmptyState icon={<BarChartHorizontal className="h-6 w-6" />} title="Nothing to schedule yet" description="Add tasks with start and due dates to see them on the timeline." />
+        <EmptyState icon={<BarChartHorizontal className="size-6" />} title="Nothing to schedule yet" description="Add tasks with start and due dates to see them on the timeline." />
       </Card>
     );
   }
@@ -186,7 +186,7 @@ export function GanttChart({ projectId }: { projectId: string }) {
                 onClick={() => row.kind === 'task' && setTaskId(row.id)}
               >
                 {row.kind === 'milestone' ? (
-                  <Diamond className="h-3.5 w-3.5 shrink-0 text-brand" fill="currentColor" />
+                  <Diamond className="size-3.5 shrink-0 text-brand" fill="currentColor" />
                 ) : (
                   <span className="shrink-0 text-xs text-muted">
                     {data.project.key}-{row.task!.number}
@@ -275,7 +275,7 @@ export function GanttChart({ projectId }: { projectId: string }) {
                     return (
                       <div
                         key={row.id}
-                        className="absolute z-[3] h-4 w-4 rotate-45 rounded-sm shadow"
+                        className="absolute z-[3] size-4 rotate-45 rounded-sm shadow-ui-sm"
                         style={{ left: x(start) + pxPerDay / 2 - 8, top: i * rowHeight + rowHeight / 2 - 8, backgroundColor: row.color }}
                         title={`${row.label} · ${formatDate(dayToIso(start))}`}
                       />
@@ -285,8 +285,8 @@ export function GanttChart({ projectId }: { projectId: string }) {
                   return (
                     <div
                       key={row.id}
-                      className={cn('group absolute z-[3] select-none overflow-hidden rounded-md shadow-sm', canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer')}
-                      style={{ left: x(start), top, width: barWidth, height: barHeight, backgroundColor: `color-mix(in srgb, ${row.color} 30%, white)` }}
+                      className={cn('group absolute z-[3] select-none overflow-hidden rounded-md shadow-ui-sm', canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer')}
+                      style={{ left: x(start), top, width: barWidth, height: barHeight, backgroundColor: `color-mix(in srgb, ${row.color} 28%, var(--surface))` }}
                       title={`${row.label}\n${formatDate(dayToIso(start))} → ${formatDate(dayToIso(end))} · ${row.progress}%`}
                       onPointerDown={(e) => startDrag(e, row, 'move')}
                       onPointerUp={() => endDrag(row)}
@@ -300,7 +300,7 @@ export function GanttChart({ projectId }: { projectId: string }) {
                       )}
                       {canEdit && (
                         <span
-                          className="absolute right-0 top-0 h-full w-2 cursor-ew-resize bg-black/10 opacity-0 group-hover:opacity-100"
+                          className="absolute right-0 top-0 h-full w-2 cursor-ew-resize bg-foreground/15 opacity-0 group-hover:opacity-100"
                           onPointerDown={(e) => startDrag(e, row, 'resize')}
                           onPointerUp={(e) => {
                             e.stopPropagation();

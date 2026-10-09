@@ -31,14 +31,14 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
   return (
     <Dropdown
       align="left"
-      className="w-full min-w-72"
+      className="w-full min-w-72 p-0"
       trigger={({ toggle: toggleOpen }) => (
         <button
           type="button"
           id={fieldId}
           disabled={disabled}
           onClick={toggleOpen}
-          className="flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 text-left text-sm shadow-xs focus:border-brand focus:outline-none disabled:opacity-60"
+          className="flex min-h-[var(--control-h)] w-full flex-wrap items-center gap-1.5 rounded-ui border border-border bg-surface px-2 py-1 text-left text-sm shadow-ui-sm focus:border-brand focus:outline-none disabled:opacity-60"
         >
           {selected.length ? (
             selected.map((user) => (
@@ -46,7 +46,7 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
                 <Avatar user={user} size="xs" className="ring-0" />
                 {fullName(user)}
                 <X
-                  className="h-3 w-3 text-muted hover:text-foreground"
+                  className="size-3 text-muted hover:text-foreground"
                   onClick={(event) => {
                     event.stopPropagation();
                     toggle(user.id);
@@ -57,7 +57,7 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
           ) : (
             <span className="px-1 text-muted/80">{placeholder}</span>
           )}
-          <ChevronDown className="ml-auto h-4 w-4 text-muted" />
+          <ChevronDown className="ml-auto size-4 text-muted" />
         </button>
       )}
     >
@@ -82,7 +82,7 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
                     <span className="block truncate">{fullName(user)}</span>
                     <span className="block truncate text-xs text-muted">{user.email}</span>
                   </span>
-                  {isSelected && <Check className="h-4 w-4 text-brand" />}
+                  {isSelected && <Check className="size-4 text-brand" />}
                 </button>
               );
             })}

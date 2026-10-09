@@ -9,6 +9,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
+  /** Persistent sessions survive browser restarts ("Keep me signed in"). */
+  persistent: boolean;
+  refreshTtlMs: number;
 }
 
 export interface ClientMeta {
@@ -18,7 +21,7 @@ export interface ClientMeta {
 
 interface TokenSubject {
   id: string;
-  organizationId: string;
+  organizationId: string | null;
   role: string;
 }
 
@@ -37,8 +40,9 @@ export class TokenService {
     return this.config.get('auth', { infer: true });
   }
 
-  async issue(user: TokenSubject, meta: ClientMeta): Promise<TokenPair> {
+  async issue(user: TokenSubject, meta: ClientMeta, persistent = false): Promise<TokenPair> {
     const jti = randomUUID();
+    const refreshTtlMs = persistent ? this.auth.rememberTtlMs : this.auth.refreshTtlMs;
     const accessPayload: JwtAccessPayload = { sub: user.id, org: user.organizationId, role: user.role };
     const refreshPayload: JwtRefreshPayload = { sub: user.id, jti };
 
@@ -49,7 +53,7 @@ export class TokenService {
       }),
       this.jwt.signAsync(refreshPayload, {
         secret: this.auth.refreshSecret,
-        expiresIn: Math.floor(this.auth.refreshTtlMs / 1000),
+        expiresIn: Math.floor(refreshTtlMs / 1000),
       }),
     ]);
 
@@ -58,20 +62,21 @@ export class TokenService {
         id: jti,
         userId: user.id,
         tokenHash: this.hash(refreshToken),
-        expiresAt: new Date(Date.now() + this.auth.refreshTtlMs),
+        expiresAt: new Date(Date.now() + refreshTtlMs),
         userAgent: meta.userAgent?.slice(0, 255),
         ipAddress: meta.ipAddress,
+        persistent,
       },
     });
 
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, persistent, refreshTtlMs };
   }
 
   /**
    * Validates a refresh token and revokes it (rotation). Presenting an already
    * revoked token is treated as theft and revokes every session of that user.
    */
-  async consume(refreshToken: string): Promise<string> {
+  async consume(refreshToken: string): Promise<{ userId: string; persistent: boolean }> {
     let payload: JwtRefreshPayload;
     try {
       payload = await this.jwt.verifyAsync<JwtRefreshPayload>(refreshToken, { secret: this.auth.refreshSecret });
@@ -93,7 +98,7 @@ export class TokenService {
     }
 
     await this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
-    return stored.userId;
+    return { userId: stored.userId, persistent: stored.persistent };
   }
 
   async revoke(refreshToken: string): Promise<void> {

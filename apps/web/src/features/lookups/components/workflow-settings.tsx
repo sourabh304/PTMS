@@ -56,7 +56,7 @@ export function WorkflowSettings() {
           actions={
             canManage && (
               <Button size="sm" onClick={() => setEditing('new')}>
-                <Plus className="h-3.5 w-3.5" /> Add {TYPE_LABELS[type].item}
+                <Plus className="size-3.5" /> Add value
               </Button>
             )
           }
@@ -71,22 +71,22 @@ export function WorkflowSettings() {
                 {lookup.category && <span className="text-xs text-muted">{humanize(lookup.category)}</span>}
                 {lookup.isDefault && (
                   <Badge tone="brand">
-                    <Star className="h-3 w-3" /> Default
+                    <Star className="size-3" /> Default
                   </Badge>
                 )}
                 {canManage && (
                   <div className="ml-auto flex gap-1">
                     <Button variant="ghost" size="icon" aria-label="Move up" disabled={index === 0} onClick={() => move(index, -1)}>
-                      <ArrowUp className="h-4 w-4" />
+                      <ArrowUp className="size-4" />
                     </Button>
                     <Button variant="ghost" size="icon" aria-label="Move down" disabled={index === lookups.length - 1} onClick={() => move(index, 1)}>
-                      <ArrowDown className="h-4 w-4" />
+                      <ArrowDown className="size-4" />
                     </Button>
                     <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(lookup)}>
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="size-4" />
                     </Button>
                     <Button variant="ghost" size="icon" aria-label="Delete" disabled={lookups.length <= 1} onClick={() => setDeleting(lookup)}>
-                      <Trash2 className="h-4 w-4 text-danger" />
+                      <Trash2 className="size-4 text-danger" />
                     </Button>
                   </div>
                 )}

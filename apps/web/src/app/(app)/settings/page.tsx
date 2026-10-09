@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation';
-import { routes } from '@/shared/config/routes';
+import { SettingsIndexRedirect } from '@/shared/components/settings-index-redirect';
 
 export default function SettingsPage() {
-  redirect(routes.settingsOrganization);
+  return <SettingsIndexRedirect />;
 }

@@ -2,29 +2,31 @@ import { appConfig } from '@/shared/config/env';
 import { cn } from '@/shared/lib/utils';
 
 interface BrandLogoProps {
-  name?: string;
-  logoUrl?: string | null;
   className?: string;
-  inverted?: boolean;
-  compact?: boolean;
+  /** `inline` puts the product name beside the logo; `stacked` puts it underneath (narrow spaces). */
+  layout?: 'inline' | 'stacked';
 }
 
-/** Product mark: organization logo when configured, otherwise a monogram of the app name. */
-export function BrandLogo({ name = appConfig.name, logoUrl, className, inverted, compact }: BrandLogoProps) {
-  const monogram = appConfig.shortName.slice(0, 2).toUpperCase();
+/**
+ * Company logo with the product name. Both a light and a dark-background variant are
+ * rendered; CSS in globals.css shows the one that matches the surface behind it.
+ */
+export function BrandLogo({ className, layout = 'inline' }: BrandLogoProps) {
+  const stacked = layout === 'stacked';
   return (
-    <div className={cn('flex items-center gap-2.5', className)}>
-      {logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt="" className="h-8 w-8 rounded-lg object-contain" />
-      ) : (
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-xs font-bold tracking-tight text-brand-foreground shadow-sm">
-          {monogram}
-        </span>
-      )}
-      {!compact && (
-        <span className={cn('truncate text-sm font-semibold tracking-tight', inverted ? 'text-white' : 'text-foreground')}>{name}</span>
-      )}
-    </div>
+    <span className={cn('flex min-w-0', stacked ? 'flex-col items-start gap-1' : 'items-center gap-2.5', className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset, sized by height */}
+      <img src={appConfig.logoUrl} alt={appConfig.companyName} className="brand-logo-light h-6 w-auto shrink-0" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={appConfig.logoDarkUrl} alt={appConfig.companyName} className="brand-logo-dark h-6 w-auto shrink-0" />
+      <span
+        className={cn(
+          'truncate font-semibold tracking-tight',
+          stacked ? 'text-[11px] uppercase leading-none tracking-wider opacity-70' : 'border-l border-current/15 pl-2.5 text-[13px] leading-none opacity-90',
+        )}
+      >
+        {appConfig.name}
+      </span>
+    </span>
   );
 }

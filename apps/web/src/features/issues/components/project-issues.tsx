@@ -50,8 +50,8 @@ export function ProjectIssues({ projectId }: { projectId: string }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <div className="relative w-full max-w-xs">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
             <Input className="pl-9" placeholder="Search issues" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <LookupSelect type={LookupType.ISSUE_STATUS} emptyLabel="All statuses" className="w-40" value={statusId} onChange={(e) => setStatusId(e.target.value)} />
@@ -67,7 +67,7 @@ export function ProjectIssues({ projectId }: { projectId: string }) {
         </div>
         {canEdit && (
           <Button onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4" /> Report issue
+            <Plus className="size-4" /> Report issue
           </Button>
         )}
       </div>
@@ -78,7 +78,7 @@ export function ProjectIssues({ projectId }: { projectId: string }) {
         ) : isError ? (
           <ErrorState message={errorMessage(error)} onRetry={refetch} />
         ) : !data?.data.length ? (
-          <EmptyState icon={<Bug className="h-6 w-6" />} title="No issues found" description="Bugs and defects reported for this project appear here." />
+          <EmptyState icon={<Bug className="size-6" />} title="No issues found" description="Bugs and defects reported for this project appear here." />
         ) : (
           <>
             <IssueTable issues={data.data} onOpen={(issue) => setIssueId(issue.id)} />

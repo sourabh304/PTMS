@@ -4,11 +4,13 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import type { ProjectRole } from '@/shared/constants/domain';
 import { api } from '@/shared/lib/api-client';
 import type { Paginated } from '@/shared/types/api';
-import type { Project, ProjectDashboard, ProjectDetail, ProjectInput, ProjectMember, ProjectQuery } from './types';
+import type { Project, ProjectDashboard, ProjectDetail, ProjectInput, ProjectMember, ProjectNavItem, ProjectQuery, ProjectSummary } from './types';
 
 export const projectKeys = {
   all: ['projects'] as const,
   list: (query: ProjectQuery) => ['projects', 'list', query] as const,
+  summary: ['projects', 'summary'] as const,
+  navigation: ['projects', 'navigation'] as const,
   detail: (id: string) => ['projects', 'detail', id] as const,
   members: (id: string) => ['projects', 'members', id] as const,
   dashboard: (id: string) => ['projects', 'dashboard', id] as const,
@@ -20,6 +22,27 @@ export function useProjects(query: ProjectQuery = {}) {
     queryFn: () => api.get<Paginated<Project>>('/projects', { ...query }),
     placeholderData: keepPreviousData,
   });
+}
+
+/** Every visible project for the sidebar (refreshed with any project change). */
+export function useProjectNavigation(enabled = true) {
+  return useQuery({ queryKey: projectKeys.navigation, queryFn: () => api.get<ProjectNavItem[]>('/projects/navigation'), enabled, staleTime: 60_000 });
+}
+
+export function useToggleFavorite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, favorite }: { id: string; favorite: boolean }) =>
+      favorite ? api.put(`/projects/${id}/favorite`) : api.delete(`/projects/${id}/favorite`),
+    onSuccess: (_, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: projectKeys.navigation });
+      void queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
+    },
+  });
+}
+
+export function useProjectSummary() {
+  return useQuery({ queryKey: projectKeys.summary, queryFn: () => api.get<ProjectSummary>('/projects/summary') });
 }
 
 export function useProject(id: string) {

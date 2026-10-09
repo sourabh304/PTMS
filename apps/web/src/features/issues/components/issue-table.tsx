@@ -30,12 +30,12 @@ export function IssueTable({ issues, onOpen, showProject }: { issues: Issue[]; o
           const closed = issue.status.category === StatusCategory.CLOSED;
           return (
             <Tr key={issue.id} className="cursor-pointer" onClick={() => onOpen(issue)}>
-              <Td className="whitespace-nowrap text-xs font-medium text-muted">{issueRef(issue)}</Td>
+              <Td className="whitespace-nowrap font-mono text-xs text-muted">{issueRef(issue)}</Td>
               <Td>
                 <span className={cn('font-medium', closed && 'text-muted line-through')}>{issue.title}</span>
                 {issue._count.comments > 0 && (
                   <span className="ml-2 inline-flex items-center gap-0.5 text-xs text-muted">
-                    <MessageSquare className="h-3 w-3" /> {issue._count.comments}
+                    <MessageSquare className="size-3" /> {issue._count.comments}
                   </span>
                 )}
                 <p className="text-xs text-muted">Reported by {fullName(issue.reporter)}</p>

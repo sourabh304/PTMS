@@ -6,9 +6,10 @@ interface AvatarUser {
   avatarUrl?: string | null;
 }
 
-const sizes = { xs: 'h-6 w-6 text-[10px]', sm: 'h-7 w-7 text-xs', md: 'h-9 w-9 text-sm', lg: 'h-14 w-14 text-lg' } as const;
+const sizes = { xs: 'size-6 text-[10px]', sm: 'size-7 text-[11px]', md: 'size-9 text-xs', lg: 'size-16 text-lg' } as const;
 
-const PALETTE = ['#2563eb', '#9333ea', '#db2777', '#ea580c', '#16a34a', '#0891b2', '#4f46e5', '#ca8a04'];
+/** Muted, accessible hues; initials avatars get a stable color per person. */
+const PALETTE = ['#3e63dd', '#8e4ec6', '#d6409f', '#e5484d', '#ef5f00', '#30a46c', '#12a594', '#0090ff', '#6e56cf', '#ad7f58'];
 
 function colorFor(user: AvatarUser): string {
   const seed = fullName(user);
@@ -21,14 +22,15 @@ export function Avatar({ user, size = 'sm', className }: { user: AvatarUser; siz
   const label = fullName(user);
   if (user.avatarUrl) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={user.avatarUrl} alt={label} title={label} className={cn('rounded-full object-cover ring-2 ring-surface', sizes[size], className)} />;
+    return <img src={user.avatarUrl} alt={label} title={label} className={cn('shrink-0 rounded-full object-cover ring-2 ring-surface', sizes[size], className)} />;
   }
+  const color = colorFor(user);
   return (
     <span
       title={label}
       aria-label={label}
-      className={cn('inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-surface', sizes[size], className)}
-      style={{ backgroundColor: colorFor(user) }}
+      className={cn('inline-flex shrink-0 items-center justify-center rounded-full font-semibold ring-2 ring-surface', sizes[size], className)}
+      style={{ backgroundColor: `color-mix(in srgb, ${color} 18%, var(--surface))`, color: `color-mix(in srgb, ${color} 85%, var(--foreground))` }}
     >
       {initials(user)}
     </span>

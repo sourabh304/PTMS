@@ -23,16 +23,28 @@ export class AuthCookieService {
     };
   }
 
+  /** Non-persistent sessions use browser-session cookies that end when the browser closes. */
   set(response: Response, tokens: TokenPair): void {
-    const { cookies, accessTtlMs, refreshTtlMs } = this.auth;
-    response.cookie(cookies.accessName, tokens.accessToken, { ...this.baseOptions(), maxAge: accessTtlMs });
-    response.cookie(cookies.refreshName, tokens.refreshToken, { ...this.baseOptions(), maxAge: refreshTtlMs });
+    const { cookies, accessTtlMs } = this.auth;
+    const lifetime = (maxAge: number) => (tokens.persistent ? { maxAge } : {});
+    response.cookie(cookies.accessName, tokens.accessToken, { ...this.baseOptions(), ...lifetime(accessTtlMs) });
+    response.cookie(cookies.refreshName, tokens.refreshToken, { ...this.baseOptions(), ...lifetime(tokens.refreshTtlMs) });
   }
 
   clear(response: Response): void {
     const { cookies } = this.auth;
     response.clearCookie(cookies.accessName, this.baseOptions());
     response.clearCookie(cookies.refreshName, this.baseOptions());
+    this.clearWorkspace(response);
+  }
+
+  /** Remembers which organization the root account has opened (browser-session cookie). */
+  setWorkspace(response: Response, organizationId: string): void {
+    response.cookie(this.auth.cookies.workspaceName, organizationId, this.baseOptions());
+  }
+
+  clearWorkspace(response: Response): void {
+    response.clearCookie(this.auth.cookies.workspaceName, this.baseOptions());
   }
 
   readRefreshToken(request: Request): string | undefined {
