@@ -1,6 +1,6 @@
 import { Global, Injectable, Module } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityRecordedEvent, DomainEvent, NotificationRequestedEvent } from './domain-events';
+import { ActivityRecordedEvent, DomainEvent, NotificationRequestedEvent, TaskChangedEvent } from './domain-events';
 
 /** Thin, typed facade over the event bus so features never depend on each other directly. */
 @Injectable()
@@ -9,6 +9,10 @@ export class EventPublisher {
 
   activity(event: ActivityRecordedEvent): void {
     this.emitter.emit(DomainEvent.ACTIVITY_RECORDED, event);
+  }
+
+  taskChanged(event: TaskChangedEvent): void {
+    this.emitter.emit(DomainEvent.TASK_CHANGED, event);
   }
 
   notify(event: NotificationRequestedEvent): void {

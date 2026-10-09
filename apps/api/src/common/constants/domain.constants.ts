@@ -81,6 +81,7 @@ export const NotificationType = {
   TIME_ENTRY_SUBMITTED: 'TIME_ENTRY_SUBMITTED',
   DUE_SOON: 'DUE_SOON',
   OVERDUE: 'OVERDUE',
+  AUTOMATION: 'AUTOMATION',
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 

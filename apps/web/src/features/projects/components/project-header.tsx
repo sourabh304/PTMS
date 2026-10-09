@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, BarChartHorizontal, Bug, CalendarDays, Clock, Flag, KanbanSquare, LayoutDashboard, Settings, Star, Table2, UserPlus, Users } from 'lucide-react';
+import { Activity, BarChartHorizontal, Bug, CalendarDays, Clock, Flag, KanbanSquare, LayoutDashboard, Settings, Star, Table2, UserPlus, Users, Zap } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { routes } from '@/shared/config/routes';
@@ -27,6 +27,7 @@ function projectViews(id: string, canManage: boolean): TabItem[] {
     { href: routes.projectMilestones(id), label: 'Milestones', icon: <Flag className={icon} /> },
     { href: routes.projectIssues(id), label: 'Issues', icon: <Bug className={icon} /> },
     { href: routes.projectTimesheets(id), label: 'Timesheets', icon: <Clock className={icon} /> },
+    { href: routes.projectAutomations(id), label: 'Automations', icon: <Zap className={icon} /> },
     { href: routes.projectActivity(id), label: 'Activity', icon: <Activity className={icon} /> },
     ...(canManage ? [{ href: routes.projectSettings(id), label: 'Settings', icon: <Settings className={icon} /> }] : []),
   ];

@@ -65,6 +65,7 @@ model User {
   activities          Activity[]
   notifications       Notification[]
   favoriteProjects    ProjectFavorite[]
+  automations         Automation[]
 
   @@index([organizationId])
 }
@@ -179,6 +180,7 @@ model Project {
   timeEntries  TimeEntry[]
   activities   Activity[]
   favorites    ProjectFavorite[]
+  automations  Automation[]
 
   @@unique([organizationId, key])
   @@index([organizationId, isArchived])
@@ -432,4 +434,28 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt])
+}
+
+/// "When <trigger> then <action>" rule that runs on a project's items (see automation.constants.ts).
+model Automation {
+  id           String    @id @default(cuid())
+  projectId    String
+  name         String
+  trigger      String
+  /// Narrows the trigger (status, priority or user id); null matches any value.
+  triggerValue String?
+  action       String
+  /// Parameter of the action (status/priority/user/group id or a number of days).
+  actionValue  String?
+  isActive     Boolean   @default(true)
+  runCount     Int       @default(0)
+  lastRunAt    DateTime?
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([projectId, trigger, isActive])
 }

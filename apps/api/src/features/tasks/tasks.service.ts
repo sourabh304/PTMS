@@ -8,7 +8,7 @@ import {
   NotificationType,
   StatusCategory,
 } from '../../common/constants/domain.constants';
-import { NotificationLinks } from '../../common/events/domain-events';
+import { NotificationLinks, TaskChangedEvent, TaskChangeKind } from '../../common/events/domain-events';
 import { EventPublisher } from '../../common/events/event-publisher.service';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { PaginationService } from '../../common/pagination/pagination.service';
@@ -110,6 +110,8 @@ export class TasksService {
 
     this.recordActivity(user, task, ActivityAction.CREATED, `created task ${this.ref(task)} ${task.title}`);
     this.notifyAssignees(user, task, dto.assigneeIds ?? []);
+    this.publishChange(user, task, 'created');
+    if (dto.assigneeIds?.length) this.publishChange(user, task, 'assigned', { assigneeIds: dto.assigneeIds });
     return flattenAssignees(task);
   }
 
@@ -164,6 +166,9 @@ export class TasksService {
       // Newly added assignees already got the assignment notice with the new date.
       this.notifyDueDateChange(user, task, addedAssignees);
     }
+    if (data.statusId) this.publishChange(user, task, 'status_changed', { statusId: task.statusId });
+    if (dto.priorityId && dto.priorityId !== existing.priorityId) this.publishChange(user, task, 'priority_changed', { priorityId: task.priorityId });
+    if (addedAssignees.length) this.publishChange(user, task, 'assigned', { assigneeIds: addedAssignees });
     return flattenAssignees(task);
   }
 
@@ -179,6 +184,7 @@ export class TasksService {
     if (data.statusId) {
       this.recordActivity(user, task, ActivityAction.STATUS_CHANGED, `moved ${this.ref(task)} to ${task.status.name}`);
       this.notifyStatusChange(user, task);
+      this.publishChange(user, task, 'status_changed', { statusId: task.statusId });
     }
     return flattenAssignees(task);
   }
@@ -379,6 +385,11 @@ export class TasksService {
     if (start && due && due < start) {
       throw new BadRequestException('Due date must be on or after the start date');
     }
+  }
+
+  /** Lets automations react to the change. */
+  private publishChange(user: AuthenticatedUser, task: Pick<Task, 'id' | 'projectId'>, kind: TaskChangeKind, details: Partial<TaskChangedEvent> = {}): void {
+    this.events.taskChanged({ organizationId: user.organizationId, projectId: task.projectId, taskId: task.id, actorId: user.id, kind, ...details });
   }
 
   private ref(task: { number: number; project?: { key: string } }): string {

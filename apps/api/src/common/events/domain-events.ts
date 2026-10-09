@@ -3,6 +3,7 @@ import { ActivityAction, EntityType, NotificationType } from '../constants/domai
 export const DomainEvent = {
   ACTIVITY_RECORDED: 'activity.recorded',
   NOTIFICATION_REQUESTED: 'notification.requested',
+  TASK_CHANGED: 'task.changed',
 } as const;
 
 export interface ActivityRecordedEvent {
@@ -14,6 +15,23 @@ export interface ActivityRecordedEvent {
   action: ActivityAction;
   summary: string;
   metadata?: Record<string, unknown>;
+}
+
+export type TaskChangeKind = 'created' | 'status_changed' | 'priority_changed' | 'assigned';
+
+/** A task changed in a way automations can react to. */
+export interface TaskChangedEvent {
+  organizationId: string;
+  projectId: string;
+  taskId: string;
+  actorId: string;
+  kind: TaskChangeKind;
+  /** New status / priority, or the users that were just assigned. */
+  statusId?: string;
+  priorityId?: string;
+  assigneeIds?: string[];
+  /** How many automations led to this change; used to stop rule loops. */
+  depth?: number;
 }
 
 export interface NotificationRequestedEvent {

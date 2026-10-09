@@ -13,6 +13,7 @@ export const routes = {
   projectGantt: (id: string) => `/projects/${id}/gantt`,
   projectCalendar: (id: string) => `/projects/${id}/calendar`,
   projectWorkload: (id: string) => `/projects/${id}/workload`,
+  projectAutomations: (id: string) => `/projects/${id}/automations`,
   projectMilestones: (id: string) => `/projects/${id}/milestones`,
   projectIssues: (id: string) => `/projects/${id}/issues`,
   projectTimesheets: (id: string) => `/projects/${id}/timesheets`,
