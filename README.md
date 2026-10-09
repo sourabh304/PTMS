@@ -27,6 +27,32 @@ in `apps/api/.env`. When `SEED_DEMO_DATA=true`, demo users share `SEED_DEMO_USER
 
 API documentation (Swagger) is served at `http://localhost:4000/api/docs` when `SWAGGER_ENABLED=true`.
 
+### Run with Docker
+
+Requirements: **Docker** with Docker Compose. No Node.js needed.
+
+```bash
+docker compose up --build
+```
+
+Open http://localhost:3000 and sign in as `admin@segueit.com` / `ChangeMe@123`.
+Data is kept in the `api-data` volume; JWT secrets are generated on first start and stored there too.
+
+Change settings with environment variables or a `.env` file next to `docker-compose.yml`:
+
+| Variable | Default | Purpose |
+| -------- | ------- | ------- |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@segueit.com` / `ChangeMe@123` | First administrator (created on first start only) |
+| `SEED_DEMO_DATA` | `false` | `true` adds sample users and projects on first start |
+| `WEB_PORT` | `3000` | Port on your machine |
+| `COOKIE_SECURE` | `false` | Set `true` when served over HTTPS |
+| `APP_NAME`, `BRAND_COLOR` | SegueIT Projects, `#2563eb` | Branding (rebuild after changing) |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | generated | Provide your own to manage secrets yourself |
+
+The `Dockerfile` has two targets, `api` and `web`, if you want to build the images separately
+(`docker build --target api .`). Web settings starting with `NEXT_PUBLIC_` and `API_PROXY_TARGET`
+are fixed at build time, so pass them as `--build-arg`.
+
 ### Production
 
 ```bash
@@ -43,7 +69,7 @@ Set `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), real `CORS_ORIGINS`, an
 - **Projects** – portfolio grid/table, status, owner, budget, timeline, color, archive/restore, members with project roles (Manager / Member / Viewer).
 - **Tasks** – task lists, subtasks, assignees, priorities, estimates, progress, start/due dates, dependencies (with cycle detection), comments, time logged.
 - **Board** – drag & drop Kanban across configurable statuses with persistent ordering.
-- **Gantt** – day/week/month zoom, dependency arrows, milestones, today marker, drag to reschedule and resize.
+- **Timeline (Gantt)** – day/week/month zoom, dependency arrows, milestones, today marker, drag to reschedule and resize.
 - **Milestones** – timeline view with completion tracking and task-based progress.
 - **Issues** – bug tracker with configurable statuses, severities, priorities, assignee and due dates.
 - **Timesheets** – log time against projects/tasks, billable flag, approval workflow, daily charts.

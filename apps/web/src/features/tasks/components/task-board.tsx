@@ -133,6 +133,9 @@ export function TaskBoard({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-4">
+      <p className="text-sm text-muted">
+        {canEdit ? 'Drag a card to another column to change its status. Click a card to see its details.' : 'Click a card to see its details.'}
+      </p>
       <TaskFilters value={filters} onChange={setFilters} members={members?.map((m) => m.user)} hideStatus />
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd}>
         <div className="scrollbar-thin flex gap-4 overflow-x-auto pb-4">
@@ -178,7 +181,7 @@ function BoardColumn({ id, title, color, tasks, disabled, onOpen, onAdd }: Colum
           <span className="rounded-full bg-surface px-2 text-xs font-medium text-muted">{tasks.length}</span>
         </div>
         {onAdd && (
-          <button type="button" onClick={onAdd} aria-label={`Add task to ${title}`} className="rounded-md p-1 text-muted hover:bg-surface hover:text-foreground">
+          <button type="button" onClick={onAdd} aria-label={`Add task to ${title}`} title={`Add task to ${title}`} className="rounded-md p-1 text-muted hover:bg-surface hover:text-foreground">
             <Plus className="h-4 w-4" />
           </button>
         )}

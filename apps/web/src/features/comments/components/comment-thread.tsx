@@ -44,10 +44,10 @@ export function CommentThread({ target }: { target: CommentTarget }) {
                   </span>
                   {comment.authorId === user?.id && editing?.id !== comment.id && (
                     <span className="ml-auto flex gap-1">
-                      <button type="button" aria-label="Edit comment" onClick={() => setEditing({ id: comment.id, body: comment.body })} className="text-muted hover:text-foreground">
+                      <button type="button" aria-label="Edit comment" title="Edit comment" onClick={() => setEditing({ id: comment.id, body: comment.body })} className="text-muted hover:text-foreground">
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
-                      <button type="button" aria-label="Delete comment" onClick={() => remove.mutate(comment.id)} className="text-muted hover:text-danger">
+                      <button type="button" aria-label="Delete comment" title="Delete comment" onClick={() => remove.mutate(comment.id)} className="text-muted hover:text-danger">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </span>

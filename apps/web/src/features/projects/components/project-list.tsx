@@ -2,6 +2,7 @@
 
 import { AlertCircle, CalendarDays, FolderKanban, LayoutGrid, List, Plus, Search, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { LookupSelect } from '@/features/lookups/components/lookup-select';
@@ -26,6 +27,7 @@ import { ProjectFormModal } from './project-form-modal';
 type View = 'grid' | 'table';
 
 export function ProjectList() {
+  const router = useRouter();
   const { can } = usePermissions();
   const [search, setSearch] = useState('');
   const [statusId, setStatusId] = useState('');
@@ -58,7 +60,7 @@ export function ProjectList() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-xs">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <Input
             placeholder="Search by name or key"
@@ -134,13 +136,15 @@ export function ProjectList() {
           ) : (
             <ProjectTable projects={data.data} />
           )}
-          <Card className="mt-4">
-            <Pagination page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} onPageChange={setPage} />
-          </Card>
+          {data.meta.totalPages > 1 && (
+            <Card className="mt-4">
+              <Pagination page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} onPageChange={setPage} />
+            </Card>
+          )}
         </>
       )}
 
-      <ProjectFormModal open={creating} onClose={() => setCreating(false)} />
+      <ProjectFormModal open={creating} onClose={() => setCreating(false)} onSaved={(project) => router.push(routes.project(project.id))} />
     </>
   );
 }

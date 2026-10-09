@@ -9,18 +9,18 @@ import { Badge, ColorBadge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardHeader } from '@/shared/ui/card';
 import { Spinner } from '@/shared/ui/feedback';
-import { Checkbox, Field, Input, Select } from '@/shared/ui/form';
+import { Checkbox, ColorInput, Field, Input, Select } from '@/shared/ui/form';
 import { Segmented } from '@/shared/ui/layout';
 import { ConfirmDialog, Modal } from '@/shared/ui/modal';
 import { useCreateLookup, useDeleteLookup, useLookups, useReorderLookups, useUpdateLookup } from '../api';
 import type { Lookup } from '../types';
 
-const TYPE_LABELS: Record<LookupType, { title: string; description: string }> = {
-  [LookupType.TASK_STATUS]: { title: 'Task statuses', description: 'Columns of the task board and the task workflow.' },
-  [LookupType.ISSUE_STATUS]: { title: 'Issue statuses', description: 'Lifecycle of bugs and defects.' },
-  [LookupType.PROJECT_STATUS]: { title: 'Project statuses', description: 'Phases a project moves through.' },
-  [LookupType.PRIORITY]: { title: 'Priorities', description: 'Shared by tasks and issues.' },
-  [LookupType.ISSUE_SEVERITY]: { title: 'Issue severities', description: 'Impact of a reported issue.' },
+const TYPE_LABELS: Record<LookupType, { title: string; description: string; item: string }> = {
+  [LookupType.TASK_STATUS]: { title: 'Task statuses', description: 'The stages a task moves through. Each one is a column on the board.', item: 'status' },
+  [LookupType.ISSUE_STATUS]: { title: 'Issue statuses', description: 'The stages a reported problem moves through until it is fixed.', item: 'status' },
+  [LookupType.PROJECT_STATUS]: { title: 'Project statuses', description: 'The phases a project moves through, e.g. Planning or Active.', item: 'status' },
+  [LookupType.PRIORITY]: { title: 'Priorities', description: 'How urgent a task or issue is.', item: 'priority' },
+  [LookupType.ISSUE_SEVERITY]: { title: 'Issue severities', description: 'How serious the impact of a reported problem is.', item: 'severity' },
 };
 
 const STATUS_TYPES: LookupType[] = [LookupType.TASK_STATUS, LookupType.ISSUE_STATUS, LookupType.PROJECT_STATUS];
@@ -56,7 +56,7 @@ export function WorkflowSettings() {
           actions={
             canManage && (
               <Button size="sm" onClick={() => setEditing('new')}>
-                <Plus className="h-3.5 w-3.5" /> Add value
+                <Plus className="h-3.5 w-3.5" /> Add {TYPE_LABELS[type].item}
               </Button>
             )
           }
@@ -152,10 +152,7 @@ function LookupModal({ type, lookup, onClose }: { type: LookupType; lookup: Look
           <Input autoFocus value={values.name} onChange={(e) => setValues({ ...values, name: e.target.value })} />
         </Field>
         <Field label="Color">
-          <div className="flex gap-2">
-            <Input type="color" className="w-14 p-1" value={values.color} onChange={(e) => setValues({ ...values, color: e.target.value })} />
-            <Input value={values.color} onChange={(e) => setValues({ ...values, color: e.target.value })} />
-          </div>
+          <ColorInput value={values.color} onChange={(color) => setValues({ ...values, color })} />
         </Field>
         {isStatus && (
           <Field label="Category" hint="Drives progress and reporting: Closed statuses count as done.">

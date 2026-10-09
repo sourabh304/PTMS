@@ -1,12 +1,12 @@
 'use client';
 
 import { Check, ChevronDown, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { cn, fullName } from '@/shared/lib/utils';
 import type { UserSummary } from '@/shared/types/api';
 import { Avatar } from '@/shared/ui/avatar';
 import { Dropdown } from '@/shared/ui/dropdown';
-import { Input } from '@/shared/ui/form';
+import { Input, useFieldId } from '@/shared/ui/form';
 
 interface UserMultiSelectProps {
   options: UserSummary[];
@@ -18,6 +18,8 @@ interface UserMultiSelectProps {
 
 export function UserMultiSelect({ options, value, onChange, placeholder = 'Select people', disabled }: UserMultiSelectProps) {
   const [search, setSearch] = useState('');
+  const fieldId = useFieldId();
+  const searchId = useId();
   const selected = options.filter((user) => value.includes(user.id));
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -33,6 +35,7 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
       trigger={({ toggle: toggleOpen }) => (
         <button
           type="button"
+          id={fieldId}
           disabled={disabled}
           onClick={toggleOpen}
           className="flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 text-left text-sm shadow-xs focus:border-brand focus:outline-none disabled:opacity-60"
@@ -61,7 +64,7 @@ export function UserMultiSelect({ options, value, onChange, placeholder = 'Selec
       {() => (
         <div>
           <div className="border-b border-border p-2">
-            <Input autoFocus placeholder="Search people" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input id={searchId} aria-label="Search people" autoFocus placeholder="Search people" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <div className="scrollbar-thin max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 && <p className="px-3 py-2 text-sm text-muted">No matches</p>}

@@ -54,6 +54,7 @@ export function MilestoneBoard({ projectId }: { projectId: string }) {
                   type="button"
                   disabled={!canEdit}
                   aria-label={done ? 'Mark as open' : 'Mark as completed'}
+                  title={done ? 'Mark as open' : 'Mark as completed'}
                   onClick={() => save.mutate({ id: milestone.id, projectId, completed: !done })}
                   className={cn('relative z-[1] mt-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-surface', done ? 'border-success text-success' : late ? 'border-danger text-danger' : 'border-brand text-brand')}
                 >

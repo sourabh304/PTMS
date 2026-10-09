@@ -352,7 +352,7 @@ function DependencyList({
               </button>
               <ColorBadge color={task.status.color} label={task.status.name} variant="dot" />
               {onRemove && (
-                <button type="button" aria-label="Remove dependency" onClick={() => onRemove(dependencyId)} className="text-muted hover:text-danger">
+                <button type="button" aria-label="Remove dependency" title="Remove dependency" onClick={() => onRemove(dependencyId)} className="text-muted hover:text-danger">
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}

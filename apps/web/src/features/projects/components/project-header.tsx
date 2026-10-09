@@ -18,7 +18,7 @@ function projectTabs(id: string, canManage: boolean): TabItem[] {
     { href: routes.project(id), label: 'Overview', icon: <LayoutDashboard className={icon} />, exact: true },
     { href: routes.projectTasks(id), label: 'Tasks', icon: <ListChecks className={icon} /> },
     { href: routes.projectBoard(id), label: 'Board', icon: <KanbanSquare className={icon} /> },
-    { href: routes.projectGantt(id), label: 'Gantt', icon: <BarChartHorizontal className={icon} /> },
+    { href: routes.projectGantt(id), label: 'Timeline', icon: <BarChartHorizontal className={icon} /> },
     { href: routes.projectMilestones(id), label: 'Milestones', icon: <Flag className={icon} /> },
     { href: routes.projectIssues(id), label: 'Issues', icon: <Bug className={icon} /> },
     { href: routes.projectTimesheets(id), label: 'Timesheets', icon: <Clock className={icon} /> },
@@ -52,7 +52,7 @@ export function ProjectWorkspace({ projectId, children }: { projectId: string; c
               {!project.access.canEdit && <Badge>Read only</Badge>}
             </h1>
             <p className="text-xs text-muted">
-              {formatDate(project.startDate)} → {formatDate(project.endDate)}
+              {project.startDate || project.endDate ? `${formatDate(project.startDate)} → ${formatDate(project.endDate)}` : 'No dates set'}
             </p>
           </div>
         </div>

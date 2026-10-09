@@ -71,7 +71,7 @@ export function ProjectTaskList({ projectId }: { projectId: string }) {
         {canEdit && (
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setEditingList({})}>
-              <FolderPlus className="h-4 w-4" /> Task list
+              <FolderPlus className="h-4 w-4" /> New task list
             </Button>
             <Button onClick={() => setCreating({})}>
               <Plus className="h-4 w-4" /> New task

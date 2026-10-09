@@ -140,7 +140,7 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: Props) {
             })}
           />
         </Field>
-        <Field label="Key" required error={errors.key?.message} hint="Prefix for task IDs" className="sm:col-span-2">
+        <Field label="Short code" required error={errors.key?.message} hint="Starts every task number, e.g. WEB-12" className="sm:col-span-2">
           <Input className="uppercase" {...form.register('key')} />
         </Field>
         <Field label="Description" className="sm:col-span-6">

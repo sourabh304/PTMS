@@ -24,10 +24,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', loading, disabled, children, type = 'button', ...props }, ref) => (
+  ({ className, variant = 'primary', size = 'md', loading, disabled, children, type = 'button', title, ...props }, ref) => (
     <button
       ref={ref}
       type={type}
+      // Icon-only buttons show their accessible name as a hover tooltip.
+      title={title ?? (size === 'icon' ? props['aria-label'] : undefined)}
       disabled={disabled || loading}
       className={cn(
         'inline-flex shrink-0 items-center rounded-lg font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60',

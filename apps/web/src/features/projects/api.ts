@@ -65,7 +65,8 @@ export function useDeleteProject() {
   return useMutation({
     mutationFn: (id: string) => api.delete(`/projects/${id}`),
     meta: { successMessage: 'Project deleted' },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
+    // Mark stale without refetching: the deleted project's open queries would 404; lists refetch when next shown.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all, refetchType: 'none' }),
   });
 }
 

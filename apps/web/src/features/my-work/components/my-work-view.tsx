@@ -89,12 +89,12 @@ export function MyWorkView() {
           taskRows.length ? (
             <TaskTable tasks={taskRows} onOpen={(t) => setTaskId(t.id)} showProject />
           ) : (
-            <EmptyState icon={<CheckSquare className="h-6 w-6" />} title="No tasks here" />
+            <EmptyState icon={<CheckSquare className="h-6 w-6" />} title="No tasks here" description="Tasks assigned to you will show up here." />
           )
         ) : issueRows.length ? (
           <IssueTable issues={issueRows} onOpen={(i) => setIssueId(i.id)} showProject />
         ) : (
-          <EmptyState icon={<Bug className="h-6 w-6" />} title="No issues here" />
+          <EmptyState icon={<Bug className="h-6 w-6" />} title="No issues here" description="Issues assigned to you will show up here." />
         )}
         {active.data && <Pagination page={active.data.meta.page} totalPages={active.data.meta.totalPages} total={active.data.meta.total} onPageChange={setPage} />}
       </Card>

@@ -2,6 +2,7 @@
 
 import { BarChartHorizontal, Diamond } from 'lucide-react';
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useSession } from '@/features/auth/api';
 import { useProject } from '@/features/projects/api';
 import { useGantt, useUpdateTask } from '@/features/tasks/api';
 import { TaskDetailDrawer } from '@/features/tasks/components/task-detail-drawer';
@@ -13,7 +14,7 @@ import { AvatarGroup } from '@/shared/ui/avatar';
 import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorState, Spinner } from '@/shared/ui/feedback';
 import { Segmented } from '@/shared/ui/layout';
-import { buildTimeline, dayToIso, GANTT_LAYOUT, GANTT_ZOOM, isWeekend, todayDay, toDay, type GanttZoom } from '../gantt.utils';
+import { buildTimeline, dayToDate, dayToIso, GANTT_LAYOUT, GANTT_ZOOM, isWeekend, todayDay, toDay, type GanttZoom } from '../gantt.utils';
 
 type GanttTask = GanttData['tasks'][number];
 
@@ -73,6 +74,8 @@ function buildRows(data: GanttData): Row[] {
 export function GanttChart({ projectId }: { projectId: string }) {
   const { data, isLoading, isError, error, refetch } = useGantt(projectId);
   const { data: project } = useProject(projectId);
+  const { data: session } = useSession();
+  const weekStartsOn = session?.organization.weekStartsOn ?? 1;
   const canEdit = !!project?.access.canEdit && !project.isArchived;
   const update = useUpdateTask();
   const [zoom, setZoom] = useState<GanttZoom>('week');
@@ -89,8 +92,11 @@ export function GanttChart({ projectId }: { projectId: string }) {
     if (data?.project.startDate) days.push(toDay(data.project.startDate));
     if (data?.project.endDate) days.push(toDay(data.project.endDate));
     days.push(today);
-    return { start: Math.min(...days) - paddingDays, end: Math.max(...days) + paddingDays };
-  }, [rows, data]);
+    const start = Math.min(...days) - paddingDays;
+    // Snap to the organization's first day of the week so week columns line up with real weeks.
+    const offset = (dayToDate(start).getUTCDay() - weekStartsOn + 7) % 7;
+    return { start: start - offset, end: Math.max(...days) + paddingDays };
+  }, [rows, data, weekStartsOn]);
 
   const timeline = useMemo(() => buildTimeline(range.start, range.end, zoom), [range, zoom]);
   const totalDays = range.end - range.start + 1;

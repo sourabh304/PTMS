@@ -10,6 +10,8 @@ import { Button } from '@/shared/ui/button';
 import { Field, Input } from '@/shared/ui/form';
 import { useAuthConfig, useLogin } from '../api';
 import { loginSchema, type LoginValues } from '../schemas';
+import { AUTH_BUTTON, AUTH_INPUT, AuthError } from './auth-ui';
+import { PasswordInput } from './password-input';
 
 /** Only allow same-app relative redirects after login. */
 function safeNext(next: string | null): string {
@@ -34,25 +36,22 @@ export function LoginForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate>
-      {login.isError && (
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {errorMessage(login.error)}
-        </div>
-      )}
-      <Field label="Work email" htmlFor="email" error={form.formState.errors.email?.message}>
-        <Input id="email" type="email" autoComplete="email" autoFocus {...form.register('email')} />
+    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+      {login.isError && <AuthError message={errorMessage(login.error)} />}
+      <Field label="Email" htmlFor="email" error={form.formState.errors.email?.message}>
+        <Input id="email" type="email" autoComplete="email" placeholder="you@company.com" autoFocus className={AUTH_INPUT} {...form.register('email')} />
       </Field>
       <Field label="Password" htmlFor="password" error={form.formState.errors.password?.message}>
-        <Input id="password" type="password" autoComplete="current-password" {...form.register('password')} />
+        <PasswordInput id="password" autoComplete="current-password" className={AUTH_INPUT} {...form.register('password')} />
       </Field>
-      <Button type="submit" size="lg" className="w-full justify-center" loading={form.formState.isSubmitting}>
+      <Button type="submit" size="lg" className={AUTH_BUTTON} loading={form.formState.isSubmitting}>
         Sign in
       </Button>
+      <p className="text-xs text-muted">Forgot your password? Ask your admin to reset it.</p>
       {config?.allowPublicRegistration && (
-        <p className="text-center text-sm text-muted">
+        <p className="border-t border-border pt-5 text-sm text-muted">
           New to {config.appName}?{' '}
-          <Link href={routes.register} className="font-medium text-brand hover:underline">
+          <Link href={routes.register} className="font-medium text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground">
             Create a workspace
           </Link>
         </p>

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 const apiBasePath = process.env.NEXT_PUBLIC_API_BASE_PATH ?? '/api';
@@ -7,9 +8,13 @@ if (!apiProxyTarget) {
   throw new Error('API_PROXY_TARGET is not set. Copy apps/web/.env.example to apps/web/.env.local (npm run env).');
 }
 
+// The Docker image sets NEXT_OUTPUT=standalone to ship a minimal self-contained server.
+const standalone = process.env.NEXT_OUTPUT === 'standalone';
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  ...(standalone && { output: 'standalone', outputFileTracingRoot: path.join(__dirname, '../..') }),
   async rewrites() {
     return [{ source: `${apiBasePath}/:path*`, destination: `${apiProxyTarget}/:path*` }];
   },

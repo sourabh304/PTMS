@@ -1,0 +1,53 @@
+# SegueIT Projects — run everything with one command:
+#
+#   docker compose up --build
+#
+# Then open http://localhost:3000 and sign in with SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD
+# (admin@segueit.com / ChangeMe@123 unless you change them).
+#
+# Settings below can be overridden from your shell or a `.env` file next to this one,
+# e.g. SEED_ADMIN_PASSWORD=S0mething-Strong docker compose up --build
+
+name: segueit-projects
+
+services:
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    environment:
+      APP_NAME: ${APP_NAME:-SegueIT Projects}
+      ALLOW_PUBLIC_REGISTRATION: ${ALLOW_PUBLIC_REGISTRATION:-true}
+      # Set to true when the site is served over HTTPS.
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      # Leave empty to auto-generate and store them in the data volume.
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-}
+      SEED_ORG_NAME: ${SEED_ORG_NAME:-SegueIT}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@segueit.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe@123}
+      # true adds sample users and projects on the first start (demo password below).
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      SEED_DEMO_USER_PASSWORD: ${SEED_DEMO_USER_PASSWORD:-Welcome@123}
+    volumes:
+      - api-data:/data
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        NEXT_PUBLIC_APP_NAME: ${APP_NAME:-SegueIT Projects}
+        NEXT_PUBLIC_BRAND_COLOR: ${BRAND_COLOR:-#2563eb}
+        API_PROXY_TARGET: http://api:4000/api
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-3000}:3000'
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  api-data:

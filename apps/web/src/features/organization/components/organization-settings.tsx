@@ -7,23 +7,26 @@ import { Permission } from '@/shared/constants/domain';
 import { Button } from '@/shared/ui/button';
 import { Card, CardBody, CardHeader } from '@/shared/ui/card';
 import { Spinner } from '@/shared/ui/feedback';
-import { Field, Input, Select } from '@/shared/ui/form';
+import { ColorInput, Field, Input, Select } from '@/shared/ui/form';
 import { useOrganization, useUpdateOrganization } from '../api';
 
 const WEEKDAYS = Array.from({ length: 7 }, (_, day) =>
   new Intl.DateTimeFormat(undefined, { weekday: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2024, 0, 7 + day))),
 );
 
-function supportedTimezones(): string[] {
+/** Browser timezones plus UTC and the saved value, which some browsers omit from the list. */
+function supportedTimezones(current?: string): string[] {
   const intl = Intl as typeof Intl & { supportedValuesOf?: (key: string) => string[] };
-  return intl.supportedValuesOf?.('timeZone') ?? ['UTC'];
+  const zones = new Set(['UTC', ...(intl.supportedValuesOf?.('timeZone') ?? [])]);
+  if (current) zones.add(current);
+  return [...zones];
 }
 
 export function OrganizationSettings() {
   const { can } = usePermissions();
   const { data: organization, isLoading } = useOrganization();
   const update = useUpdateOrganization();
-  const timezones = useMemo(supportedTimezones, []);
+  const timezones = useMemo(() => supportedTimezones(organization?.timezone), [organization?.timezone]);
   const [values, setValues] = useState({ name: '', logoUrl: '', primaryColor: '', timezone: 'UTC', weekStartsOn: 1, workingHoursPerDay: 8 });
   const readOnly = !can(Permission.ORG_MANAGE);
 
@@ -63,10 +66,7 @@ export function OrganizationSettings() {
             <Input type="url" placeholder="https://…" value={values.logoUrl} onChange={(e) => setValues({ ...values, logoUrl: e.target.value })} />
           </Field>
           <Field label="Brand color">
-            <div className="flex gap-2">
-              <Input type="color" className="w-14 p-1" value={values.primaryColor} onChange={(e) => setValues({ ...values, primaryColor: e.target.value })} />
-              <Input value={values.primaryColor} onChange={(e) => setValues({ ...values, primaryColor: e.target.value })} />
-            </div>
+            <ColorInput value={values.primaryColor} onChange={(primaryColor) => setValues({ ...values, primaryColor })} />
           </Field>
           <Field label="Timezone">
             <Select value={values.timezone} onChange={(e) => setValues({ ...values, timezone: e.target.value })}>

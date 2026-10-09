@@ -36,25 +36,31 @@
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-instrument), ui-serif, Georgia, serif;
 }
 
-html,
-body {
-  background: var(--background);
-  color: var(--foreground);
-}
+/* Base styles live in the base layer so Tailwind utilities (e.g. border-brand) can override them. */
+@layer base {
+  html,
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
 
-body {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
 
-* {
-  border-color: var(--border);
-}
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
 
-::selection {
-  background: color-mix(in srgb, var(--brand) 25%, white);
+  ::selection {
+    background: color-mix(in srgb, var(--brand) 25%, white);
+  }
 }
 
 .scrollbar-thin {

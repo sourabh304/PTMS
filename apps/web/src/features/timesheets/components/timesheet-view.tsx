@@ -1,6 +1,6 @@
 'use client';
 
-import { addDays, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subMonths, subWeeks } from 'date-fns';
+import { addDays, differenceInCalendarDays, endOfMonth, endOfWeek, format, isValid, startOfMonth, startOfWeek, subMonths, subWeeks } from 'date-fns';
 import { Check, Clock, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useSession } from '@/features/auth/api';
@@ -56,6 +56,23 @@ function resolveRange(preset: RangePreset, weekStartsOn: number, custom: { from:
   }
 }
 
+const MAX_CHART_DAYS = 92;
+
+/** One bar per day of the range (empty days included), so gaps in logged time are visible. */
+function dailyHours(byDay: { date: string; minutes: number }[], range: { from: string; to: string }) {
+  const start = new Date(`${range.from}T00:00:00`);
+  const end = new Date(`${range.to}T00:00:00`);
+  const days = differenceInCalendarDays(end, start) + 1;
+  if (!isValid(start) || !isValid(end) || days < 1 || days > MAX_CHART_DAYS) {
+    return byDay.map((d) => ({ day: formatDate(d.date, 'dd MMM'), hours: minutesToHours(d.minutes) }));
+  }
+  const minutesByDate = new Map(byDay.map((d) => [d.date.slice(0, 10), d.minutes]));
+  return Array.from({ length: days }, (_, i) => {
+    const date = addDays(start, i);
+    return { day: format(date, days <= 7 ? 'EEE d' : 'd MMM'), hours: minutesToHours(minutesByDate.get(iso(date)) ?? 0) };
+  });
+}
+
 export function TimesheetView({ projectId }: { projectId?: string }) {
   const { data: session } = useSession();
   const { can } = usePermissions();
@@ -85,10 +102,7 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
   const { data, isLoading, isError, error, refetch } = useTimeEntries({ ...filters, page, limit: appConfig.defaultPageSize });
   const { data: summary } = useTimeSummary(filters);
 
-  const chartData = useMemo(
-    () => (summary?.byDay ?? []).map((d) => ({ day: formatDate(d.date, 'dd MMM'), hours: minutesToHours(d.minutes) })),
-    [summary],
-  );
+  const chartData = useMemo(() => dailyHours(summary?.byDay ?? [], range), [summary, range]);
 
   const editable = (entry: TimeEntry) => entry.userId === session?.id && entry.approvalStatus !== ApprovalStatus.APPROVED;
 
@@ -155,7 +169,11 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
       <Card>
         <CardHeader title="Hours per day" description={`${formatDate(range.from)} → ${formatDate(range.to)}`} />
         <CardBody>
-          <ColumnChart data={chartData} xKey="day" series={[{ key: 'hours', label: 'Hours', color: 'var(--brand)' }]} height={220} />
+          {summary?.totalMinutes ? (
+            <ColumnChart data={chartData} xKey="day" series={[{ key: 'hours', label: 'Hours', color: 'var(--brand)' }]} height={220} />
+          ) : (
+            <EmptyState icon={<Clock className="h-6 w-6" />} title="No time logged in this period" description="Use “Log time” to record the hours you worked." className="py-8" />
+          )}
         </CardBody>
       </Card>
 
@@ -199,7 +217,7 @@ export function TimesheetView({ projectId }: { projectId?: string }) {
                     </Td>
                     <Td className="whitespace-nowrap text-right font-medium">
                       {formatMinutes(entry.minutes)}
-                      {!entry.isBillable && <span className="ml-1 text-xs font-normal text-muted">(nb)</span>}
+                      {!entry.isBillable && <span className="block text-xs font-normal text-muted" title="Not billed to the client">Non-billable</span>}
                     </Td>
                     <Td>
                       <Badge tone={APPROVAL_TONE[entry.approvalStatus]}>{humanize(entry.approvalStatus)}</Badge>

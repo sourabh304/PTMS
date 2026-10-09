@@ -28,7 +28,7 @@ export function TaskFilters({ value, onChange, members, hideStatus }: Props) {
   const set = <K extends keyof TaskFilterState>(key: K, next: TaskFilterState[K]) => onChange({ ...value, [key]: next });
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="relative w-full max-w-xs">
+      <div className="relative w-full sm:w-64">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <Input className="pl-9" placeholder="Search tasks or ID" value={value.search} onChange={(e) => set('search', e.target.value)} />
       </div>

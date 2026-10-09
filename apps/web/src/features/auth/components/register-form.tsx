@@ -12,6 +12,8 @@ import { EmptyState, Spinner } from '@/shared/ui/feedback';
 import { Field, Input } from '@/shared/ui/form';
 import { useAuthConfig, useRegister } from '../api';
 import { registerSchema, type RegisterValues } from '../schemas';
+import { AUTH_BUTTON, AUTH_INPUT, AuthError } from './auth-ui';
+import { PasswordInput } from './password-input';
 
 export function RegisterForm() {
   const { data: config, isLoading } = useAuthConfig();
@@ -22,7 +24,7 @@ export function RegisterForm() {
         title="Sign-up is disabled"
         description="Ask your administrator to create an account for you."
         action={
-          <Link href={routes.login} className="text-sm font-medium text-brand hover:underline">
+          <Link href={routes.login} className="text-sm font-medium text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground">
             Back to sign in
           </Link>
         }
@@ -53,38 +55,34 @@ function RegisterFormFields({ minLength }: { minLength: number }) {
   });
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate>
-      {register.isError && (
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {errorMessage(register.error)}
-        </div>
-      )}
-      <Field label="Organization name" htmlFor="organizationName" error={errors.organizationName?.message}>
-        <Input id="organizationName" autoFocus {...form.register('organizationName')} />
+    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+      {register.isError && <AuthError message={errorMessage(register.error)} />}
+      <Field label="Company or team name" htmlFor="organizationName" error={errors.organizationName?.message}>
+        <Input id="organizationName" autoFocus placeholder="Acme Inc." className={AUTH_INPUT} {...form.register('organizationName')} />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="First name" htmlFor="firstName" error={errors.firstName?.message}>
-          <Input id="firstName" autoComplete="given-name" {...form.register('firstName')} />
+          <Input id="firstName" autoComplete="given-name" className={AUTH_INPUT} {...form.register('firstName')} />
         </Field>
         <Field label="Last name" htmlFor="lastName" error={errors.lastName?.message}>
-          <Input id="lastName" autoComplete="family-name" {...form.register('lastName')} />
+          <Input id="lastName" autoComplete="family-name" className={AUTH_INPUT} {...form.register('lastName')} />
         </Field>
       </div>
-      <Field label="Work email" htmlFor="email" error={errors.email?.message}>
-        <Input id="email" type="email" autoComplete="email" {...form.register('email')} />
+      <Field label="Email" htmlFor="email" error={errors.email?.message}>
+        <Input id="email" type="email" autoComplete="email" placeholder="you@company.com" className={AUTH_INPUT} {...form.register('email')} />
       </Field>
-      <Field label="Password" htmlFor="password" error={errors.password?.message} hint={`At least ${minLength} characters with upper, lower case and a number`}>
-        <Input id="password" type="password" autoComplete="new-password" {...form.register('password')} />
+      <Field label="Password" htmlFor="password" error={errors.password?.message} hint={`At least ${minLength} characters, with an upper-case letter, a lower-case letter and a number`}>
+        <PasswordInput id="password" autoComplete="new-password" className={AUTH_INPUT} {...form.register('password')} />
       </Field>
       <Field label="Confirm password" htmlFor="confirmPassword" error={errors.confirmPassword?.message}>
-        <Input id="confirmPassword" type="password" autoComplete="new-password" {...form.register('confirmPassword')} />
+        <PasswordInput id="confirmPassword" autoComplete="new-password" className={AUTH_INPUT} {...form.register('confirmPassword')} />
       </Field>
-      <Button type="submit" size="lg" className="w-full justify-center" loading={form.formState.isSubmitting}>
+      <Button type="submit" size="lg" className={AUTH_BUTTON} loading={form.formState.isSubmitting}>
         Create workspace
       </Button>
-      <p className="text-center text-sm text-muted">
+      <p className="border-t border-border pt-5 text-sm text-muted">
         Already have an account?{' '}
-        <Link href={routes.login} className="font-medium text-brand hover:underline">
+        <Link href={routes.login} className="font-medium text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground">
           Sign in
         </Link>
       </p>
