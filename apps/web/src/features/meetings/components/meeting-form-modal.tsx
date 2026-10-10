@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { useProjectNavigation } from '@/features/projects/api';
 import { MeetingType } from '@/shared/constants/domain';
+import { errorMessage } from '@/shared/lib/api-client';
 import { Button } from '@/shared/ui/button';
 import { Field, FormAlert, Input, Select, Textarea } from '@/shared/ui/form';
 import { Modal } from '@/shared/ui/modal';
@@ -20,14 +21,43 @@ interface MeetingFormModalProps {
   defaultDay?: string;
   /** Project to pre-select for a new meeting (null = whole organization). */
   defaultProjectId?: string | null;
+  /** Called with the meeting as saved, before the form closes. */
+  onSaved?: (meeting: Meeting) => void;
 }
 
 const DEFAULT_START = '10:00';
 const DEFAULT_MINUTES = 30;
+/** Same limits as the API. */
+const MAX_TITLE = 150;
+const MAX_TEXT = 2000;
+const MAX_MEETING_MS = 24 * 60 * 60 * 1000;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const localDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const localTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** The day after a `YYYY-MM-DD` date. */
+const dayAfter = (day: string) => {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d + 1);
+};
+
+const TOO_LONG = {
+  title: `Keep the title to ${MAX_TITLE} characters or fewer`,
+  link: `The meeting link can be at most ${MAX_TEXT.toLocaleString()} characters`,
+  description: `Keep the notes to ${MAX_TEXT.toLocaleString()} characters or fewer`,
+};
+
+/** The API names the request field ("title must be shorter than…"); say it in the form's words instead. */
+const SERVER_FIELD_MESSAGES: [RegExp, string][] = [
+  [/^title\b/, TOO_LONG.title],
+  [/^description\b/, TOO_LONG.description],
+  [/^link\b/, 'Paste the full meeting link, starting with https://'],
+  [/^(startsAt|endsAt)\b/, 'Pick a date and times'],
+];
+const friendlyError = (error: unknown) => {
+  const message = errorMessage(error);
+  return SERVER_FIELD_MESSAGES.find(([pattern]) => pattern.test(message))?.[1] ?? message;
+};
 
 function emptyValues(day: string | undefined, projectId: string | null | undefined) {
   const [h, m] = DEFAULT_START.split(':').map(Number);
@@ -45,7 +75,8 @@ function emptyValues(day: string | undefined, projectId: string | null | undefin
 }
 
 /** Schedule or edit a meeting: link, time, kind and who sees it (a project or everyone). */
-export function MeetingFormModal({ open, onClose, meeting, defaultDay, defaultProjectId }: MeetingFormModalProps) {
+export function MeetingFormModal({ open, onClose, meeting, defaultDay, defaultProjectId, onSaved }: MeetingFormModalProps) {
+  const formId = useId();
   const create = useCreateMeeting();
   const update = useUpdateMeeting();
   const { data: projects } = useProjectNavigation(open);
@@ -72,26 +103,55 @@ export function MeetingFormModal({ open, onClose, meeting, defaultDay, defaultPr
     }
   }, [open, meeting, defaultDay, defaultProjectId]);
 
+  // Archived projects are read-only and left out of the list. A new meeting never starts on one; a meeting
+  // that already belongs to one keeps it as an option, so the audience shown is the audience saved.
+  const listed = !values.projectId || !projects || projects.some((project) => project.id === values.projectId);
+  const keptProject = !listed && meeting?.project?.id === values.projectId ? meeting.project : null;
+  useEffect(() => {
+    if (!listed && !meeting) setValues((v) => ({ ...v, projectId: '' }));
+  }, [listed, meeting]);
+
+  // An end time that is not after the start time is on the next day (a meeting that crosses midnight).
+  const overnight = !!values.start && !!values.end && values.end <= values.start;
+  const nextDay = overnight && values.day ? dayAfter(values.day) : null;
+  const endDay = nextDay ? localDate(nextDay) : values.day;
+
   const set = (key: keyof typeof values) => (event: { target: { value: string } }) => setValues((v) => ({ ...v, [key]: event.target.value }));
 
-  const submit = () => {
-    if (!values.title.trim()) return setError('Give the meeting a title');
-    if (!/^https?:\/\/\S+$/i.test(values.link.trim())) return setError('Paste the full meeting link, starting with https://');
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const title = values.title.trim();
+    const link = values.link.trim();
+    const description = values.description.trim();
+    if (!title) return setError('Give the meeting a title');
+    if (title.length > MAX_TITLE) return setError(TOO_LONG.title);
+    if (!/^https?:\/\/\S+$/i.test(link)) return setError('Paste the full meeting link, starting with https://');
+    if (link.length > MAX_TEXT) return setError(TOO_LONG.link);
+    if (description.length > MAX_TEXT) return setError(TOO_LONG.description);
     const startsAt = new Date(`${values.day}T${values.start}`);
-    const endsAt = new Date(`${values.day}T${values.end}`);
+    const endsAt = new Date(`${endDay}T${values.end}`);
     if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) return setError('Pick a date and times');
     if (endsAt <= startsAt) return setError('The meeting must end after it starts');
+    if (endsAt.getTime() - startsAt.getTime() > MAX_MEETING_MS) return setError('A meeting can last at most 24 hours');
+    setError('');
     const input = {
-      title: values.title.trim(),
-      description: values.description.trim() || null,
+      title,
+      description: description || null,
       type: values.type,
-      link: values.link.trim(),
+      link,
       startsAt: startsAt.toISOString(),
       endsAt: endsAt.toISOString(),
       projectId: values.projectId || null,
     };
-    if (meeting) update.mutate({ id: meeting.id, ...input }, { onSuccess: onClose });
-    else create.mutate(input, { onSuccess: onClose });
+    const callbacks = {
+      onSuccess: (saved: Meeting) => {
+        onSaved?.(saved);
+        onClose();
+      },
+      onError: (err: unknown) => setError(friendlyError(err)),
+    };
+    if (meeting) update.mutate({ id: meeting.id, ...input }, callbacks);
+    else create.mutate(input, callbacks);
   };
 
   return (
@@ -105,20 +165,22 @@ export function MeetingFormModal({ open, onClose, meeting, defaultDay, defaultPr
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={submit} loading={create.isPending || update.isPending}>
+          {/* Outside the form, but submits it (as does Enter in a field). */}
+          <Button type="submit" form={formId} loading={create.isPending || update.isPending}>
             {meeting ? 'Save' : 'Schedule'}
           </Button>
         </>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* noValidate: the checks in submit() give clearer messages than the browser's. */}
+      <form id={formId} onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-3">
         {error && (
           <div className="sm:col-span-3">
             <FormAlert>{error}</FormAlert>
           </div>
         )}
         <Field label="Title" required className="sm:col-span-3">
-          <Input autoFocus value={values.title} onChange={set('title')} placeholder="e.g. Weekly sync" />
+          <Input autoFocus value={values.title} onChange={set('title')} maxLength={MAX_TITLE} placeholder="e.g. Weekly sync" />
         </Field>
         <div className="sm:col-span-3">
           <p className="mb-1.5 text-sm font-medium text-foreground">Kind</p>
@@ -147,7 +209,7 @@ export function MeetingFormModal({ open, onClose, meeting, defaultDay, defaultPr
           </div>
         </div>
         <Field label="Meeting link" required hint="Zoom, Teams, Google Meet… everyone who can see the meeting can open it." className="sm:col-span-3">
-          <Input type="url" value={values.link} onChange={set('link')} placeholder="https://" />
+          <Input type="url" value={values.link} onChange={set('link')} maxLength={MAX_TEXT} placeholder="https://" />
         </Field>
         <Field label="Date" required>
           <Input type="date" value={values.day} onChange={set('day')} />
@@ -155,12 +217,17 @@ export function MeetingFormModal({ open, onClose, meeting, defaultDay, defaultPr
         <Field label="Starts" required>
           <Input type="time" value={values.start} onChange={set('start')} />
         </Field>
-        <Field label="Ends" required>
+        <Field
+          label="Ends"
+          required
+          hint={overnight ? `Next day${nextDay ? ` (${nextDay.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })})` : ''}` : undefined}
+        >
           <Input type="time" value={values.end} onChange={set('end')} />
         </Field>
         <Field label="Visible to" className="sm:col-span-3">
           <Select value={values.projectId} onChange={set('projectId')}>
             <option value="">Everyone in the organization</option>
+            {keptProject && <option value={keptProject.id}>Members of {keptProject.name} (archived)</option>}
             {projects?.map((project) => (
               <option key={project.id} value={project.id}>
                 Members of {project.name}
@@ -169,9 +236,9 @@ export function MeetingFormModal({ open, onClose, meeting, defaultDay, defaultPr
           </Select>
         </Field>
         <Field label="Notes" className="sm:col-span-3">
-          <Textarea rows={2} value={values.description} onChange={set('description')} placeholder="Agenda, dial-in details…" />
+          <Textarea rows={2} value={values.description} onChange={set('description')} maxLength={MAX_TEXT} placeholder="Agenda, dial-in details…" />
         </Field>
-      </div>
+      </form>
     </Modal>
   );
 }

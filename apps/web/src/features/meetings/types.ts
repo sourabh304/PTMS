@@ -12,6 +12,7 @@ export interface Meeting {
   endsAt: string;
   project: { id: string; name: string; key: string; color: string | null } | null;
   createdBy: UserSummary;
+  updatedAt: string;
 }
 
 export interface MeetingInput {

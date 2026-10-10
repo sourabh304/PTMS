@@ -6,7 +6,8 @@ const LOOKUP_SELECT = { id: true, name: true, color: true, category: true } sati
 export const TASK_LIST_INCLUDE = {
   status: { select: LOOKUP_SELECT },
   priority: { select: LOOKUP_SELECT },
-  project: { select: { id: true, name: true, key: true, color: true } },
+  // isArchived: archived projects are read-only, so the cross-project calendars do not offer to move their tasks.
+  project: { select: { id: true, name: true, key: true, color: true, isArchived: true } },
   taskList: { select: { id: true, name: true, color: true } },
   milestone: { select: { id: true, name: true } },
   assignees: { select: { user: { select: USER_SUMMARY_SELECT } } },

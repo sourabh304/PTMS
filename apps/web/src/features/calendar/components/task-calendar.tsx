@@ -1,7 +1,7 @@
 'use client';
 
 import { CalendarX2, ChevronLeft, ChevronRight, Eye, GripVertical, PanelRight, Plus } from 'lucide-react';
-import { useMemo, useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useState, type DragEvent } from 'react';
 import { useSession } from '@/features/auth/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useMeetings } from '@/features/meetings/api';
@@ -31,6 +31,7 @@ import {
   diffDays,
   monthGrid,
   monthLabel,
+  parseDateKey,
   shiftMonth,
   taskKey,
   todayKey,
@@ -63,8 +64,10 @@ export function TaskCalendar({ query, canEdit, showProject, meetings: meetingSco
   const { data: session } = useSession();
   const { can } = usePermissions();
   const weekStartsOn = session?.organization?.weekStartsOn ?? 1;
-  const [dateParam] = useQueryParam('date');
-  const [month, setMonth] = useState<DateKey>(() => (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : todayKey()));
+  const [dateParam, setDateParam] = useQueryParam('date');
+  // ?date= (e.g. from a meeting notice) picks the month; a malformed or impossible date is ignored.
+  const linkedDay = parseDateKey(dateParam);
+  const [month, setMonth] = useState<DateKey>(() => linkedDay ?? todayKey());
   const [taskId, setTaskId] = useQueryParam('taskId');
   const [expandedDay, setExpandedDay] = useState<DateKey | null>(null);
   const [dropTarget, setDropTarget] = useState<DateKey | null>(null);
@@ -77,7 +80,19 @@ export function TaskCalendar({ query, canEdit, showProject, meetings: meetingSco
   const update = useQuickUpdateTask();
   const today = todayKey();
   const withMeetings = !!meetingScope;
-  const canSchedule = withMeetings && can(Permission.MEETINGS_MANAGE);
+  // canEdit is false on archived (read-only) projects, which take no new meetings either.
+  const canSchedule = withMeetings && canEdit && can(Permission.MEETINGS_MANAGE);
+
+  // Follow the link also when this calendar is already open (a notice clicked on /calendar).
+  useEffect(() => {
+    if (linkedDay) setMonth(linkedDay);
+  }, [linkedDay]);
+
+  /** Shows another month. The ?date= link is dropped so that following it again jumps back. */
+  const goToMonth = (key: DateKey) => {
+    setMonth(key);
+    if (dateParam) setDateParam(null);
+  };
 
   const { data, isLoading, isError, error, refetch } = useTasks({ ...query, limit: appConfig.boardPageSize, sortBy: 'dueDate', sortOrder: 'asc' });
   const tasks = useMemo(() => data?.data ?? [], [data]);
@@ -117,6 +132,16 @@ export function TaskCalendar({ query, canEdit, showProject, meetings: meetingSco
     return { byDay: map, unscheduled: loose };
   }, [tasks, days, showTasks, spans]);
 
+  /**
+   * The open meeting: the calendar's copy, or the one kept when it was opened or saved, whichever is newer.
+   * A meeting saved into another month (or out of this project) is no longer in the calendar's list.
+   */
+  const shownMeeting = useMemo(() => {
+    if (!openMeeting) return null;
+    const listed = meetingsQuery.data?.find((m) => m.id === openMeeting.id);
+    return listed && listed.updatedAt >= openMeeting.updatedAt ? listed : openMeeting;
+  }, [openMeeting, meetingsQuery.data]);
+
   /** Moves the task so it ends on `day`, keeping its duration. */
   const reschedule = (task: Task, day: DateKey) => {
     const due = taskKey(task.dueDate);
@@ -139,7 +164,7 @@ export function TaskCalendar({ query, canEdit, showProject, meetings: meetingSco
     setDropTarget(null);
     const id = event.dataTransfer.getData(DRAG_TYPE);
     const task = tasks.find((t) => t.id === id);
-    if (task) reschedule(task, day);
+    if (task && !task.project.isArchived) reschedule(task, day);
   };
 
   if (isLoading) return <Spinner />;
@@ -148,7 +173,8 @@ export function TaskCalendar({ query, canEdit, showProject, meetings: meetingSco
   const itemProps = (task: Task) => ({
     task,
     showProject,
-    draggable: canEdit,
+    // Archived projects are read-only (the global and My work calendars show them too).
+    draggable: canEdit && !task.project.isArchived,
     onOpen: () => setTaskId(task.id),
   });
 
@@ -160,14 +186,14 @@ export function TaskCalendar({ query, canEdit, showProject, meetings: meetingSco
       <Card className="min-w-0 flex-1 overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="icon" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
+            <Button variant="secondary" size="icon" aria-label="Previous month" onClick={() => goToMonth(shiftMonth(month, -1))}>
               <ChevronLeft />
             </Button>
-            <Button variant="secondary" size="icon" aria-label="Next month" onClick={() => setMonth(shiftMonth(month, 1))}>
+            <Button variant="secondary" size="icon" aria-label="Next month" onClick={() => goToMonth(shiftMonth(month, 1))}>
               <ChevronRight />
             </Button>
             <h2 className="ml-1 text-base font-semibold">{monthLabel(month)}</h2>
-            <Button variant="ghost" size="sm" onClick={() => setMonth(today)}>
+            <Button variant="ghost" size="sm" onClick={() => goToMonth(today)}>
               Today
             </Button>
           </div>
@@ -180,7 +206,7 @@ export function TaskCalendar({ query, canEdit, showProject, meetings: meetingSco
               )}
             >
               {() => (
-                <div className="space-y-2 p-2">
+                <div className="flex flex-col gap-2 p-2">
                   {withMeetings && <Checkbox label="Tasks" checked={showTasks} onChange={toggleTasks} />}
                   {withMeetings && <Checkbox label="Meetings" checked={showMeetings} onChange={toggleMeetings} />}
                   <Checkbox label="Tasks across every day they run" checked={spans} disabled={!showTasks} onChange={toggleSpans} />
@@ -319,7 +345,7 @@ export function TaskCalendar({ query, canEdit, showProject, meetings: meetingSco
         </div>
       </Modal>
 
-      <MeetingDetailModal meeting={openMeeting && (meetingsQuery.data?.find((m) => m.id === openMeeting.id) ?? openMeeting)} onClose={() => setOpenMeeting(null)} />
+      <MeetingDetailModal meeting={shownMeeting} onSaved={setOpenMeeting} onClose={() => setOpenMeeting(null)} />
       {canSchedule && (
         <MeetingFormModal open={!!scheduling} onClose={() => setScheduling(null)} defaultDay={scheduling ?? undefined} defaultProjectId={meetingScope?.projectId ?? null} />
       )}

@@ -4,6 +4,7 @@ import { CalendarClock, Copy, ExternalLink, FolderKanban, Globe, Pencil, Trash2,
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useProjectNavigation } from '@/features/projects/api';
 import { Permission } from '@/shared/constants/domain';
 import { fullName } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -31,15 +32,55 @@ export function MeetingChip({ meeting, onOpen, roomy }: { meeting: Meeting; onOp
   );
 }
 
+/** Copies text to the clipboard; false when the browser refused. */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // No Clipboard API (e.g. the app opened over plain http): copy from a hidden text box instead.
+    const focused = document.activeElement as HTMLElement | null;
+    const box = document.createElement('textarea');
+    box.value = text;
+    box.setAttribute('readonly', '');
+    box.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(box);
+    box.select();
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      box.remove();
+      focused?.focus();
+    }
+  }
+}
+
+interface MeetingDetailModalProps {
+  meeting: Meeting | null;
+  onClose: () => void;
+  /** Called with the meeting as saved after an edit. */
+  onSaved?: (meeting: Meeting) => void;
+}
+
 /** Pop-up card with everything about a meeting and a button to join it. */
-export function MeetingDetailModal({ meeting, onClose }: { meeting: Meeting | null; onClose: () => void }) {
+export function MeetingDetailModal({ meeting, onClose, onSaved }: MeetingDetailModalProps) {
   const { can } = usePermissions();
   const canManage = can(Permission.MEETINGS_MANAGE);
   const remove = useDeleteMeeting();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { data: projects } = useProjectNavigation(canManage && !!meeting?.project);
   if (!meeting) return null;
   const style = meetingStyle(meeting.type);
+  // Managers see every project, and the list leaves out only archived ones, which are read-only.
+  const archived = !!meeting.project && !!projects && !projects.some((project) => project.id === meeting.project?.id);
+
+  const copyLink = async () => {
+    if (await copyText(meeting.link)) toast.success('Link copied');
+    else toast.error('Could not copy the link. Select it and copy it yourself.');
+  };
 
   return (
     <>
@@ -56,7 +97,7 @@ export function MeetingDetailModal({ meeting, onClose }: { meeting: Meeting | nu
         description={style.label}
         footer={
           <>
-            {canManage && (
+            {canManage && !archived && (
               <div className="mr-auto flex gap-1">
                 <Button variant="ghost" size="icon" aria-label="Edit meeting" onClick={() => setEditing(true)}>
                   <Pencil />
@@ -80,7 +121,7 @@ export function MeetingDetailModal({ meeting, onClose }: { meeting: Meeting | nu
         <dl className="space-y-3 text-sm">
           <Row icon={<CalendarClock />}>{formatMeetingRange(meeting)}</Row>
           <Row icon={meeting.project ? <FolderKanban /> : <Globe />}>
-            {meeting.project ? `Members of ${meeting.project.name}` : 'Everyone in the organization'}
+            {meeting.project ? `Members of ${meeting.project.name}${archived ? ' (archived, read-only)' : ''}` : 'Everyone in the organization'}
           </Row>
           <Row icon={<Video />}>
             <span className="flex min-w-0 items-center gap-1">
@@ -91,10 +132,7 @@ export function MeetingDetailModal({ meeting, onClose }: { meeting: Meeting | nu
                 variant="ghost"
                 size="icon"
                 aria-label="Copy link"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(meeting.link);
-                  toast.success('Link copied');
-                }}
+                onClick={() => void copyLink()}
               >
                 <Copy className="size-3.5" />
               </Button>
@@ -104,7 +142,7 @@ export function MeetingDetailModal({ meeting, onClose }: { meeting: Meeting | nu
           <p className="text-xs text-muted">Scheduled by {fullName(meeting.createdBy)}</p>
         </dl>
       </Modal>
-      <MeetingFormModal open={editing} meeting={meeting} onClose={() => setEditing(false)} />
+      <MeetingFormModal open={editing} meeting={meeting} onSaved={onSaved} onClose={() => setEditing(false)} />
       <ConfirmDialog
         open={deleting}
         onClose={() => setDeleting(false)}

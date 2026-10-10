@@ -34,7 +34,8 @@ export function useCreateMeeting() {
   const invalidate = useInvalidateMeetings();
   return useMutation({
     mutationFn: (input: MeetingInput) => api.post<Meeting>('/meetings', input),
-    meta: { successMessage: 'Meeting scheduled' },
+    // The form shows errors inline, in its own words.
+    meta: { successMessage: 'Meeting scheduled', silentError: true },
     onSuccess: invalidate,
   });
 }
@@ -43,7 +44,8 @@ export function useUpdateMeeting() {
   const invalidate = useInvalidateMeetings();
   return useMutation({
     mutationFn: ({ id, ...input }: Partial<MeetingInput> & { id: string }) => api.patch<Meeting>(`/meetings/${id}`, input),
-    meta: { successMessage: 'Meeting updated' },
+    // The form shows errors inline, in its own words.
+    meta: { successMessage: 'Meeting updated', silentError: true },
     onSuccess: invalidate,
   });
 }

@@ -7,11 +7,14 @@ import { Popover } from '@/shared/ui/popover';
 
 /**
  * "⋯" overflow menu for table rows and list items. Rendered in a portal, so it
- * is never clipped by a horizontally scrolling table. Fill it with DropdownItem.
+ * is never clipped by a horizontally scrolling table. Fill it with DropdownItem;
+ * keyboard handling (focus on open, arrow keys, Tab/Escape) comes from Popover.
  */
 export function RowMenu({ label = 'More actions', children, className }: { label?: string; children: (close: () => void) => ReactNode; className?: string }) {
   return (
     <Popover
+      role="menu"
+      label={label}
       align="end"
       className="min-w-48 p-1"
       trigger={({ ref, open, toggle }) => (
@@ -35,7 +38,7 @@ export function RowMenu({ label = 'More actions', children, className }: { label
         </button>
       )}
     >
-      {(close) => <div role="menu">{children(close)}</div>}
+      {children}
     </Popover>
   );
 }

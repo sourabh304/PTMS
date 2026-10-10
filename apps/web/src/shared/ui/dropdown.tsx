@@ -13,11 +13,13 @@ interface DropdownProps {
 
 /**
  * Accessible menu that closes on outside click / Escape. Rendered in a portal (see Popover),
- * so scrolling tables and cards with hidden overflow never cut it off.
+ * so scrolling tables and cards with hidden overflow never cut it off. Opening focuses the
+ * first item; arrow keys move between items and Tab or Escape closes it.
  */
 export function Dropdown({ trigger, children, align = 'right', className }: DropdownProps) {
   return (
     <Popover
+      role="menu"
       align={align === 'right' ? 'end' : 'start'}
       className={cn('min-w-52 max-w-[calc(100vw-1.5rem)] overflow-hidden p-1', className)}
       trigger={({ ref, open, toggle }) => (
@@ -26,7 +28,7 @@ export function Dropdown({ trigger, children, align = 'right', className }: Drop
         </span>
       )}
     >
-      {(close) => <div role="menu">{children(close)}</div>}
+      {children}
     </Popover>
   );
 }
@@ -38,8 +40,10 @@ export function DropdownItem({ onClick, children, danger }: { onClick: () => voi
       role="menuitem"
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-[calc(var(--radius)-2px)] px-2.5 py-2 text-left text-sm transition-colors [&_svg]:size-4 [&_svg]:text-muted',
-        danger ? 'text-danger hover:bg-danger-soft [&_svg]:text-danger' : 'text-foreground-soft hover:bg-surface-muted hover:text-foreground',
+        'flex w-full items-center gap-2.5 rounded-[calc(var(--radius)-2px)] px-2.5 py-2 text-left text-sm outline-none transition-colors [&_svg]:size-4 [&_svg]:text-muted',
+        danger
+          ? 'text-danger hover:bg-danger-soft focus-visible:bg-danger-soft [&_svg]:text-danger'
+          : 'text-foreground-soft hover:bg-surface-muted hover:text-foreground focus-visible:bg-surface-muted focus-visible:text-foreground',
       )}
     >
       {children}
@@ -48,5 +52,5 @@ export function DropdownItem({ onClick, children, danger }: { onClick: () => voi
 }
 
 export function DropdownSeparator() {
-  return <div className="-mx-1 my-1 h-px bg-border" />;
+  return <div role="separator" className="-mx-1 my-1 h-px bg-border" />;
 }

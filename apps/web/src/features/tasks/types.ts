@@ -22,7 +22,8 @@ export interface Task {
   updatedAt: string;
   status: LookupRef;
   priority: LookupRef;
-  project: ProjectRef;
+  /** Archived projects are read-only. */
+  project: ProjectRef & { isArchived: boolean };
   taskList: { id: string; name: string; color: string | null } | null;
   milestone: { id: string; name: string } | null;
   assignees: UserSummary[];
