@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChevronDown } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useSession } from '@/features/auth/api';
@@ -66,6 +66,7 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: Props) {
   const { data: session } = useSession();
   // The root account is not a member of the organization, so it must assign an owner.
   const ownerRequired = session?.role === PLATFORM_ROOT_ROLE;
+  const formId = useId();
 
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { memberIds: [] } });
   const { errors } = form.formState;
@@ -136,13 +137,13 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: Props) {
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={onSubmit} loading={pending}>
+          <Button type="submit" form={formId} loading={pending}>
             {isEdit ? 'Save changes' : 'Create project'}
           </Button>
         </>
       }
     >
-      <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-6">
+      <form id={formId} onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-6">
         <Field label="Project name" required error={errors.name?.message} className="sm:col-span-4">
           <Input
             autoFocus
@@ -200,7 +201,12 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: Props) {
           </>
         )}
         {!isEdit && (
-          <Field label="Team members" className="sm:col-span-6" hint="You and the owner are added as project managers automatically.">
+          <Field
+            label="Team members"
+            className="sm:col-span-6"
+            // Mirrors the API: the owner and the creating coordinator join; root never becomes a member.
+            hint={ownerRequired ? 'The owner joins the project automatically.' : 'You and the owner join the project automatically.'}
+          >
             <Controller
               control={form.control}
               name="memberIds"

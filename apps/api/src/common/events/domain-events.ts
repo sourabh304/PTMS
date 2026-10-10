@@ -35,6 +35,8 @@ export interface TaskChangedEvent {
 }
 
 export interface NotificationRequestedEvent {
+  /** Organization the notification is about; the root account only sees those of the workspace it has open. */
+  organizationId: string | null;
   recipientIds: string[];
   actorId: string;
   type: NotificationType;

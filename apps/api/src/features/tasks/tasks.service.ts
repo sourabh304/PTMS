@@ -416,6 +416,7 @@ export class TasksService {
   /** The task's creator and assignees follow its progress. */
   private notifyStatusChange(user: AuthenticatedUser, task: NotifiableTask & { createdById: string; status: { name: string } }): void {
     this.events.notify({
+      organizationId: user.organizationId,
       recipientIds: [task.createdById, ...task.assignees.map((a) => a.user.id)],
       actorId: user.id,
       type: NotificationType.TASK_STATUS_CHANGED,
@@ -428,6 +429,7 @@ export class TasksService {
   private notifyDueDateChange(user: AuthenticatedUser, task: NotifiableTask & { dueDate: Date | null }, skipIds: string[]): void {
     const due = task.dueDate ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(task.dueDate) : null;
     this.events.notify({
+      organizationId: user.organizationId,
       recipientIds: task.assignees.map((a) => a.user.id).filter((id) => !skipIds.includes(id)),
       actorId: user.id,
       type: NotificationType.TASK_DUE_DATE_CHANGED,
@@ -443,6 +445,7 @@ export class TasksService {
     recipientIds: string[],
   ): void {
     this.events.notify({
+      organizationId: user.organizationId,
       recipientIds,
       actorId: user.id,
       type: NotificationType.TASK_ASSIGNED,

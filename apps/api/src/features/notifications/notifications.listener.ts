@@ -15,6 +15,7 @@ export class NotificationsListener {
       await this.prisma.notification.createMany({
         data: event.recipientIds.map((userId) => ({
           userId,
+          organizationId: event.organizationId ?? null,
           type: event.type,
           title: event.title,
           body: event.body ?? null,

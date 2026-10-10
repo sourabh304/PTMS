@@ -183,7 +183,7 @@ export class AutomationsService {
           data: closed ? { statusId: value, completedAt: new Date(), progress: 100 } : { statusId: value, completedAt: null },
         });
         this.record(automation, event, task, ActivityAction.STATUS_CHANGED, `moved ${ref} to ${status.name}`);
-        this.notify(automation, [task.createdById, ...task.assignees.map((a) => a.userId)], `${ref} moved to ${status.name}`, task.title, link);
+        this.notify(event.organizationId, automation, [task.createdById, ...task.assignees.map((a) => a.userId)], `${ref} moved to ${status.name}`, task.title, link);
         this.events.taskChanged({ ...next, kind: 'status_changed', statusId: value });
         changed = true;
         break;
@@ -202,7 +202,7 @@ export class AutomationsService {
         if (!(await this.prisma.projectMember.count({ where: { projectId: task.projectId, userId: value } }))) break;
         await this.prisma.taskAssignee.create({ data: { taskId: task.id, userId: value } });
         this.record(automation, event, task, ActivityAction.ASSIGNED, `assigned ${ref}`);
-        this.notify(automation, [value], `${ref} assigned to you`, task.title, link);
+        this.notify(event.organizationId, automation, [value], `${ref} assigned to you`, task.title, link);
         this.events.taskChanged({ ...next, kind: 'assigned', assigneeIds: [value] });
         changed = true;
         break;
@@ -226,15 +226,15 @@ export class AutomationsService {
         break;
       }
       case AutomationAction.NOTIFY_USER:
-        if (value) this.notify(automation, [value], `${ref}: ${automation.name}`, task.title, link);
+        if (value) this.notify(event.organizationId, automation, [value], `${ref}: ${automation.name}`, task.title, link);
         changed = !!value;
         break;
       case AutomationAction.NOTIFY_ASSIGNEES:
-        this.notify(automation, task.assignees.map((a) => a.userId), `${ref}: ${automation.name}`, task.title, link);
+        this.notify(event.organizationId, automation, task.assignees.map((a) => a.userId), `${ref}: ${automation.name}`, task.title, link);
         changed = task.assignees.length > 0;
         break;
       case AutomationAction.NOTIFY_CREATOR:
-        this.notify(automation, [task.createdById], `${ref}: ${automation.name}`, task.title, link);
+        this.notify(event.organizationId, automation, [task.createdById], `${ref}: ${automation.name}`, task.title, link);
         changed = true;
         break;
     }
@@ -258,8 +258,9 @@ export class AutomationsService {
   }
 
   /** Automations notify everyone they target, including the person whose change triggered them. */
-  private notify(automation: Automation, recipientIds: string[], title: string, taskTitle: string, link: string): void {
+  private notify(organizationId: string, automation: Automation, recipientIds: string[], title: string, taskTitle: string, link: string): void {
     this.events.notify({
+      organizationId: organizationId,
       recipientIds,
       actorId: '',
       type: NotificationType.AUTOMATION,

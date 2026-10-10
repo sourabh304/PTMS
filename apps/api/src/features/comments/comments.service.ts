@@ -61,6 +61,7 @@ export class CommentsService {
       select: { authorId: true },
     });
     this.events.notify({
+      organizationId: user.organizationId,
       recipientIds: [...target.watcherIds, ...participants.map((p) => p.authorId)],
       actorId: user.id,
       type: NotificationType.COMMENT_ADDED,

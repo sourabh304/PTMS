@@ -389,18 +389,22 @@ model Activity {
 }
 
 model Notification {
-  id        String    @id @default(cuid())
-  userId    String
-  type      String
-  title     String
-  body      String?
-  link      String?
-  readAt    DateTime?
-  createdAt DateTime  @default(now())
+  id             String    @id @default(cuid())
+  userId         String
+  /// Organization the notification is about, so the root account only sees the open workspace's.
+  /// Null for notifications created before it was recorded.
+  organizationId String?
+  type           String
+  title          String
+  body           String?
+  link           String?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt])
+  @@index([userId, organizationId, readAt])
 }
 
 /// "When <trigger> then <action>" rule that runs on a project's items (see automation.constants.ts).

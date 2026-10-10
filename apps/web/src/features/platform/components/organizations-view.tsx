@@ -1,7 +1,7 @@
 'use client';
 
 import { Building2, LogIn, MoreHorizontal, Pause, Play, Plus, Search, Trash2, UserPlus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { appConfig } from '@/shared/config/env';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { useQueryParam } from '@/shared/hooks/use-query-param';
@@ -99,7 +99,17 @@ export function OrganizationsView() {
                 {data.data.map((org) => (
                     <Tr key={org.id} className="cursor-pointer" onClick={() => setOrgId(org.id)}>
                       <Td>
-                        <p className="font-medium text-foreground">{org.name}</p>
+                        {/* The row is clickable for mouse users; the name is the focusable control for keyboards. */}
+                        <button
+                          type="button"
+                          className="block text-left font-medium text-foreground hover:underline"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setOrgId(org.id);
+                          }}
+                        >
+                          {org.name}
+                        </button>
                         <p className="font-mono text-xs text-muted">{org.slug}</p>
                       </Td>
                       <Td className="text-right tabular-nums">{org._count.users}</Td>
@@ -143,7 +153,6 @@ function OrganizationDetails({ org, onDeleted }: { org: PlatformOrganizationDeta
   const [name, setName] = useState(org.name);
   const [adding, setAdding] = useState(false);
   const [confirm, setConfirm] = useState<'suspend' | 'delete' | null>(null);
-  const [slugConfirm, setSlugConfirm] = useState('');
 
   return (
     <div className="space-y-6">
@@ -194,7 +203,9 @@ function OrganizationDetails({ org, onDeleted }: { org: PlatformOrganizationDeta
       </Disclosure>
 
       <section className="flex items-center justify-between gap-2 border-t border-border pt-4">
-        <p className="text-xs text-muted">Created {formatDate(org.createdAt)} · {org._count.users} people · {org._count.projects} projects</p>
+        <p className="text-xs text-muted">
+          Created {formatDate(org.createdAt)} · {plural(org._count.users, 'person', 'people')} · {plural(org._count.projects, 'project', 'projects')}
+        </p>
         <Dropdown
           trigger={({ toggle }) => (
             <Button variant="ghost" size="icon" aria-label="More actions" onClick={toggle}>
@@ -238,20 +249,72 @@ function OrganizationDetails({ org, onDeleted }: { org: PlatformOrganizationDeta
         loading={update.isPending}
         onConfirm={() => update.mutate({ id: org.id, isActive: false }, { onSuccess: () => setConfirm(null) })}
       />
-      <ConfirmDialog
+      <DeleteOrganizationDialog
         open={confirm === 'delete'}
         onClose={() => setConfirm(null)}
-        title="Delete organization"
-        message={`This permanently deletes ${org.name} with all of its users, projects, tasks, issues, meetings and timesheets.`}
-        confirmLabel="Delete forever"
+        org={org}
         loading={remove.isPending}
-        onConfirm={() => slugConfirm === org.slug && remove.mutate(org.id, { onSuccess: onDeleted })}
-      >
-        <Field label={`Type ${org.slug} to confirm`}>
-          <Input className="font-mono" value={slugConfirm} onChange={(e) => setSlugConfirm(e.target.value.trim())} />
-        </Field>
-      </ConfirmDialog>
+        onConfirm={() => remove.mutate(org.id, { onSuccess: onDeleted })}
+      />
     </div>
+  );
+}
+
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+
+/** Delete confirmation that stays disabled until the slug is typed; the input starts empty each time it opens. */
+function DeleteOrganizationDialog({
+  open,
+  onClose,
+  org,
+  loading,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  org: PlatformOrganizationDetail;
+  loading: boolean;
+  onConfirm: () => void;
+}) {
+  const formId = useId();
+  const [slugConfirm, setSlugConfirm] = useState('');
+  const matches = slugConfirm === org.slug;
+
+  useEffect(() => {
+    if (open) setSlugConfirm('');
+  }, [open]);
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Delete organization"
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" form={formId} variant="danger" disabled={!matches} loading={loading}>
+            Delete forever
+          </Button>
+        </>
+      }
+    >
+      <form
+        id={formId}
+        className="space-y-4 text-sm text-foreground-soft"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (matches) onConfirm();
+        }}
+      >
+        <p>This permanently deletes {org.name} with all of its users, projects, tasks, issues, meetings and timesheets.</p>
+        <Field label={`Type ${org.slug} to confirm`}>
+          <Input autoFocus className="font-mono" autoComplete="off" value={slugConfirm} onChange={(e) => setSlugConfirm(e.target.value.trim().toLowerCase())} />
+        </Field>
+      </form>
+    </Modal>
   );
 }
 
@@ -280,10 +343,14 @@ function CreateOrganizationModal({ open, onClose, onCreated }: { open: boolean; 
     }
   }, [open]);
 
+  const formId = useId();
   const set = (key: keyof typeof EMPTY_FORM) => (event: { target: { value: string } }) => setValues((v) => ({ ...v, [key]: event.target.value }));
 
-  const submit = () => {
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    // Each attempt replaces the previous message, so a fixed form never shows a stale alert.
     if (Object.values(values).some((v) => !v.trim())) return setError('All fields are required');
+    setError('');
     create.mutate(
       {
         name: values.name.trim(),
@@ -294,6 +361,7 @@ function CreateOrganizationModal({ open, onClose, onCreated }: { open: boolean; 
           onClose();
           onCreated(org.id);
         },
+        onError: (err) => setError(errorMessage(err)),
       },
     );
   };
@@ -309,13 +377,13 @@ function CreateOrganizationModal({ open, onClose, onCreated }: { open: boolean; 
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={submit} loading={create.isPending}>
+          <Button type="submit" form={formId} loading={create.isPending}>
             Create organization
           </Button>
         </>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2">
+      <form id={formId} onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
         {error && (
           <div className="sm:col-span-2">
             <FormAlert>{error}</FormAlert>
@@ -337,7 +405,7 @@ function CreateOrganizationModal({ open, onClose, onCreated }: { open: boolean; 
         <Field label="Initial password" required hint="Upper and lower case letters and a number; share it securely." className="sm:col-span-2">
           <Input type="password" autoComplete="new-password" value={values.password} onChange={set('password')} />
         </Field>
-      </div>
+      </form>
     </Modal>
   );
 }
@@ -358,12 +426,15 @@ function PersonModal({ open, onClose, title, description, organizationId }: { op
     }
   }, [open]);
 
+  const formId = useId();
   const set = (key: keyof typeof EMPTY_PERSON) => (event: { target: { value: string } }) => setValues((v) => ({ ...v, [key]: event.target.value }));
-  const submit = () => {
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
     if (Object.values(values).some((v) => !v.trim())) return setError('All fields are required');
+    setError('');
     add.mutate(
       { organizationId, firstName: values.firstName.trim(), lastName: values.lastName.trim(), email: values.email.trim(), password: values.password },
-      { onSuccess: onClose },
+      { onSuccess: onClose, onError: (err) => setError(errorMessage(err)) },
     );
   };
 
@@ -378,13 +449,13 @@ function PersonModal({ open, onClose, title, description, organizationId }: { op
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={submit} loading={add.isPending}>
+          <Button type="submit" form={formId} loading={add.isPending}>
             Add coordinator
           </Button>
         </>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2">
+      <form id={formId} onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
         {error && (
           <div className="sm:col-span-2">
             <FormAlert>{error}</FormAlert>
@@ -402,7 +473,7 @@ function PersonModal({ open, onClose, title, description, organizationId }: { op
         <Field label="Initial password" required hint="Upper and lower case letters and a number; share it securely." className="sm:col-span-2">
           <Input type="password" autoComplete="new-password" value={values.password} onChange={set('password')} />
         </Field>
-      </div>
+      </form>
     </Modal>
   );
 }

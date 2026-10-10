@@ -59,7 +59,7 @@ function PersonDetailsContent({ userId }: { userId: string }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Projects" value={stats.projects} icon={<FolderKanban />} />
         <StatCard label="Open tasks" value={stats.openTasks} icon={<ListTodo />} hint={`${stats.completedTasks30d} completed in 30 days`} tone="success" />
-        <StatCard label="Overdue" value={stats.overdueTasks} icon={<AlertTriangle />} hint={`${stats.openIssues} open issues`} tone={stats.overdueTasks ? 'danger' : 'warning'} />
+        <StatCard label="Overdue" value={stats.overdueTasks} icon={<AlertTriangle />} hint={plural(stats.openIssues, 'open issue', 'open issues')} tone={stats.overdueTasks ? 'danger' : 'warning'} />
         <StatCard label="Time this week" value={formatMinutes(stats.minutesThisWeek)} icon={<Clock />} hint={`${formatMinutes(stats.minutes30d)} in 30 days`} tone="warning" />
       </div>
 
@@ -72,7 +72,7 @@ function PersonDetailsContent({ userId }: { userId: string }) {
                   <span className="size-2.5 shrink-0 rounded-sm" style={{ backgroundColor: project.color ?? 'var(--brand)' }} />
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{project.name}</span>
                   <ColorBadge color={project.status.color} label={project.isArchived ? 'Archived' : project.status.name} variant="dot" />
-                  <span className="w-28 text-right text-xs text-muted">{project.openTasks} open tasks</span>
+                  <span className="w-28 shrink-0 text-right text-xs text-muted">{plural(project.openTasks, 'open task', 'open tasks')}</span>
                 </Link>
               </li>
             ))}
@@ -82,7 +82,8 @@ function PersonDetailsContent({ userId }: { userId: string }) {
         )}
       </CollapsibleCard>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      {/* min-w-0 lets the cards shrink to the viewport so long rows truncate instead of scrolling the page. */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 [&>*]:min-w-0">
         <CollapsibleCard title="Open tasks" meta={data.tasks.length} storageKey="person.tasks" icon={<ListTodo />}>
           {data.tasks.length ? (
             <ul className="scrollbar-thin max-h-96 divide-y divide-border overflow-y-auto">
@@ -165,6 +166,8 @@ function PersonDetailsContent({ userId }: { userId: string }) {
     </div>
   );
 }
+
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="px-[var(--card-p)] py-8 text-center text-sm text-muted">{children}</div>;

@@ -89,7 +89,7 @@ export function LoginForm() {
         {showResetHelp && (
           <p className="mt-2 flex gap-2 rounded-ui bg-surface-muted px-3 py-2 text-xs text-foreground-soft animate-fade-in">
             <Info className="mt-0.5 size-3.5 shrink-0 text-brand" />
-            Passwords are reset by your workspace administrator under Settings → Users. Ask them for a new temporary password.
+            Passwords are reset by a project coordinator under Settings → Users. Ask them for a new temporary password.
           </p>
         )}
       </div>
@@ -108,7 +108,7 @@ export function LoginForm() {
         <p className="text-center text-sm text-muted">
           Need an account?{' '}
           <a href={`mailto:${appConfig.supportEmail}`} className="font-medium text-brand hover:underline">
-            Contact your administrator
+            Contact your project coordinator
           </a>
         </p>
       )}

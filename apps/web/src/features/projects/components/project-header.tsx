@@ -54,15 +54,13 @@ export function ProjectWorkspace({ projectId, children }: { projectId: string; c
             {project.isArchived && <Badge tone="warning">Archived</Badge>}
             {!project.access.canEdit && <Badge>Read only</Badge>}
           </div>
-          <p className="mt-1 max-w-3xl truncate text-sm text-muted">
-            {project.description || `${project.key} · ${formatShortDate(project.startDate)} – ${formatShortDate(project.endDate)}`}
-          </p>
+          <p className="mt-1 max-w-3xl truncate text-sm text-muted">{project.description || projectSubtitle(project)}</p>
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
           <div className="text-right text-xs text-muted">
             <span className="font-semibold tabular-nums text-foreground">{project.stats.progress}%</span> done ·{' '}
-            {project.stats.completedTasks}/{project.stats.totalTasks} tasks
+            {project.stats.completedTasks}/{project.stats.totalTasks} {project.stats.totalTasks === 1 ? 'task' : 'tasks'}
           </div>
           <AvatarGroup users={project.members.map((m) => m.user)} max={4} size="sm" />
           {project.access.canManage && (
@@ -79,6 +77,20 @@ export function ProjectWorkspace({ projectId, children }: { projectId: string; c
       <div className="pt-5">{children}</div>
     </div>
   );
+}
+
+/** Key plus whichever dates are set, e.g. "WEB · 01 Oct – 31 Dec" or "WEB · from 01 Oct"; just the key when there are none. */
+function projectSubtitle(project: ProjectDetail): string {
+  const { startDate, endDate } = project;
+  const range =
+    startDate && endDate
+      ? `${formatShortDate(startDate)} – ${formatShortDate(endDate)}`
+      : startDate
+        ? `from ${formatShortDate(startDate)}`
+        : endDate
+          ? `until ${formatShortDate(endDate)}`
+          : '';
+  return range ? `${project.key} · ${range}` : project.key;
 }
 
 function FavoriteButton({ project }: { project: ProjectDetail }) {

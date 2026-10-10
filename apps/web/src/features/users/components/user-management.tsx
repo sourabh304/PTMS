@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, KeyRound, Pencil, Plus, Search, UserCheck, UserX } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { usePasswordMinLength, useSession } from '@/features/auth/api';
@@ -119,7 +119,8 @@ export function UserManagement() {
                 <Th>Role</Th>
                 <Th>Job title</Th>
                 <Th>Status</Th>
-                <Th>Last sign-in</Th>
+                {/* Sign-in activity is only sent to people who manage accounts. */}
+                {canManage && <Th>Last sign-in</Th>}
                 {canManage && <Th className="w-12" />}
               </tr>
             </thead>
@@ -142,7 +143,7 @@ export function UserManagement() {
                   </Td>
                   <Td className="text-muted">{user.jobTitle ?? '—'}</Td>
                   <Td>{user.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Deactivated</Badge>}</Td>
-                  <Td className="whitespace-nowrap text-muted">{formatDateTime(user.lastLoginAt)}</Td>
+                  {canManage && <Td className="whitespace-nowrap text-muted">{formatDateTime(user.lastLoginAt)}</Td>}
                   {canManage && (
                     <Td>
                       <div className="flex justify-end">
@@ -212,6 +213,7 @@ function UserFormModal({ user, onClose, isSelf, roles }: { user: User | 'new' | 
   const update = useUpdateUser();
   const minPasswordLength = usePasswordMinLength();
   const roleLocked = isSelf || roles.length < 2;
+  const formId = useId();
   const form = useForm<UserValues>({ resolver: zodResolver(userSchema) });
   const { errors } = form.formState;
 
@@ -254,13 +256,13 @@ function UserFormModal({ user, onClose, isSelf, roles }: { user: User | 'new' | 
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={onSubmit} loading={create.isPending || update.isPending}>
+          <Button type="submit" form={formId} loading={create.isPending || update.isPending}>
             Save
           </Button>
         </>
       }
     >
-      <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
+      <form id={formId} onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
         <Field label="First name" required error={errors.firstName?.message}>
           <Input {...form.register('firstName')} />
         </Field>
@@ -309,6 +311,7 @@ function ResetPasswordModal({ user, onClose }: { user: User | null; onClose: () 
   const minPasswordLength = usePasswordMinLength();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const formId = useId();
 
   useEffect(() => {
     setPassword('');
@@ -333,15 +336,23 @@ function ResetPasswordModal({ user, onClose }: { user: User | null; onClose: () 
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={submit} loading={reset.isPending}>
+          <Button type="submit" form={formId} loading={reset.isPending}>
             Reset password
           </Button>
         </>
       }
     >
-      <Field label="New password" error={error}>
-        <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      </Field>
+      <form
+        id={formId}
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <Field label="New password" error={error}>
+          <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </Field>
+      </form>
     </Modal>
   );
 }

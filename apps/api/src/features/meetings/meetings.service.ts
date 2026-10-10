@@ -159,6 +159,7 @@ export class MeetingsService {
       const organizer = meeting.createdBy.isActive ? [meeting.createdById] : [];
       const recipientIds = meeting.project ? [...meeting.project.members.map((member) => member.userId), ...organizer] : everyone;
       this.events.notify({
+        organizationId: organizationId,
         recipientIds,
         actorId: SYSTEM_ACTOR,
         type: NotificationType.MEETING_TODAY,

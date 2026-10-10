@@ -150,6 +150,7 @@ export class TimesheetsService {
       `${approved ? 'approved' : 'rejected'} ${this.hours(updated.minutes)} logged by ${fullName(updated.user)}`,
     );
     this.events.notify({
+      organizationId: user.organizationId,
       recipientIds: [updated.userId],
       actorId: user.id,
       type: NotificationType.TIME_ENTRY_REVIEWED,
@@ -220,6 +221,7 @@ export class TimesheetsService {
     });
     const day = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(entry.date);
     this.events.notify({
+      organizationId: actor.organizationId,
       recipientIds: approvers.map((approver) => approver.id),
       actorId: actor.id,
       type: NotificationType.TIME_ENTRY_SUBMITTED,

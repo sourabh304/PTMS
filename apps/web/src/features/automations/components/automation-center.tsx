@@ -172,7 +172,13 @@ export function AutomationCenter({ projectId }: { projectId: string }) {
             <EmptyState
               icon={<Zap className="size-6" />}
               title="No automations yet"
-              description={canManage ? 'Start from a recipe or build your own rule.' : 'Project managers can add automations here.'}
+              description={
+                canManage
+                  ? 'Start from a recipe or build your own rule.'
+                  : project?.isArchived
+                    ? 'This project is archived. Restore it to add automations.'
+                    : 'Project coordinators can add automations here.'
+              }
             />
             {canManage && (
               <div className="mx-auto grid max-w-3xl gap-2 px-[var(--card-p)] pb-[var(--card-p)] sm:grid-cols-2">

@@ -12,6 +12,19 @@ export const taskKey = (value: string | null | undefined): DateKey | null => (va
 export const addDays = (key: DateKey, days: number): DateKey => toKey(new Date(fromKey(key).getTime() + days * DAY_MS));
 export const diffDays = (from: DateKey, to: DateKey): number => Math.round((fromKey(to).getTime() - fromKey(from).getTime()) / DAY_MS);
 
+/** Years the calendars can show (the API refuses meetings outside them). */
+const MIN_YEAR = 2000;
+const MAX_YEAR = 2100;
+
+/** `value` when it is a real `YYYY-MM-DD` date between 2000 and 2100 (not 2026-02-30), otherwise null. */
+export function parseDateKey(value: string | null | undefined): DateKey | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = fromKey(value);
+  if (Number.isNaN(date.getTime()) || toKey(date) !== value) return null;
+  const year = date.getUTCFullYear();
+  return year >= MIN_YEAR && year <= MAX_YEAR ? value : null;
+}
+
 export function todayKey(): DateKey {
   const now = new Date();
   return toKey(new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())));

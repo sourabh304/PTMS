@@ -169,6 +169,7 @@ export class ProjectsService {
       summary: `created project ${project.name}`,
     });
     this.events.notify({
+      organizationId: user.organizationId,
       recipientIds: [...leadIds, ...memberIds],
       actorId: user.id,
       type: NotificationType.PROJECT_ADDED,
@@ -256,6 +257,7 @@ export class ProjectsService {
         summary: `added ${newIds.length} member(s) to the project`,
       });
       this.events.notify({
+        organizationId: user.organizationId,
         recipientIds: newIds,
         actorId: user.id,
         type: NotificationType.PROJECT_ADDED,
@@ -288,6 +290,7 @@ export class ProjectsService {
       summary: `removed a member from the project`,
     });
     this.events.notify({
+      organizationId: user.organizationId,
       recipientIds: [userId],
       actorId: user.id,
       type: NotificationType.PROJECT_REMOVED,

@@ -1,9 +1,9 @@
 'use client';
 
-import { Archive, ArchiveRestore, MoreHorizontal, Pencil, Trash2, UserPlus, X } from 'lucide-react';
+import { Archive, ArchiveRestore, MoreHorizontal, Pencil, ShieldOff, Trash2, UserPlus, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useActiveUsers } from '@/features/users/api';
 import { UserMultiSelect } from '@/features/users/components/user-multi-select';
 import { routes } from '@/shared/config/routes';
@@ -14,9 +14,9 @@ import { Button } from '@/shared/ui/button';
 import { CardBody } from '@/shared/ui/card';
 import { CollapsibleCard } from '@/shared/ui/collapsible';
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/shared/ui/dropdown';
-import { Spinner } from '@/shared/ui/feedback';
+import { EmptyState, Spinner } from '@/shared/ui/feedback';
 import { Field, Input } from '@/shared/ui/form';
-import { ConfirmDialog, Modal } from '@/shared/ui/modal';
+import { Modal } from '@/shared/ui/modal';
 import { useAddMembers, useDeleteProject, useProject, useProjectMembers, useRemoveMember, useUpdateProject } from '../api';
 import { ProjectFormModal } from './project-form-modal';
 
@@ -30,9 +30,25 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [confirmKey, setConfirmKey] = useState('');
 
   if (!project) return <Spinner />;
+  // The tab is hidden for members, but the URL still works: show why instead of controls the API rejects.
+  if (!project.access.canManage) {
+    return (
+      <EmptyState
+        icon={<ShieldOff />}
+        title="Only project coordinators can manage this project"
+        description="Ask a project coordinator to change its details or members."
+        action={
+          <Link href={routes.project(project.id)} className="text-sm font-medium text-brand hover:underline">
+            Back to the main table
+          </Link>
+        }
+      />
+    );
+  }
+  // Archived projects are read-only: members can't be added or removed until the project is restored.
+  const membersLocked = project.isArchived;
 
   return (
     <div className="space-y-4">
@@ -82,7 +98,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
           <dl className="grid gap-4 text-sm sm:grid-cols-3">
             <Detail label="Key" value={project.key} />
             <Detail label="Owner" value={fullName(project.owner)} />
-            <Detail label="Budget" value={project.budgetHours ? `${project.budgetHours} hours` : '—'} />
+            <Detail label="Budget" value={project.budgetHours ? `${project.budgetHours} ${project.budgetHours === 1 ? 'hour' : 'hours'}` : '—'} />
             <Detail label="Start" value={formatDate(project.startDate)} />
             <Detail label="End" value={formatDate(project.endDate)} />
             <Detail label="Created" value={formatDate(project.createdAt)} />
@@ -98,12 +114,18 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
       <CollapsibleCard
         title="Members"
         meta={members ? `${members.length}` : undefined}
-        description="Members see this project and work on its items. Coordinators manage it."
+        description={
+          membersLocked
+            ? 'This project is archived. Restore it to add or remove members.'
+            : 'Members see this project and work on its items. Coordinators manage it.'
+        }
         storageKey="project-settings.members"
         actions={
-          <Button size="sm" onClick={() => setAdding(true)}>
-            <UserPlus className="size-3.5" /> Add members
-          </Button>
+          !membersLocked && (
+            <Button size="sm" onClick={() => setAdding(true)}>
+              <UserPlus className="size-3.5" /> Add members
+            </Button>
+          )
         }
       >
         {isLoading ? (
@@ -123,7 +145,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
                       {member.user.jobTitle ?? member.user.email} · joined {formatDate(member.createdAt)}
                     </p>
                   </Link>
-                  {!isOwner && (
+                  {!isOwner && !membersLocked && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -143,23 +165,73 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
 
       <ProjectFormModal open={editing} onClose={() => setEditing(false)} project={project} />
       <AddMembersModal projectId={projectId} open={adding} onClose={() => setAdding(false)} existingIds={members?.map((m) => m.userId) ?? []} />
-      <ConfirmDialog
+      <DeleteProjectDialog
         open={deleting}
         onClose={() => setDeleting(false)}
-        title="Delete project"
-        message={`This permanently deletes ${project.name} with all of its tasks, issues, milestones and time entries.`}
-        confirmLabel="Delete forever"
+        projectName={project.name}
+        projectKey={project.key}
         loading={deleteProject.isPending}
-        onConfirm={() =>
-          confirmKey === project.key &&
-          deleteProject.mutate(project.id, { onSuccess: () => router.replace(routes.projects) })
-        }
-      >
-        <Field label={`Type ${project.key} to confirm`}>
-          <Input value={confirmKey} onChange={(e) => setConfirmKey(e.target.value.toUpperCase())} />
-        </Field>
-      </ConfirmDialog>
+        onConfirm={() => deleteProject.mutate(project.id, { onSuccess: () => router.replace(routes.projects) })}
+      />
     </div>
+  );
+}
+
+/** Delete confirmation that stays disabled until the project key is typed; the input starts empty each time. */
+function DeleteProjectDialog({
+  open,
+  onClose,
+  projectName,
+  projectKey,
+  loading,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  projectName: string;
+  projectKey: string;
+  loading: boolean;
+  onConfirm: () => void;
+}) {
+  const formId = useId();
+  const [confirmKey, setConfirmKey] = useState('');
+  const matches = confirmKey === projectKey;
+
+  useEffect(() => {
+    if (open) setConfirmKey('');
+  }, [open]);
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Delete project"
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" form={formId} variant="danger" disabled={!matches} loading={loading}>
+            Delete forever
+          </Button>
+        </>
+      }
+    >
+      <form
+        id={formId}
+        className="space-y-4 text-sm text-foreground-soft"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (matches) onConfirm();
+        }}
+      >
+        <p>This permanently deletes {projectName} with all of its tasks, issues, milestones and time entries.</p>
+        <Field label={`Type ${projectKey} to confirm`}>
+          <Input autoFocus value={confirmKey} onChange={(e) => setConfirmKey(e.target.value.toUpperCase())} />
+        </Field>
+      </form>
+    </Modal>
   );
 }
 

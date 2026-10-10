@@ -152,6 +152,7 @@ export class IssuesService {
     }
     if (statusChanged) {
       this.events.notify({
+        organizationId: user.organizationId,
         recipientIds: [issue.reporterId, ...(issue.assigneeId ? [issue.assigneeId] : [])],
         actorId: user.id,
         type: NotificationType.ISSUE_STATUS_CHANGED,
@@ -225,6 +226,7 @@ export class IssuesService {
     assigneeId: string,
   ): void {
     this.events.notify({
+      organizationId: user.organizationId,
       recipientIds: [assigneeId],
       actorId: user.id,
       type: NotificationType.ISSUE_ASSIGNED,

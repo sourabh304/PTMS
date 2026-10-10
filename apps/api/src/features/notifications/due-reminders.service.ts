@@ -15,6 +15,7 @@ const SYSTEM_ACTOR = 'system';
 const OPEN_STATUS: Prisma.LookupWhereInput = { OR: [{ category: null }, { category: { not: StatusCategory.CLOSED } }] };
 
 interface DueItem {
+  organizationId: string;
   ref: string;
   title: string;
   projectName: string;
@@ -87,6 +88,7 @@ export class DueRemindersService implements OnApplicationBootstrap, OnModuleDest
     for (const task of tasks) {
       const kind = this.send(
         {
+          organizationId,
           ref: `${task.project.key}-${task.number}`,
           title: task.title,
           projectName: task.project.name,
@@ -125,6 +127,7 @@ export class DueRemindersService implements OnApplicationBootstrap, OnModuleDest
     for (const issue of issues) {
       const kind = this.send(
         {
+          organizationId,
           ref: `${issue.project.key}-BUG-${issue.number}`,
           title: issue.title,
           projectName: issue.project.name,
@@ -149,6 +152,7 @@ export class DueRemindersService implements OnApplicationBootstrap, OnModuleDest
     const when = overdue ? 'is overdue' : item.dueDate.getTime() === today.getTime() ? 'is due today' : 'is due tomorrow';
     const dueLabel = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(item.dueDate);
     this.events.notify({
+      organizationId: item.organizationId,
       recipientIds: item.recipientIds,
       actorId: SYSTEM_ACTOR,
       type: overdue ? NotificationType.OVERDUE : NotificationType.DUE_SOON,
