@@ -19,6 +19,7 @@ import { ProjectAccessService } from '../projects/project-access.service';
 import { USER_SUMMARY_SELECT } from '../users/users.select';
 import { AddDependencyDto, CreateTaskDto, MoveTaskDto, TaskQueryDto, UpdateTaskDto } from './dto/task.dto';
 import { TASK_DETAIL_INCLUDE, TASK_LIST_INCLUDE } from './tasks.select';
+import { textContains } from '../../common/utils/search.util';
 
 /** Gap between consecutive board positions so cards can be inserted without renumbering. */
 const POSITION_STEP = 1024;
@@ -282,8 +283,8 @@ export class TasksService {
       const number = Number(query.search.replace(/^[A-Z]+-/i, ''));
       and.push({
         OR: [
-          { title: { contains: query.search } },
-          { description: { contains: query.search } },
+          { title: textContains(query.search) },
+          { description: textContains(query.search) },
           ...(Number.isInteger(number) && number > 0 ? [{ number }] : []),
         ],
       });

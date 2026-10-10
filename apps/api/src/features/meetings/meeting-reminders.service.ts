@@ -19,6 +19,8 @@ export class MeetingRemindersService implements OnApplicationBootstrap, OnModule
   ) {}
 
   onApplicationBootstrap(): void {
+    // Serverless functions do not stay alive between requests; Vercel Cron calls run() instead.
+    if (process.env.VERCEL) return;
     this.timers.push(setTimeout(() => void this.run(), FIRST_CHECK_DELAY_MS).unref());
     this.timers.push(setInterval(() => void this.run(), CHECK_INTERVAL_MS).unref());
   }
@@ -27,12 +29,13 @@ export class MeetingRemindersService implements OnApplicationBootstrap, OnModule
     this.timers.forEach((timer) => clearTimeout(timer));
   }
 
-  async run(now = new Date()): Promise<void> {
+  /** `digestHour` 0 announces every meeting of the day (used by the once-a-day cron). */
+  async run(now = new Date(), digestHour?: number): Promise<void> {
     if (this.running) return;
     this.running = true;
     try {
       const organizations = await this.prisma.organization.findMany({ where: { isActive: true }, select: { id: true } });
-      for (const organization of organizations) await this.meetings.sendReminders(organization.id, undefined, now);
+      for (const organization of organizations) await this.meetings.sendReminders(organization.id, undefined, now, digestHour);
     } catch (error) {
       this.logger.warn(`Could not send meeting reminders: ${(error as Error).message}`);
     } finally {

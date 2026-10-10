@@ -14,6 +14,7 @@ import { AddMembersDto, CreateProjectDto, ProjectQueryDto, UpdateProjectDto } fr
 import { ProjectAccessService } from './project-access.service';
 import { evaluateProjectHealth } from './project-health';
 import { ProjectProgressService, type ProgressStats } from './project-progress.service';
+import { textContains } from '../../common/utils/search.util';
 
 /** Number of member avatars embedded in project payloads (the full list has its own endpoint). */
 const MEMBER_PREVIEW_COUNT = 4;
@@ -45,7 +46,7 @@ export class ProjectsService {
       ...(query.ownerId ? { ownerId: query.ownerId } : {}),
       ...(query.statusCategory ? { status: { category: query.statusCategory } } : {}),
       ...(query.search
-        ? { OR: [{ name: { contains: query.search } }, { key: { contains: query.search.toUpperCase() } }] }
+        ? { OR: [{ name: textContains(query.search) }, { key: textContains(query.search.toUpperCase()) }] }
         : {}),
     };
 

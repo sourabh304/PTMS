@@ -44,6 +44,10 @@ Employee → Member).
 
 API documentation (Swagger) is served at `http://localhost:4000/api/docs` when `SWAGGER_ENABLED=true`.
 
+### Deploy on Vercel
+
+See [DEPLOYMENT.md](DEPLOYMENT.md): two Vercel projects (web + API) from this repository with a Neon Postgres database.
+
 ### Run with Docker
 
 Requirements: **Docker** with Docker Compose. No Node.js needed.

@@ -12,6 +12,7 @@ import { ErrorState, Spinner } from '@/shared/ui/feedback';
 import { LinkTabs, type TabItem } from '@/shared/ui/layout';
 import { useProject, useToggleFavorite } from '../api';
 import type { ProjectDetail } from '../types';
+import { ProjectActionsMenu } from './project-actions-menu';
 
 const icon = 'size-4';
 /** Views shown as tabs; the rest sit in the "More" menu. */
@@ -71,6 +72,7 @@ export function ProjectWorkspace({ projectId, children }: { projectId: string; c
               <UserPlus className="size-4" /> Members
             </Link>
           )}
+          {project.access.canManage && <ProjectActionsMenu project={project} />}
         </div>
       </div>
       <LinkTabs className="mt-4" items={projectViews(project.id, project.access.canManage)} maxVisible={PRIMARY_VIEWS} />

@@ -22,6 +22,7 @@ import {
 } from './dto/user.dto';
 import { PasswordService } from './password.service';
 import { PublicUser, USER_DIRECTORY_SELECT, USER_PUBLIC_SELECT } from './users.select';
+import { textContains } from '../../common/utils/search.util';
 
 /** Open tasks / issues listed on a member's details page. */
 const DETAILS_LIST_SIZE = 50;
@@ -47,10 +48,10 @@ export class UsersService {
       ...(query.search
         ? {
             OR: [
-              { firstName: { contains: query.search } },
-              { lastName: { contains: query.search } },
-              { email: { contains: query.search } },
-              { jobTitle: { contains: query.search } },
+              { firstName: textContains(query.search) },
+              { lastName: textContains(query.search) },
+              { email: textContains(query.search) },
+              { jobTitle: textContains(query.search) },
             ],
           }
         : {}),

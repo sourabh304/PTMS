@@ -15,6 +15,7 @@ import {
   StatusCategory,
 } from '../src/common/constants/domain.constants';
 import { OrgRole, PlatformRole, ProjectRole } from '../src/common/constants/roles.constants';
+import { PASSWORD_POLICY, PASSWORD_POLICY_MESSAGE } from '../src/common/validation/password.policy';
 import { slugify } from '../src/common/utils/string.util';
 import { DEFAULT_LOOKUPS } from '../src/features/lookups/lookup.defaults';
 import { ORGANIZATION_DEFAULTS } from '../src/features/organizations/organization.defaults';
@@ -26,33 +27,42 @@ import { DEMO_MEETINGS, DEMO_ORGANIZATION, DEMO_PROJECTS, DEMO_USERS, ROOT_ACCOU
 
 const prisma = new PrismaClient();
 
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required environment variable ${name}`);
-  return value;
-}
-
 const DAY = 86_400_000;
 const today = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
 const dayOffset = (days: number) => new Date(today.getTime() + days * DAY);
 
-const saltRounds = () => Number(requireEnv('BCRYPT_SALT_ROUNDS'));
+const saltRounds = () => Number(process.env.BCRYPT_SALT_ROUNDS || 12);
+
+/** Root email and password: ROOT_EMAIL / ROOT_PASSWORD when set, otherwise ROOT_ACCOUNT (development only). */
+function rootCredentials(): { email: string; password: string } {
+  const production = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+  const password = process.env.ROOT_PASSWORD;
+  if (!password) {
+    if (production) throw new Error('Set the ROOT_PASSWORD environment variable: production never uses the built-in root password.');
+    return { email: ROOT_ACCOUNT.email, password: ROOT_ACCOUNT.password };
+  }
+  const strong =
+    password.length >= PASSWORD_POLICY.minLength && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password);
+  if (!strong) throw new Error(`ROOT_PASSWORD is too weak. ${PASSWORD_POLICY_MESSAGE}.`);
+  return { email: process.env.ROOT_EMAIL || ROOT_ACCOUNT.email, password };
+}
 
 /** The platform root account: creates organizations and appoints their project coordinators. */
 async function seedRoot(): Promise<void> {
-  const email = ROOT_ACCOUNT.email.toLowerCase();
   if (await prisma.user.findFirst({ where: { role: PlatformRole.ROOT } })) {
     console.log('✔ Root account already exists');
     return;
   }
+  const credentials = rootCredentials();
+  const email = credentials.email.toLowerCase();
   if (await prisma.user.findUnique({ where: { email } })) {
-    throw new Error(`Root email ${email} is already used by an organization user; change ROOT_ACCOUNT in seed-data.ts`);
+    throw new Error(`Root email ${email} is already used by an organization user; choose another ROOT_EMAIL`);
   }
   await prisma.user.create({
     data: {
       organizationId: null,
       email,
-      passwordHash: await bcrypt.hash(ROOT_ACCOUNT.password, saltRounds()),
+      passwordHash: await bcrypt.hash(credentials.password, saltRounds()),
       firstName: ROOT_ACCOUNT.firstName,
       lastName: ROOT_ACCOUNT.lastName,
       jobTitle: ROOT_ACCOUNT.jobTitle,

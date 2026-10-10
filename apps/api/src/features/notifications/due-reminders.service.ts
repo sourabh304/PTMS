@@ -39,6 +39,8 @@ export class DueRemindersService implements OnApplicationBootstrap, OnModuleDest
   ) {}
 
   onApplicationBootstrap(): void {
+    // Serverless functions do not stay alive between requests; Vercel Cron calls run() instead.
+    if (process.env.VERCEL) return;
     this.timers.push(setTimeout(() => void this.run(), FIRST_CHECK_DELAY_MS).unref());
     this.timers.push(setInterval(() => void this.run(), CHECK_INTERVAL_MS).unref());
   }

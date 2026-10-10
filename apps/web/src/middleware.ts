@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { PUBLIC_ROUTES, routes } from '@/shared/config/routes';
 
-const REFRESH_COOKIE = process.env.AUTH_REFRESH_COOKIE_NAME;
+// Must match the API's REFRESH_COOKIE_NAME (its default is sptms_rt).
+const REFRESH_COOKIE = process.env.AUTH_REFRESH_COOKIE_NAME || 'sptms_rt';
 
 /**
  * Optimistic route protection: users without a session cookie are sent to the login page.

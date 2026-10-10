@@ -8,5 +8,6 @@ import { MeetingsService } from './meetings.service';
   imports: [ProjectsModule],
   controllers: [MeetingsController],
   providers: [MeetingsService, MeetingRemindersService],
+  exports: [MeetingRemindersService],
 })
 export class MeetingsModule {}

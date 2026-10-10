@@ -8,6 +8,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
+    "vercel-build": "node scripts/postgres-schema.mjs && prisma generate --schema prisma/schema.postgres.prisma && nest build && prisma db push --schema prisma/schema.postgres.prisma --skip-generate && tsx prisma/seed.ts && mkdir -p public",
     "lint": "tsc --noEmit -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest",

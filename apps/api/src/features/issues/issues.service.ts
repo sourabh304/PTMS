@@ -17,6 +17,7 @@ import { LookupsService } from '../lookups/lookups.service';
 import { ProjectAccessService } from '../projects/project-access.service';
 import { USER_SUMMARY_SELECT } from '../users/users.select';
 import { CreateIssueDto, IssueQueryDto, UpdateIssueDto } from './dto/issue.dto';
+import { textContains } from '../../common/utils/search.util';
 
 const LOOKUP_SELECT = { id: true, name: true, color: true, category: true } satisfies Prisma.LookupSelect;
 
@@ -58,7 +59,7 @@ export class IssuesService {
       const number = Number(query.search.replace(/^[A-Z]+-/i, ''));
       and.push({
         OR: [
-          { title: { contains: query.search } },
+          { title: textContains(query.search) },
           ...(Number.isInteger(number) && number > 0 ? [{ number }] : []),
         ],
       });

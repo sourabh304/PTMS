@@ -12,6 +12,7 @@ import {
   UpdatePlatformOrganizationDto,
 } from './dto/platform-organization.dto';
 import { OrganizationsService } from './organizations.service';
+import { textContains } from '../../common/utils/search.util';
 
 /** Root-only administration of every organization on the platform. */
 @Injectable()
@@ -33,7 +34,7 @@ export class PlatformOrganizationsService {
     const page = this.pagination.resolve(query.page, query.limit);
     const where: Prisma.OrganizationWhereInput = {
       ...(query.status ? { isActive: query.status === 'active' } : {}),
-      ...(query.search ? { OR: [{ name: { contains: query.search } }, { slug: { contains: query.search.toLowerCase() } }] } : {}),
+      ...(query.search ? { OR: [{ name: textContains(query.search) }, { slug: textContains(query.search.toLowerCase()) }] } : {}),
     };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.organization.findMany({

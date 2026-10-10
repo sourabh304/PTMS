@@ -40,7 +40,7 @@ const buildConfiguration = () => {
         accessName: env.ACCESS_COOKIE_NAME,
         refreshName: env.REFRESH_COOKIE_NAME,
         workspaceName: env.ROOT_WORKSPACE_COOKIE_NAME,
-        secure: env.COOKIE_SECURE,
+        secure: env.COOKIE_SECURE ?? env.NODE_ENV === 'production',
         sameSite: env.COOKIE_SAME_SITE,
         domain: env.COOKIE_DOMAIN || undefined,
       },
@@ -58,6 +58,9 @@ const buildConfiguration = () => {
     },
     meetings: {
       digestHour: env.MEETING_DIGEST_HOUR,
+    },
+    cron: {
+      secret: env.CRON_SECRET,
     },
   };
 };

@@ -1,45 +1,11 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
-import { NestExpressApplication } from '@nestjs/platform-express';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
-import { AppModule } from './app.module';
+import { createApp } from './app.setup';
 import { AppConfig } from './config/configuration';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  const config = app.get(ConfigService<AppConfig, true>);
-  const appConfig = config.get('app', { infer: true });
-
-  app.set('trust proxy', 1);
-  app.use(helmet());
-  app.use(cookieParser());
-  app.setGlobalPrefix(appConfig.apiPrefix);
-  app.enableCors({ origin: appConfig.corsOrigins, credentials: true });
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-  app.enableShutdownHooks();
-
-  if (appConfig.swaggerEnabled) {
-    const document = SwaggerModule.createDocument(
-      app,
-      new DocumentBuilder()
-        .setTitle(`${appConfig.name} API`)
-        .setDescription('REST API for projects, tasks, milestones, issues, timesheets and reporting')
-        .setVersion('1.0')
-        .addCookieAuth(config.get('auth', { infer: true }).cookies.accessName)
-        .addBearerAuth()
-        .build(),
-    );
-    SwaggerModule.setup(`${appConfig.apiPrefix}/docs`, app, document);
-  }
+  const app = await createApp();
+  const appConfig = app.get(ConfigService<AppConfig, true>).get('app', { infer: true });
 
   await app.listen(appConfig.port);
   const logger = new Logger('Bootstrap');

@@ -25,6 +25,7 @@ import { PlatformModule } from './features/platform/platform.module';
 import { ProjectsModule } from './features/projects/projects.module';
 import { ReportsModule } from './features/reports/reports.module';
 import { AutomationsModule } from './features/automations/automations.module';
+import { CronModule } from './features/cron/cron.module';
 import { CustomFieldsModule } from './features/custom-fields/custom-fields.module';
 import { TaskListsModule } from './features/task-lists/task-lists.module';
 import { TasksModule } from './features/tasks/tasks.module';
@@ -59,6 +60,7 @@ import { PrismaModule } from './prisma/prisma.module';
     TasksModule,
     MilestonesModule,
     MeetingsModule,
+    CronModule,
     IssuesModule,
     CommentsModule,
     TimesheetsModule,
